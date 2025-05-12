@@ -17,8 +17,8 @@ import { CONFIG } from './config';
 import { GcsApi } from './gcs-api';
 import {
   ImagePolicyViolations,
-  PolicyViolation,
   POLICY_VIOLATIONS_FILE,
+  PolicyViolation,
 } from './gemini-validation-service';
 import { GoogleAdsApiFactory } from './google-ads-api-mock';
 
@@ -108,7 +108,7 @@ const getData = () => {
   for (const [adGroupId, images] of Object.entries(adGroups)) {
     result.push({
       id: adGroupId,
-      name: images[0].filename.split('|').slice(1, -1).join('|'),
+      name: images[0].filename.split('|')[1],
       images,
     });
   }

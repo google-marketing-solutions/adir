@@ -22,7 +22,9 @@ interface Config {
   'Impression Threshold': number;
   'ImgGen Prompt': string;
   'ImgGen Prompt Suffix': string;
-  'Number of images per Ad Group': number;
+  'Number of Square Images per Asset Group (Pmax)': number;
+  'Number of Landscape Images per Asset Group (Pmax)': number;
+  'Number of Portrait Images per Asset Group (Pmax)': number;
   'GCP Project': string;
   'GCS Bucket': string;
   'Max. bad images': number;
@@ -34,7 +36,7 @@ interface Config {
   'Rejected DIR': string;
   'Ad Group Name Regex': string;
   'Image Validation Prompt': string;
-  'Adios Mode': string;
+  'Adir Mode': string;
   'Text Prompt Context': string;
   'Text Prompt': string;
   'Text Prompt Suffix': string;
@@ -57,7 +59,9 @@ const DEFAULT_CONFIG = {
   'Impression Threshold': 0,
   'ImgGen Prompt': '${name}',
   'ImgGen Prompt Suffix': 'HDR, taken by professional',
-  'Number of images per Ad Group': 0,
+  'Number of Square Images per Asset Group (Pmax)': 0,
+  'Number of Landscape Images per Asset Group (Pmax)': 0,
+  'Number of Portrait Images per Asset Group (Pmax)': 0,
   'GCP Project': '',
   'GCS Bucket': '',
   'Max. bad images': 0,
@@ -69,7 +73,7 @@ const DEFAULT_CONFIG = {
   'Rejected DIR': '',
   'Image Validation Prompt': '',
   'Ad Group Name Regex': '^(?<name>.*)$', // capture everything by default
-  'Adios Mode': '',
+  'Adir Mode': '',
   'Text Prompt Context': '',
   'Text Prompt': '',
   'Text Prompt Suffix': '',
@@ -82,8 +86,8 @@ const DEFAULT_CONFIG = {
 };
 
 export const ADIOS_MODES = {
-  AD_GROUP: 'AdGroup Name',
-  KEYWORDS: 'AdGroup Keywords',
+  AD_GROUP: 'Asset Group Name',
+  KEYWORDS: 'Search Signal Keywords ',
 };
 export const ADIOS_MODE_CELL = 'B6';
 

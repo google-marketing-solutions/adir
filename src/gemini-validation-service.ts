@@ -15,8 +15,8 @@
  */
 import { CONFIG } from './config';
 import { GcsApi } from './gcs-api';
-import { VertexAiApi } from './vertex-ai-api';
 import { GoogleAdsApiFactory } from './google-ads-api-mock';
+import { VertexAiApi } from './vertex-ai-api';
 
 export const POLICY_VIOLATIONS_FILE = 'policyViolations.json';
 
@@ -39,10 +39,7 @@ export class GeminiValidationService {
 
   constructor() {
     this._gcsApi = new GcsApi(CONFIG['GCS Bucket']);
-    this._vertexAiApi = new VertexAiApi(
-      'us-central1-aiplatform.googleapis.com',
-      CONFIG['GCP Project']!
-    );
+    this._vertexAiApi = new VertexAiApi(CONFIG['GCP Project']!, 'us-central1');
     this._googleAdsApi = GoogleAdsApiFactory.createObject();
   }
 
@@ -83,15 +80,15 @@ export class GeminiValidationService {
       this.getPolicies()
     );
 
-    const adGroups = this._googleAdsApi.getAdGroups();
-    for (const adGroup of adGroups) {
+    const assetGroups = this._googleAdsApi.getAssetGroups();
+    for (const assetGroup of assetGroups) {
       Logger.log(
-        `Processing Ad Group ${adGroup.adGroup.name} (${adGroup.adGroup.id})...`
+        `Processing Asset Group ${assetGroup.assetGroup.name} (${assetGroup.assetGroup.id})...`
       );
 
       const images = this._gcsApi.getImages(
         GoogleAdsApiFactory.getAdsAccountId(),
-        adGroup.adGroup.id,
+        assetGroup.assetGroup.id,
         [CONFIG['Generated DIR']]
       );
 
@@ -123,7 +120,7 @@ export class GeminiValidationService {
         });
 
         if (violationsPerImage.length) {
-          const jsonPath = `${adGroup.customer.id}/${adGroup.adGroup.id}/${CONFIG['Generated DIR']}/${POLICY_VIOLATIONS_FILE}`;
+          const jsonPath = `${assetGroup.customer.id}/${assetGroup.assetGroup.id}/${CONFIG['Generated DIR']}/${POLICY_VIOLATIONS_FILE}`;
           Logger.log(`Saving violations on GCS: ${jsonPath}`);
           this._gcsApi.uploadFile(JSON.stringify(violationsPerImage), jsonPath);
         }

@@ -13,15 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Component, Input } from '@angular/core';
 import { CommonModule, NgOptimizedImage } from '@angular/common';
+import { Component, Input } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import {
-  Image,
-  ImageIssue,
-  IMAGE_STATUS,
-} from '../api-calls/api-calls.service.interface';
+import { Image, IMAGE_STATUS } from '../api-calls/api-calls.service.interface';
 
 @Component({
   selector: 'image-extension',
@@ -99,4 +95,39 @@ export class ImageExtensionComponent {
     const baseSize = 128;
     return `${baseSize * this.imageSize}px`;
   };
+
+  getAspectClass(): string {
+    const parts = this.image.filename.split('|');
+    let aspect = parts[parts.length - 1];
+    // Remove any file extension (e.g., ".png") if present
+    if (aspect.indexOf('.') !== -1) {
+      aspect = aspect.split('.')[0];
+    }
+    return aspect.toLowerCase(); // returns "square", "landscape", or "portrait"
+  }
+  getImageWidth(): string {
+    const size = this.imageSize;
+    const aspect = this.getAspectClass();
+    if (aspect === 'square') {
+      return `${256 * size}px`;
+    } else if (aspect === 'landscape') {
+      return `${256 * size}px`;
+    } else if (aspect === 'portrait') {
+      return `${144 * size}px`;
+    }
+    return `${128 * size}px`;
+  }
+  // Compute the image height based on the aspect ratio.
+  getImageHeight(): string {
+    const size = this.imageSize; // slider value multiplier
+    const aspect = this.getAspectClass();
+    if (aspect === 'square') {
+      return `${256 * size}px`;
+    } else if (aspect === 'landscape') {
+      return `${144 * size}px`;
+    } else if (aspect === 'portrait') {
+      return `${256 * size}px`;
+    }
+    return `${128 * size}px`; // fallback
+  }
 }

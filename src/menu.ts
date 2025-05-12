@@ -18,14 +18,15 @@ import { ADIOS_MODES, ADIOS_MODE_CELL, sheet } from './config';
 export const menu = null;
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
-  ui.createMenu('Adios')
+  ui.createMenu('Adir✈️')
     .addSubMenu(
       ui
         .createMenu('▶️ Run')
-        .addItem('Image generation', 'ImageGenerationService.manuallyRun')
-        .addItem('Image upload', 'ImageUploadService.manuallyRun')
-        .addItem('Image assets linking', 'ImageExtensionService.manuallyRun')
-        .addItem('Create experiments', 'runExperimentsService')
+        .addItem(
+          'Pmax Image generation',
+          'PmaxImageGenerationService.manuallyRun'
+        )
+        .addItem('Pmax Image upload', 'PmaxImageUploadService.manuallyRun')
         .addItem('Policy validation', 'runGeminiValidationService')
     )
     .addSubMenu(
@@ -34,7 +35,7 @@ function onOpen() {
         .addItem('Every day', 'AdiosTriggers.scheduleForEveryDay')
     )
     .addToUi();
-  // Show only the corresponding rows for the Adios Mode on page load
+  // Show only the corresponding rows for the Adir Mode on page load
   toggleRows(sheet.getRange(ADIOS_MODE_CELL).getValue());
 }
 
@@ -62,9 +63,8 @@ function toggleRows(adiosMode: string) {
 }
 
 const allowedFunctions = [
-  'ImageGenerationService.manuallyRun',
-  'ImageUploadService.manuallyRun',
-  'ImageExtensionService.manuallyRun',
+  'PmaxImageGenerationService.manuallyRun',
+  'PmaxImageUploadService.manuallyRun',
 ];
 class AdiosTriggers {
   /**

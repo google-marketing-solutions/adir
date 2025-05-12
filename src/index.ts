@@ -14,20 +14,16 @@
  * limitations under the License.
  */
 
-import { menu } from './menu';
-import { ImageExtensionService } from './image-extension-service';
-import { ImageGenerationService } from './image-generation-service';
-import { ImageUploadService } from './image-upload-service';
-import { ExperimentsService } from './experiments-service';
-import { GeminiValidationService } from './gemini-validation-service';
 import { FRONTEND_HELPER } from './frontend-helper';
+import { GeminiValidationService } from './gemini-validation-service';
+import { menu } from './menu';
+import { PmaxImageGenerationService } from './pmax-image-generation-service';
+import { PmaxImageUploadService } from './pmax-image-upload-service';
 import { uiHelper } from './ui-helper';
 
 menu;
-ImageExtensionService;
-ImageGenerationService;
-ImageUploadService;
-ExperimentsService;
+PmaxImageGenerationService;
+PmaxImageUploadService;
 GeminiValidationService;
 FRONTEND_HELPER;
 uiHelper;

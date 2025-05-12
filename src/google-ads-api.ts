@@ -18,6 +18,7 @@ import { CONFIG } from './config';
 export abstract class GoogleAdsApiInterface {
   abstract getAdGroups(): any[];
   abstract getKeywordsForAdGroup(id: string): any[];
+  abstract getAssetGroups(): any[];
 }
 
 export class GoogleAdsApi implements GoogleAdsApiInterface {
@@ -99,6 +100,10 @@ export class GoogleAdsApi implements GoogleAdsApiInterface {
 
   getAdGroups() {
     return this.executeSearch(GoogleAdsApi.QUERIES.ADGROUPS);
+  }
+
+  getAssetGroups() {
+    return this.executeSearch(GoogleAdsApi.QUERIES.ASSETGROUPS);
   }
 
   uploadImageAssets(files: GoogleCloud.Storage.Image[]) {
@@ -320,6 +325,9 @@ export class GoogleAdsApi implements GoogleAdsApiInterface {
       ADGROUPS: `
         SELECT ad_group.name, ad_group.id, customer.id FROM ad_group  WHERE campaign.id IN (${CONFIG['Campaign IDs']}) AND ad_group.status = 'ENABLED'
       `,
+      ASSETGROUPS: `
+        SELECT asset_group.name, asset_group.id, customer.id FROM asset_group WHERE campaign.id IN (${CONFIG['Campaign IDs']}) AND asset_group.status = 'ENABLED'
+      `,
       ADGROUP_EXTENSION_SETTINGS: `
         SELECT ad_group_extension_setting.resource_name, ad_group_extension_setting.extension_feed_items, ad_group.id FROM ad_group_extension_setting WHERE ad_group_extension_setting.extension_type = 'IMAGE'
       `,
@@ -333,6 +341,14 @@ export class GoogleAdsApi implements GoogleAdsApiInterface {
         WHERE ad_group.id = <ad_group_id>
         AND ad_group_criterion.status = 'ENABLED'
         AND ad_group_criterion.negative = FALSE
+        LIMIT 1000
+      `,
+      SEARCH_SIGNAL_KEYWORDS_FOR_ASSETGROUP_ID: `
+        SELECT
+          asset_group_signal.search_theme.text
+        FROM asset_group_signal
+        WHERE asset_group.id = <asset_group_id>
+        AND asset_group_signal.approval_status = 'APPROVED'
         LIMIT 1000
       `,
     };
@@ -499,7 +515,20 @@ export class GoogleAdsApi implements GoogleAdsApiInterface {
 
     return this.executeSearch(query);
   }
+  /**
+   * Returns the list of Search Signal keywords for the specific asset group in pMax campaign
+   *
+   * @param assetGroupId Asset Group ID
+   */
+  getSearchSignalKeywordsForAdGroup(assetGroupId: string) {
+    const query =
+      GoogleAdsApi.QUERIES.SEARCH_SIGNAL_KEYWORDS_FOR_ASSETGROUP_ID.replaceAll(
+        '<asset_group_id>',
+        assetGroupId
+      );
 
+    return this.executeSearch(query);
+  }
   /**
    * Remove the specified assets from the ad group
    *

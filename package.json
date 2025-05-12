@@ -1,7 +1,7 @@
 {
-  "name": "adios",
-  "version": "1.3",
-  "description": "Adios: One-stop solution for Google Ads image assets management",
+  "name": "adir",
+  "version": "1.0",
+  "description": "Adir: A solution for image assets generation in Performance Max Campaigns",
   "main": "build/index.js",
   "license": "Apache-2.0",
   "keywords": [],

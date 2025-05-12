@@ -24,10 +24,24 @@ import {
   VertexAiApi,
 } from './vertex-ai-api';
 
-export class ImageGenerationService extends Triggerable {
+export class PmaxImageGenerationService extends Triggerable {
   private readonly _gcsApi;
   private readonly _vertexAiApi;
   private readonly _googleAdsApi;
+  private readonly _aspectRatios = [
+    {
+      type: 'square',
+      ratio: '1:1',
+    },
+    {
+      type: 'landscape',
+      ratio: '16:9',
+    },
+    {
+      type: 'portrait',
+      ratio: '9:16',
+    },
+  ];
 
   constructor() {
     super();
@@ -45,76 +59,62 @@ export class ImageGenerationService extends Triggerable {
   run() {
     const MAX_TRIES = 3;
     this.deleteTrigger();
-    const adGroups = this._googleAdsApi.getAdGroups();
+    const assetGroups = this._googleAdsApi.getAssetGroups();
 
-    const lastImageGenerationProcessedAdGroupId =
+    const lastPmaxImageGenerationProcessedAdGroupId =
       PropertiesService.getScriptProperties().getProperty(
-        'lastImageGenerationProcessedAdGroupId'
+        'lastPmaxImageGenerationProcessedAdGroupId'
       );
     let startIndex = 0;
-    if (lastImageGenerationProcessedAdGroupId) {
-      const lastIndex = adGroups.findIndex(
-        adGroup => adGroup.adGroup.id === lastImageGenerationProcessedAdGroupId
+    if (lastPmaxImageGenerationProcessedAdGroupId) {
+      const lastIndex = assetGroups.findIndex(
+        assetGroup =>
+          assetGroup.assetGroup.id === lastPmaxImageGenerationProcessedAdGroupId
       );
       startIndex = Math.max(lastIndex, 0); // startIndex might be -1
     }
-    adGroupsLoop: for (let i = startIndex; i < adGroups.length; i++) {
-      const adGroup = adGroups[i];
+    assetGroupsLoop: for (let i = startIndex; i < assetGroups.length; i++) {
+      const assetGroup = assetGroups[i];
       if (this.shouldTerminate()) {
         Logger.log(
-          `The function is reaching the 6 minute timeout, and therfore will create a trigger to rerun from this ad group: ${adGroup.adGroup.name} and then self terminate.`
+          `The function is reaching the 6 minute timeout, and therefore will create a trigger to rerun from this ad group: ${assetGroup.assetGroup.name} and then self terminate.`
         );
         PropertiesService.getScriptProperties().setProperty(
-          'lastImageGenerationProcessedAdGroupId',
-          adGroup.adGroup.id
+          'lastPmaxImageGenerationProcessedAdGroupId',
+          assetGroup.assetGroup.id
         );
         this.createTriggerForNextRun();
         return; // Exit the function to prevent further execution
       }
 
       Logger.log(
-        `Processing Ad Group ${adGroup.adGroup.name} (${adGroup.adGroup.id})...`
+        `Processing Asset Group ${assetGroup.assetGroup.name} (${assetGroup.assetGroup.id})...`
       );
       let generatedImages = 0;
       let numTries = 0;
-      // TODO: Add logic to only generate images if < "Max. bad images"
-      const existingImgCount = this._gcsApi.countImages(
-        adGroup.customer.id,
-        adGroup.adGroup.id,
-        [
-          CONFIG['Generated DIR'],
-          CONFIG['Uploaded DIR'],
-          CONFIG['Validated DIR'],
-        ]
-      );
-      if (existingImgCount >= CONFIG['Number of images per Ad Group']!) {
-        Logger.log(
-          `Ad Group ${adGroup.adGroup.name}(${adGroup.adGroup.id}) has enough generated images, skipping...`
-        );
-        continue;
-      }
-      // Calculate how many images have to be generated for this Ad Group in the whole execution, in batches
-      const adGroupImgCount =
-        CONFIG['Number of images per Ad Group'] - existingImgCount;
+      let neededSquare =
+        Number(CONFIG['Number of Square Images per Asset Group (Pmax)']) || 0;
+      let neededLandscape =
+        Number(CONFIG['Number of Landscape Images per Asset Group (Pmax)']) ||
+        0;
+      let neededPortrait =
+        Number(CONFIG['Number of Portrait Images per Asset Group (Pmax)']) || 0;
+      const assetGroupImgCount =
+        neededSquare + neededLandscape + neededPortrait;
       Logger.log(
-        `Generating ${adGroupImgCount} images for ${adGroup.adGroup.name}(${adGroup.adGroup.id})...`
+        `generating: ${neededSquare} square images, ${neededLandscape} Landscape images,
+        and ${neededPortrait} portrait images. Over all ${assetGroupImgCount}. `
       );
-
       // Process it in batches of max VISION_API_LIMIT images (as for now, 4)
-      while (generatedImages < adGroupImgCount && numTries <= MAX_TRIES) {
-        const imgCount = Math.min(
-          this._vertexAiApi.IMAGE_GENERATION_API_LIMIT,
-          adGroupImgCount - generatedImages
-        );
-
-        let gAdsData = ''; // Kwds or AdGroup data
+      while (generatedImages < assetGroupImgCount && numTries <= MAX_TRIES) {
+        let gAdsData = ''; // Kwds or AssetGroup data
         let imgPrompt = ''; // Prompt that will be sent to Vision API (Imagen)
 
-        switch (CONFIG['Adios Mode']) {
+        switch (CONFIG['Adir Mode']) {
           case ADIOS_MODES.AD_GROUP: {
             const regex = new RegExp(CONFIG['Ad Group Name Regex']);
             const matchGroups = this.getRegexMatchGroups(
-              adGroup.adGroup.name,
+              assetGroup.assetGroup.name,
               regex
             );
 
@@ -122,30 +122,31 @@ export class ImageGenerationService extends Triggerable {
               gAdsData = this.createPrompt(matchGroups);
             } else {
               Logger.log(
-                `No matching groups found for ${adGroup.adGroup.name} with ${regex}. Using full prompt.`
+                `No matching groups found for ${assetGroup.assetGroup.name} with ${regex}. Using full prompt.`
               );
               gAdsData = CONFIG['ImgGen Prompt'];
             }
             break;
           }
           case ADIOS_MODES.KEYWORDS: {
-            const keywordInfo = this._googleAdsApi.getKeywordsForAdGroup(
-              adGroup.adGroup.id
-            );
+            const keywordInfo =
+              this._googleAdsApi.getSearchSignalKeywordsForAdGroup(
+                assetGroup.assetGroup.id
+              );
             // Set to avoid duplicated text in keywords
             const keywordList = [
               ...new Set(
                 keywordInfo
-                  .map(x => x.adGroupCriterion.keyword.text)
+                  .map(x => x.assetGroupSignal.searchTheme.text)
                   .filter(x => !!x)
               ),
             ];
 
             if (!keywordList.length) {
               Logger.log(
-                `No positive keywords: skiping AdGroup ${adGroup.adGroup.id}`
+                `No positive keywords: skipping Asset Group ${assetGroup.assetGroup.id}`
               );
-              continue adGroupsLoop;
+              continue assetGroupsLoop;
             }
 
             Logger.log('Positive keyword list:' + keywordList.join());
@@ -154,11 +155,11 @@ export class ImageGenerationService extends Triggerable {
           }
           default:
             // TODO: Prevent execution if Config is not correctly filled
-            console.error(`Unknown mode: ${CONFIG['Adios Mode']}`);
+            console.error(`Unknown mode: ${CONFIG['Adir Mode']}`);
         }
 
         // Keywords mode -> generate Imagen Prompt through Gemini API
-        if (CONFIG['Adios Mode'] === ADIOS_MODES.AD_GROUP) {
+        if (CONFIG['Adir Mode'] === ADIOS_MODES.AD_GROUP) {
           imgPrompt = gAdsData;
         } else {
           // Call Gemini to generate the Img Prompt
@@ -195,59 +196,96 @@ export class ImageGenerationService extends Triggerable {
         }
 
         Logger.log(
-          `Imagen Prompt for AdGroup ${adGroup.adGroup.name}: "${imgPrompt}"`
+          `Imagen Prompt for assetGroup ${assetGroup.assetGroup.name}: "${imgPrompt}"`
         );
 
         let images: string[] = [];
         try {
-          images = this._vertexAiApi.callImageGenerationApi(
-            imgPrompt,
-            imgCount
-          );
+          for (const aspectRatio of this._aspectRatios) {
+            // One generation in per each aspect ratio.
+            let batchSize = 0;
+            let currentNeeded = 0;
+            switch (aspectRatio.type) {
+              case 'square':
+                currentNeeded = neededSquare;
+                break;
+              case 'landscape':
+                currentNeeded = neededLandscape;
+                break;
+              case 'portrait':
+                currentNeeded = neededPortrait;
+                break;
+              default:
+                currentNeeded = 0;
+                break;
+            }
+            let newImages: string[] = [];
+            if (currentNeeded > 0) {
+              batchSize = Math.min(
+                currentNeeded,
+                this._vertexAiApi.IMAGE_GENERATION_API_LIMIT
+              );
+              newImages =
+                this._vertexAiApi.callImageGenerationApi(
+                  imgPrompt,
+                  batchSize,
+                  aspectRatio.ratio
+                ) || [];
+              if (aspectRatio.type === 'square') {
+                neededSquare -= newImages.length;
+              } else if (aspectRatio.type === 'landscape') {
+                neededLandscape -= newImages.length;
+              } else if (aspectRatio.type === 'portrait') {
+                neededPortrait -= newImages.length;
+              }
+              images = images.concat(newImages);
+            }
+            for (const image of newImages) {
+              const filename = this.generateImageFileName(
+                assetGroup.assetGroup.id,
+                assetGroup.assetGroup.name,
+                aspectRatio.type
+              );
+              const folder = `${assetGroup.customer.id}/${assetGroup.assetGroup.id}/${CONFIG['Generated DIR']}`;
+              const imageBlob = Utilities.newBlob(
+                Utilities.base64Decode(image),
+                'image/png',
+                filename
+              );
+              this._gcsApi.uploadImage(imageBlob, filename, folder);
+            }
+          }
         } catch (e) {
           if (e instanceof ImageGenerationApiCallError) {
             Logger.log(
               'Not able to generate images, this might be because of the blocked content (see the logs)...'
             );
-          } else {
-            throw e; // Unknown error
+            numTries++;
+            continue;
           }
+          throw e;
         }
 
         Logger.log(
-          `Received ${images?.length || 0} images for ${adGroup.adGroup.name}(${
-            adGroup.adGroup.id
-          })...`
+          `Received ${images?.length || 0} images for ${
+            assetGroup.assetGroup.name
+          }(${assetGroup.assetGroup.id})...`
         );
         if (!images || !images.length) {
           numTries++;
           continue;
         }
-        for (const image of images) {
-          const filename = this.generateImageFileName(
-            adGroup.adGroup.id,
-            adGroup.adGroup.name
-          );
-          const folder = `${adGroup.customer.id}/${adGroup.adGroup.id}/${CONFIG['Generated DIR']}`;
-          const imageBlob = Utilities.newBlob(
-            Utilities.base64Decode(image),
-            'image/png',
-            filename
-          );
-          this._gcsApi.uploadImage(imageBlob, filename, folder);
-        }
-
         // Update generatedImages to finish the while loop
         generatedImages += images.length;
       }
       PropertiesService.getScriptProperties().setProperty(
-        'lastImageGenerationProcessedAdGroupId',
-        adGroup.adGroup.id
+        'lastPmaxImageGenerationProcessedAdGroupId',
+        assetGroup.assetGroup.id
       );
     }
     Logger.log('Finished generating.');
     PropertiesService.getScriptProperties().deleteProperty(
-      'lastImageGenerationProcessedAdGroupId'
+      'lastPmaxImageGenerationProcessedAdGroupId'
     );
     this.deleteTrigger();
   }
@@ -258,25 +296,29 @@ export class ImageGenerationService extends Triggerable {
    * name is provided as an argument, this will be trimmed so that the final
    * name does not exceed this.
    *
-   * @param {number} adGroupId: the ID of the ad group
-   * @param {string} adGroupName: the name of the ad group
-   * @returns {string} a file name that's less than 128 characters long, that
-   *   takes the form `adGroupId|adGroupName|timestamp`
+   * @param {number} assetGroupId: the ID of the ad group
+   * @param {string} assetGroupName: the name of the ad group
+   * @return {string} a file name that's less than 128 characters long, that
+   *   takes the form `assetGroupId|assetGroupName|timestamp`
    */
-  generateImageFileName(adGroupId: number, adGroupName: string) {
+  generateImageFileName(
+    assetGroupId: number,
+    assetGroupName: string,
+    aspect?: string
+  ) {
     // Remove any slashes in the ad group name as that would be problematic with
     // the file path
-    adGroupName = adGroupName.replaceAll('/', ''); // TODO: Escape "|"
+    assetGroupName = assetGroupName.replaceAll('/', ''); // TODO: Escape "|"
     // Some ad group names can be very long. Trim them to stay within the 128
     // character limit.
     const fileNameLimit = 128;
     const now = Date.now().toString();
     // These are the | characters added to the final string.
-    const extraChars = 2;
-    const adGroupNameLimit =
-      fileNameLimit - now.length - adGroupId.toString().length - extraChars;
-    const trimmedAdGroupName = adGroupName.slice(0, adGroupNameLimit);
-    return `${adGroupId}|${trimmedAdGroupName}|${Date.now()}`;
+    const extraChars = 3;
+    const assetGroupNameLimit =
+      fileNameLimit - now.length - assetGroupId.toString().length - extraChars;
+    const trimmedassetGroupName = assetGroupName.slice(0, assetGroupNameLimit);
+    return `${assetGroupId}|${trimmedassetGroupName}|${Date.now()}|${aspect}`;
   }
   /**
    * For a given string & regex return the match groups if they exist else null
@@ -331,29 +373,31 @@ export class ImageGenerationService extends Triggerable {
 
   static triggeredRun() {
     PropertiesService.getScriptProperties().setProperty(
-      `${ImageGenerationService.name}StartTime`,
+      `${PmaxImageGenerationService.name}StartTime`,
       new Date().getTime().toString()
     );
-    const imageGenerationService = new ImageGenerationService();
-    imageGenerationService.run();
+    const PmaximageGenerationService = new PmaxImageGenerationService();
+    PmaximageGenerationService.run();
   }
 
   static manuallyRun() {
     PropertiesService.getScriptProperties().setProperty(
-      `${ImageGenerationService.name}StartTime`,
+      `${PmaxImageGenerationService.name}StartTime`,
       new Date().getTime().toString()
     );
-    const lastImageGenerationProcessedAdGroupId =
+    const lastPmaxImageGenerationProcessedAdGroupId =
       PropertiesService.getScriptProperties().getProperty(
-        'lastImageGenerationProcessedAdGroupId'
+        'lastPmaxImageGenerationProcessedAdGroupId'
       );
-    if (lastImageGenerationProcessedAdGroupId) {
+    if (lastPmaxImageGenerationProcessedAdGroupId) {
       PropertiesService.getScriptProperties().deleteProperty(
-        'lastImageGenerationProcessedAdGroupId'
+        'lastPmaxImageGenerationProcessedAdGroupId'
       );
-      Logger.log('Cleared last processed Ad Group ID for a fresh manual run.');
+      Logger.log(
+        'Cleared last processed Asset Group ID for a fresh manual run.'
+      );
     }
-    const imageGenerationService = new ImageGenerationService();
-    imageGenerationService.run();
+    const pmaxImageGenerationService = new PmaxImageGenerationService();
+    pmaxImageGenerationService.run();
   }
 }

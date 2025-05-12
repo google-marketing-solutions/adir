@@ -81,6 +81,20 @@ class GoogleAdsApiMock implements GoogleAdsApiInterface {
     }));
   }
 
+  getAssetGroups() {
+    if (!this.data) {
+      return [];
+    }
+
+    return this.data.map(row => ({
+      customer: { id: GoogleAdsApiFactory.mockAccountId },
+      assetGroup: {
+        id: row[0],
+        name: row[0],
+      },
+    }));
+  }
+
   getKeywordsForAdGroup(id: string) {
     if (!this.data) {
       return [];
@@ -91,6 +105,22 @@ class GoogleAdsApiMock implements GoogleAdsApiInterface {
       .map(row => ({
         adGroupCriterion: {
           keyword: {
+            text: row[1],
+          },
+        },
+      }));
+  }
+
+  getSearchSignalKeywordsForAdGroup(id: string) {
+    if (!this.data) {
+      return [];
+    }
+
+    return this.data
+      .filter(row => row[0] === id)
+      .map(row => ({
+        assetGroupSignal: {
+          searchTheme: {
             text: row[1],
           },
         },

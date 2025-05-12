@@ -14,9 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <div
-  style="position: relative"
-  [style.width]="getImageSize()"
-  [style.height]="getImageSize()">
+  [ngClass]="getAspectClass()"
+  [style.width]="getImageWidth()"
+  [style.height]="getImageHeight()"
+>
   <img
     ngSrc="{{ image.url }}"
     alt="{{ image.filename }}"

@@ -18,7 +18,7 @@ import { GcsApi } from './gcs-api';
 import { GoogleAdsApi } from './google-ads-api';
 import { Triggerable } from './triggerable';
 
-export class ImageUploadService extends Triggerable {
+export class PmaxImageUploadService extends Triggerable {
   private readonly _gcsApi;
   private readonly _googleAdsApi;
 
@@ -34,38 +34,39 @@ export class ImageUploadService extends Triggerable {
 
   run() {
     this.deleteTrigger();
-    const adGroups = this._googleAdsApi.getAdGroups();
-    const lastImageUploadProcessedAdGroupId =
+    const assetGroups = this._googleAdsApi.getAssetGroups();
+    const lastImageUploadProcessedAssetGroupId =
       PropertiesService.getScriptProperties().getProperty(
-        'lastImageUploadProcessedAdGroupId'
+        'lastImageUploadProcessedAssetGroupId'
       );
     let startIndex = 0;
-    if (lastImageUploadProcessedAdGroupId) {
-      const lastIndex = adGroups.findIndex(
-        adGroup => adGroup.adGroup.id === lastImageUploadProcessedAdGroupId
+    if (lastImageUploadProcessedAssetGroupId) {
+      const lastIndex = assetGroups.findIndex(
+        assetGroup =>
+          assetGroup.assetGroup.id === lastImageUploadProcessedAssetGroupId
       );
       startIndex = Math.max(lastIndex, 0);
     }
-    for (let i = startIndex; i < adGroups.length; i++) {
-      const adGroup = adGroups[i];
+    for (let i = startIndex; i < assetGroups.length; i++) {
+      const assetGroup = assetGroups[i];
       if (this.shouldTerminate()) {
         Logger.log(
-          `The function is reaching the 6 minute timeout, and therfore will create a trigger to rerun from this ad group: ${adGroup.adGroup.name} and then self terminate.`
+          `The function is reaching the 6 minute timeout, and therefore will create a trigger to rerun from this asset group: ${assetGroup.assetGroup.name} and then self terminate.`
         );
         PropertiesService.getScriptProperties().setProperty(
-          'lastImageUploadProcessedAdGroupId',
-          adGroup.adGroup.id
+          'lastImageUploadProcessedAssetGroupId',
+          assetGroup.assetGroup.id
         );
         this.createTriggerForNextRun();
         return; // Exit the function to prevent further execution
       }
       Logger.log(
-        `Processing Ad Group ${adGroup.adGroup.name} (${adGroup.adGroup.id})...`
+        `Processing Asset Group ${assetGroup.assetGroup.name} (${assetGroup.assetGroup.id})...`
       );
       const imgFolder = CONFIG['Validated DIR'] || CONFIG['Generated DIR'];
       const images = this._gcsApi.getImages(
         CONFIG['Account ID'],
-        adGroup.adGroup.id,
+        assetGroup.assetGroup.id,
         [imgFolder]
       ) as GoogleCloud.Storage.Image[];
       // Upload new images
@@ -75,51 +76,53 @@ export class ImageUploadService extends Triggerable {
         this._googleAdsApi.uploadImageAssets(images);
         this._gcsApi.moveImages(
           CONFIG['Account ID'],
-          adGroup.adGroup.id,
+          assetGroup.assetGroup.id,
           images,
           imgFolder,
           CONFIG['Uploaded DIR']
         );
         PropertiesService.getScriptProperties().setProperty(
-          'lastImageUploadProcessedAdGroupId',
-          adGroup.adGroup.id
+          'lastImageUploadProcessedAssetGroupId',
+          assetGroup.assetGroup.id
         );
       }
       // TODO: Remove assets from the Asset Library
     }
     Logger.log('Finished uploading images.');
-    // If script completes without timing out, clear the stored ad group ID and any triggers
+    // If script completes without timing out, clear the stored asset group ID and any triggers
     PropertiesService.getScriptProperties().deleteProperty(
-      'lastImageUploadProcessedAdGroupId'
+      'lastImageUploadProcessedAssetGroupId'
     );
     this.deleteTrigger();
   }
 
   static triggeredRun() {
     PropertiesService.getScriptProperties().setProperty(
-      `${ImageUploadService.name}StartTime`,
+      `${PmaxImageUploadService.name}StartTime`,
       new Date().getTime().toString()
     );
-    const imageUploadService = new ImageUploadService();
-    imageUploadService.run();
+    const pmaximageUploadService = new PmaxImageUploadService();
+    pmaximageUploadService.run();
   }
 
   static manuallyRun() {
     PropertiesService.getScriptProperties().setProperty(
-      `${ImageUploadService.name}StartTime`,
+      `${PmaxImageUploadService.name}StartTime`,
       new Date().getTime().toString()
     );
-    const lastImageUploadProcessedAdGroupId =
+    const lastImageUploadProcessedAssetGroupId =
       PropertiesService.getScriptProperties().getProperty(
-        'lastImageUploadProcessedAdGroupId'
+        'lastImageUploadProcessedAssetGroupId'
       );
-    if (lastImageUploadProcessedAdGroupId) {
+    if (lastImageUploadProcessedAssetGroupId) {
       PropertiesService.getScriptProperties().deleteProperty(
-        'lastImageUploadProcessedAdGroupId'
+        'lastImageUploadProcessedAssetGroupId'
       );
-      Logger.log('Cleared last processed Ad Group ID for a fresh manual run.');
+      Logger.log(
+        'Cleared last processed Asset Group ID for a fresh manual run.'
+      );
     }
-    const imageUploadService = new ImageUploadService();
-    imageUploadService.run();
+    const pmaximageUploadService = new PmaxImageUploadService();
+    pmaximageUploadService.run();
   }
 }
