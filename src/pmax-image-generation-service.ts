@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { ADIOS_MODES, CONFIG } from './config';
+import { ADIR_MODES, CONFIG } from './config';
 import { GcsApi } from './gcs-api';
 import { GoogleAdsApiFactory } from './google-ads-api-mock';
 import { Triggerable } from './triggerable';
@@ -111,7 +111,7 @@ export class PmaxImageGenerationService extends Triggerable {
         let imgPrompt = ''; // Prompt that will be sent to Vision API (Imagen)
 
         switch (CONFIG['Adir Mode']) {
-          case ADIOS_MODES.AD_GROUP: {
+          case ADIR_MODES.AD_GROUP: {
             const regex = new RegExp(CONFIG['Ad Group Name Regex']);
             const matchGroups = this.getRegexMatchGroups(
               assetGroup.assetGroup.name,
@@ -128,7 +128,7 @@ export class PmaxImageGenerationService extends Triggerable {
             }
             break;
           }
-          case ADIOS_MODES.KEYWORDS: {
+          case ADIR_MODES.KEYWORDS: {
             const keywordInfo =
               this._googleAdsApi.getSearchSignalKeywordsForAdGroup(
                 assetGroup.assetGroup.id
@@ -159,7 +159,7 @@ export class PmaxImageGenerationService extends Triggerable {
         }
 
         // Keywords mode -> generate Imagen Prompt through Gemini API
-        if (CONFIG['Adir Mode'] === ADIOS_MODES.AD_GROUP) {
+        if (CONFIG['Adir Mode'] === ADIR_MODES.AD_GROUP) {
           imgPrompt = gAdsData;
         } else {
           // Call Gemini to generate the Img Prompt

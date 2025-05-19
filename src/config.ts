@@ -85,11 +85,18 @@ const DEFAULT_CONFIG = {
   'Image Generation Model': undefined,
 };
 
-export const ADIOS_MODES = {
+/**
+ * Defines the available modes for Adir image generation.
+ * These modes determine the Google Ads context that will be used for building image generation prompts.
+ */
+export const ADIR_MODES = {
   AD_GROUP: 'Asset Group Name',
   KEYWORDS: 'Search Signal Keywords ',
 };
-export const ADIOS_MODE_CELL = 'B6';
+/**
+ * Specifies the spreadsheet cell (e.g., 'B6') that stores the current Adir mode.
+ */
+export const ADIR_MODE_CELL = 'B6';
 
 export const CONFIG: Config =
   sheet
