@@ -22,11 +22,15 @@ function onOpen() {
     .addSubMenu(
       ui
         .createMenu('▶️ Run')
+        .addItem('Image generation', 'PmaxImageGenerationService.manuallyRun')
         .addItem(
-          'Pmax Image generation',
-          'PmaxImageGenerationService.manuallyRun'
+          'GAds sourced Image upload',
+          'PmaxImageUploadService.manuallyRun'
         )
-        .addItem('Pmax Image upload', 'PmaxImageUploadService.manuallyRun')
+        .addItem(
+          'Manually sourced Image upload',
+          'UploadToAssetLibraryFromMockService.manuallyRun'
+        )
         .addItem('Policy validation', 'runGeminiValidationService')
     )
     .addSubMenu(
@@ -48,14 +52,19 @@ function onEdit(e: GoogleAppsScript.Events.SheetsOnEdit) {
 function toggleRows(adirMode: string) {
   switch (adirMode) {
     case ADIR_MODES.AD_GROUP:
-      // Show rows 7,8. Hide rows 9,10,11
-      sheet.showRows(7, 2);
-      sheet.hideRows(9, 3);
+      // Show rows 11, 12. Hide rows 13-17
+      sheet.showRows(11, 2);
+      sheet.hideRows(13, 5);
       break;
     case ADIR_MODES.KEYWORDS:
       // Hide rows 7,8. Show rows 9,10,11
-      sheet.showRows(9, 3);
-      sheet.hideRows(7, 2);
+      sheet.showRows(13, 2);
+      sheet.hideRows(11, 2);
+      sheet.hideRows(15, 2);
+      break;
+    case ADIR_MODES.MANUAL:
+      sheet.showRows(15, 2);
+      sheet.hideRows(11, 4);
       break;
     default:
       console.error(`Unknown mode: ${adirMode}`);
@@ -65,6 +74,7 @@ function toggleRows(adirMode: string) {
 const allowedFunctions = [
   'PmaxImageGenerationService.manuallyRun',
   'PmaxImageUploadService.manuallyRun',
+  'UploadToAssetLibraryFromMockService.manuallyRun',
 ];
 class AdiosTriggers {
   /**

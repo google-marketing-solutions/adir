@@ -20,10 +20,12 @@ import { menu } from './menu';
 import { PmaxImageGenerationService } from './pmax-image-generation-service';
 import { PmaxImageUploadService } from './pmax-image-upload-service';
 import { uiHelper } from './ui-helper';
+import { UploadToAssetLibraryFromMockService } from './upload_to_asset_library_from_mock';
 
 menu;
 PmaxImageGenerationService;
 PmaxImageUploadService;
+UploadToAssetLibraryFromMockService;
 GeminiValidationService;
 FRONTEND_HELPER;
 uiHelper;

@@ -21,15 +21,15 @@ export class GoogleAdsApiFactory {
 
   static checkSheet() {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(
-      CONFIG['Google Ads Mock Sheet']
+      CONFIG['Manual Mode Sheet']
     );
     if (!sheet) {
-      throw `Mock sheet for Google Ads '${CONFIG['Google Ads Mock Sheet']}' does not exist.`;
+      throw `Mock sheet for Google Ads '${CONFIG['Manual Mode Sheet']}' does not exist.`;
     }
   }
 
   static createObject() {
-    if (!CONFIG['Google Ads Mock Sheet']) {
+    if (!CONFIG['Manual Mode Sheet']) {
       return new GoogleAdsApi(
         CONFIG['Ads API Key'],
         CONFIG['Manager ID'],
@@ -40,13 +40,13 @@ export class GoogleAdsApiFactory {
     GoogleAdsApiFactory.checkSheet();
 
     Logger.log(
-      `Mocking Google Ads API from the sheet '${CONFIG['Google Ads Mock Sheet']}'`
+      `Mocking Google Ads API from the sheet '${CONFIG['Manual Mode Sheet']}'`
     );
-    return new GoogleAdsApiMock(CONFIG['Google Ads Mock Sheet']);
+    return new GoogleAdsApiMock(CONFIG['Manual Mode Sheet']);
   }
 
   static getAdsAccountId() {
-    if (!CONFIG['Google Ads Mock Sheet']) {
+    if (!CONFIG['Manual Mode Sheet']) {
       return CONFIG['Account ID'];
     }
 

@@ -128,7 +128,8 @@ export class PmaxImageGenerationService extends Triggerable {
             }
             break;
           }
-          case ADIR_MODES.KEYWORDS: {
+          case ADIR_MODES.KEYWORDS:
+          case ADIR_MODES.MANUAL: {
             const keywordInfo =
               this._googleAdsApi.getSearchSignalKeywordsForAdGroup(
                 assetGroup.assetGroup.id
@@ -144,12 +145,14 @@ export class PmaxImageGenerationService extends Triggerable {
 
             if (!keywordList.length) {
               Logger.log(
-                `No positive keywords: skipping Asset Group ${assetGroup.assetGroup.id}`
+                `No positive keywords or creative summary: skipping Asset Group ${assetGroup.assetGroup.id}`
               );
               continue assetGroupsLoop;
             }
 
-            Logger.log('Positive keyword list:' + keywordList.join());
+            Logger.log(
+              'Positive keyword list or creative summary:' + keywordList.join()
+            );
             gAdsData = keywordList.join();
             break;
           }
@@ -161,10 +164,20 @@ export class PmaxImageGenerationService extends Triggerable {
         // Keywords mode -> generate Imagen Prompt through Gemini API
         if (CONFIG['Adir Mode'] === ADIR_MODES.AD_GROUP) {
           imgPrompt = gAdsData;
-        } else {
+        } else if (
+          CONFIG['Adir Mode'] === ADIR_MODES.KEYWORDS ||
+          CONFIG['Adir Mode'] === ADIR_MODES.MANUAL
+        ) {
           // Call Gemini to generate the Img Prompt
-          const promptContext = CONFIG['Text Prompt Context'];
-          let textPrompt = `${promptContext} ${CONFIG['Text Prompt']} ${gAdsData}`;
+          const promptContext =
+            CONFIG['Adir Mode'] === ADIR_MODES.KEYWORDS
+              ? CONFIG['Keyword Mode Text Prompt Context']
+              : CONFIG['Manual Mode Text Prompt Context'];
+          const baseTextPrompt =
+            CONFIG['Adir Mode'] === ADIR_MODES.KEYWORDS
+              ? CONFIG['Keyword Mode Text Prompt']
+              : CONFIG['Manual Mode Text Prompt'];
+          let textPrompt = `${promptContext} ${baseTextPrompt} ${gAdsData}`;
 
           if (CONFIG['Text Prompt Suffix']) {
             textPrompt += ' ' + CONFIG['Text Prompt Suffix'];
@@ -202,7 +215,7 @@ export class PmaxImageGenerationService extends Triggerable {
         let images: string[] = [];
         try {
           for (const aspectRatio of this._aspectRatios) {
-            // One generation in per each aspect ratio.
+            // One generation per each aspect ratio.
             let batchSize = 0;
             let currentNeeded = 0;
             switch (aspectRatio.type) {

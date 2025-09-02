@@ -37,11 +37,13 @@ interface Config {
   'Ad Group Name Regex': string;
   'Image Validation Prompt': string;
   'Adir Mode': string;
-  'Text Prompt Context': string;
-  'Text Prompt': string;
+  'Keyword Mode Text Prompt Context': string;
+  'Keyword Mode Text Prompt': string;
+  'Manual Mode Text Prompt Context': string;
+  'Manual Mode Text Prompt': string;
   'Text Prompt Suffix': string;
   'Prompt translations sheet': string;
-  'Google Ads Mock Sheet': string;
+  'Manual Mode Sheet': string;
   'GCP Region'?: string;
   'VertexAI Api Domain Part'?: string;
   'Gemini Model'?: string;
@@ -74,11 +76,13 @@ const DEFAULT_CONFIG = {
   'Image Validation Prompt': '',
   'Ad Group Name Regex': '^(?<name>.*)$', // capture everything by default
   'Adir Mode': '',
-  'Text Prompt Context': '',
-  'Text Prompt': '',
+  'Keyword Mode Text Prompt Context': '',
+  'Keyword Mode Text Prompt': '',
+  'Manual Mode Text Prompt Context': '',
+  'Manual Mode Text Prompt': '',
   'Text Prompt Suffix': '',
   'Prompt translations sheet': '',
-  'Google Ads Mock Sheet': '',
+  'Manual Mode Sheet': '',
   'GCP Region': undefined,
   'VertexAI Api Domain Part': undefined,
   'Gemini Model': undefined,
@@ -92,11 +96,12 @@ const DEFAULT_CONFIG = {
 export const ADIR_MODES = {
   AD_GROUP: 'Asset Group Name',
   KEYWORDS: 'Search Signal Keywords ',
+  MANUAL: 'Creative Concept Manual Mode',
 };
 /**
  * Specifies the spreadsheet cell (e.g., 'B6') that stores the current Adir mode.
  */
-export const ADIR_MODE_CELL = 'B6';
+export const ADIR_MODE_CELL = 'B10';
 
 export const CONFIG: Config =
   sheet
