@@ -10,6 +10,7 @@ import {
 } from "@/services/vertexAiService";
 import { useConfigStore } from "@/stores/config";
 import { ref } from "vue";
+const errorMessage = ref("");
 
 const emit = defineEmits(["generation-complete", "update:loading"]);
 const KEYWORD_GENERATION_TEXT_PROMPT =
@@ -36,8 +37,9 @@ const handleGenerate = async () => {
   emit("update:loading", true);
   const generatedImages = [];
   try {
+    errorMessage.value = "";
     console.log("Starting image generation...");
-    const campaignIds = props.selectedCampaigns.map((c) => c.id);
+    const campaignIds = props.selectedCampaigns.map((c) => c.campaign.id);
     const assetGroups = await fetchAssetGroupsByCampaignIds(campaignIds);
     console.log("Fetched asset groups:", assetGroups);
 
@@ -60,6 +62,7 @@ const handleGenerate = async () => {
             ),
           ];
           if (!keywordList.length) {
+            errorMessage.value = `No search signal keywords for Asset Group ${group.assetGroup.name}, skipping`;
             console.log(
               `No search signal keywords for Asset Group ${group.assetGroup.id}, skipping`,
             );
@@ -107,6 +110,7 @@ const handleGenerate = async () => {
     }
     emit("generation-complete", generatedImages);
   } catch (error) {
+    errorMessage.value = "An error occurred during image generation. Please try again.";
     console.error("Error in Search Signal Keywords generation:", error);
   } finally {
     isLoading.value = false;
@@ -148,6 +152,9 @@ const handleGenerate = async () => {
       :disabled="isLoading"
     >
       <span v-if="isLoading" class="loading loading-spinner"></span>
+    <div v-if="errorMessage" class="text-yellow-500 mt-4">
+      {{ errorMessage }}
+    </div>
       {{ isLoading ? "Generating..." : "Generate Images" }}
     </button>
   </div>

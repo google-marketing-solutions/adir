@@ -51,7 +51,7 @@ export async function uploadBase64Image(fileName: string, base64Data: string) {
     params
   );
 
-  return result.mediaLink;
+  return `gs://${result.bucket}/${result.name}`;
 }
 
 /**
@@ -166,4 +166,31 @@ export async function removeImages(gcsUris: string[]): Promise<void> {
   });
 
   await Promise.all(deletePromises);
+}
+
+/**
+ * Moves images from 'GENERATED' to 'UPLOADED' folder in GCS.
+ * @param {string[]} imageNames - An array of image names to move.
+ * @return {Promise<void>}
+ */
+export async function moveImages(imageNames: string[]): Promise<void> {
+  const gcsApiClient = createGcsApiClient();
+  const configStore = useConfigStore();
+  const { gcsBucketName } = configStore;
+  const bucketName = gcsBucketName.startsWith("gs://")
+    ? gcsBucketName.substring(5)
+    : gcsBucketName;
+
+  const movePromises = imageNames.map(async (fullName) => {
+    const sourceObject = encodeURIComponent(fullName);
+    const destinationObject = encodeURIComponent(
+      fullName.replace("/GENERATED/", "/UPLOADED/")
+    );
+    const path = `/${bucketName}/o/${sourceObject}/rewriteTo/b/${bucketName}/o/${destinationObject}`;
+    await gcsApiClient.post(path, {});
+    const deletePath = `/${bucketName}/o/${sourceObject}`;
+    await gcsApiClient.delete(deletePath);
+  });
+
+  await Promise.all(movePromises);
 }

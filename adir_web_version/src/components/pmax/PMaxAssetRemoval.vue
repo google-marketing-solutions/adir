@@ -1,20 +1,17 @@
 <script setup>
 import ProxiedImage from "@/components/ProxiedImage.vue";
+import ScrollToTopButton from "@/components/ScrollToTopButton.vue";
 import {
+  fetchDemandGenAssets,
   fetchPMaxAssets,
   removeAssetGroupAssets,
 } from "@/services/googleAdsService.ts";
 import { useAssetStore } from "@/stores/assetStore";
-import { computed, defineEmits, defineProps, onMounted, ref } from "vue";
-
-const props = defineProps({
-  selectedCampaigns: {
-    type: Array,
-    required: true,
-  },
-});
+import { useCampaignStore } from "@/stores/campaignStore";
+import { computed, defineEmits, onMounted, ref } from "vue";
 
 const assetStore = useAssetStore();
+const campaignStore = useCampaignStore();
 const removalStep = ref(1);
 const emit = defineEmits(["change-subpage"]);
 const showRemovalNotice = ref(false);
@@ -30,12 +27,38 @@ const activeMetrics = computed(() => {
   return new Set(conditions.value.map((c) => c.metric));
 });
 
-const getAssetFormat = (resourceName) => {
-  let format = resourceName.split("~").pop();
-  if (format === "MARKETING_IMAGE") {
-    format = "LANDSCAPE_MARKETING_IMAGE";
+const getAssetFormat = (asset) => {
+  if (asset.type === "pmax") {
+    let format = asset.assetGroupAsset.resourceName.split("~").pop();
+    if (format === "MARKETING_IMAGE") {
+      format = "LANDSCAPE_MARKETING_IMAGE";
+    }
+    return format;
+  } else {
+    const { width, height } = asset.asset.imageAsset.fullSize;
+    if (width === height) {
+      return "SQUARE_MARKETING_IMAGE";
+    } else if (width > height) {
+      return "LANDSCAPE_MARKETING_IMAGE";
+    } else {
+      return "PORTRAIT_MARKETING_IMAGE";
+    }
   }
-  return format;
+};
+
+const getAssetResourceName = (asset) => {
+  return asset.type === "pmax"
+    ? asset.assetGroupAsset.resourceName
+    : asset.asset.resourceName;
+};
+
+const getAssetUniqueId = (asset) => {
+  if (asset.type === "demandgen") {
+    // For Demand Gen, the combination of ad and asset is the one used in the API
+    return `${asset.adGroupAd.resourceName}~${asset.asset.resourceName}`;
+  }
+  // For PMax, the asset group asset resource name is enough
+  return asset.assetGroupAsset.resourceName;
 };
 
 const assetFormats = [
@@ -60,54 +83,170 @@ function updateVisibleFormats(format, isChecked) {
 const filteredAssets = computed(() => {
   filterTrigger.value; // Depend on the trigger
   return assetStore.assets.filter((asset) => {
-    const format = getAssetFormat(asset.assetGroupAsset.resourceName);
+    const format = getAssetFormat(asset);
     return visibleFormats.value.has(format);
   });
 });
 
 const groupedAssets = computed(() => {
-  const campaigns = {};
-  filteredAssets.value.forEach((asset) => {
-    const campaignName = asset.campaign.name;
-    const assetGroupName = asset.assetGroup.name;
+  // Use the new getter from the asset store
+  const allGroupedAssets = assetStore.groupedAssets;
 
-    if (!campaigns[campaignName]) {
-      campaigns[campaignName] = {
-        name: campaignName,
-        assetGroups: {},
-      };
-    }
+  // We still need to filter based on the visible formats selected in the UI
+  // The getter in the store operates on all assets, so we filter here.
+  const filteredCampaigns = allGroupedAssets
+    .map((campaign) => {
+      const filteredCampaign = { ...campaign, assetGroups: {}, adGroups: {} };
 
-    if (!campaigns[campaignName].assetGroups[assetGroupName]) {
-      campaigns[campaignName].assetGroups[assetGroupName] = {
-        name: assetGroupName,
-        assets: [],
-      };
-    }
+      // Filter PMax asset groups
+      Object.values(campaign.assetGroups).forEach((assetGroup) => {
+        const filteredAssetsInGroup = assetGroup.assets.filter((asset) =>
+          visibleFormats.value.has(getAssetFormat(asset)),
+        );
+        if (filteredAssetsInGroup.length > 0) {
+          filteredCampaign.assetGroups[assetGroup.name] = {
+            ...assetGroup,
+            assets: filteredAssetsInGroup,
+          };
+        }
+      });
 
-    campaigns[campaignName].assetGroups[assetGroupName].assets.push(asset);
-  });
-  return Object.values(campaigns);
+      // Filter Demand Gen ad groups and their ads
+      Object.values(campaign.adGroups).forEach((adGroup) => {
+        const filteredAdGroup = { ...adGroup, ads: {} };
+        let hasVisibleAssetsInAdGroup = false;
+
+        Object.values(adGroup.ads).forEach((ad) => {
+          const filteredAssetsInAd = ad.assets.filter((asset) =>
+            visibleFormats.value.has(getAssetFormat(asset)),
+          );
+          if (filteredAssetsInAd.length > 0) {
+            filteredAdGroup.ads[ad.name] = {
+              ...ad,
+              assets: filteredAssetsInAd,
+            };
+            hasVisibleAssetsInAdGroup = true;
+          }
+        });
+
+        if (hasVisibleAssetsInAdGroup) {
+          filteredCampaign.adGroups[adGroup.name] = filteredAdGroup;
+        }
+      });
+
+      // Only include the campaign if it has any visible assets left after filtering
+      if (
+        Object.keys(filteredCampaign.assetGroups).length > 0 ||
+        Object.keys(filteredCampaign.adGroups).length > 0
+      ) {
+        return filteredCampaign;
+      }
+      return null;
+    })
+    .filter(Boolean); // Remove nulls
+
+  return filteredCampaigns;
 });
 
-function formatCurrency(micros) {
+// Pass the currency code dynamically (e.g., 'ILS', 'EUR', 'USD')
+const formatAdsCurrency = (micros, currencyCode = "USD") => {
+  // 1. Safety Check
   if (micros === undefined || micros === null) {
-    return "0.00";
+    return "N/A";
   }
-  return (micros / 1000000).toFixed(2);
-}
+
+  // 2. The Google Ads "Micros" Math
+  const actualAmount = micros / 1000000;
+
+  // 3. We use 'en-US' for the locale so numbers look like "1,000.00" (comma separator)
+  // But we pass the specific currencyCode to get the right symbol (€, ₪, ¥)
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currencyCode,
+  }).format(actualAmount);
+};
+
+const safeFormat = (value, formatterFn) => {
+  const num = Number(value);
+  if (isNaN(num)) {
+    return "N/A";
+  }
+  return formatterFn(num);
+};
+
+// Specific Formatters (using Intl for precision)
+const formatters = {
+  // For Conversions, Clicks, Impressions
+  number: (val) =>
+    new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2, // Conversions can be fractional in Google Ads
+    }).format(val),
+
+  // For CTR, Conv. Rate
+  percent: (val) =>
+    new Intl.NumberFormat("en-US", {
+      style: "percent",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(val),
+};
+
+// 3. Expose clean functions to the template
+const formatNumber = (val) => safeFormat(val, formatters.number);
+const formatPercent = (val) => safeFormat(val, formatters.percent);
 
 async function handleCheckAssets() {
   isLoading.value = true;
   try {
-    const campaignIds = props.selectedCampaigns.map((c) => c.id);
-    const results = await fetchPMaxAssets(
-      conditions.value,
-      dateRange.value,
-      campaignIds,
+    if (
+      !campaignStore.selectedCampaigns ||
+      campaignStore.selectedCampaigns.length === 0
+    ) {
+      console.error("No campaigns selected or prop not ready.");
+      isLoading.value = false;
+      return;
+    }
+    const pmaxCampaigns = campaignStore.selectedCampaigns.filter(
+      (c) => c.type === "pmax",
     );
-    assetStore.setAssets(results || []);
+    const demandGenCampaigns = campaignStore.selectedCampaigns.filter(
+      (c) => c.type === "demandgen",
+    );
+
+    const pmaxCampaignIds = pmaxCampaigns.map((c) => c.campaign.id);
+    const demandGenCampaignIds = demandGenCampaigns.map((c) => c.campaign.id);
+
+    let pmaxResults = [];
+    if (pmaxCampaignIds.length > 0) {
+      pmaxResults = await fetchPMaxAssets(
+        conditions.value,
+        dateRange.value,
+        pmaxCampaignIds,
+      );
+      pmaxResults = pmaxResults.map((asset) => ({ ...asset, type: "pmax" }));
+    }
+
+    let demandGenResults = [];
+    if (demandGenCampaignIds.length > 0) {
+      demandGenResults = await fetchDemandGenAssets(
+        conditions.value,
+        dateRange.value,
+        demandGenCampaignIds,
+      );
+      demandGenResults = demandGenResults.map((asset) => ({
+        ...asset,
+        type: "demandgen",
+      }));
+    }
+
+    const allAssets = [...pmaxResults, ...demandGenResults];
+    console.log("Fetched assets:", allAssets);
+    assetStore.setAssets(allAssets || []);
     removalStep.value = 2;
+  } catch (error) {
+    console.error("Failed to fetch assets:", error);
+    // Optionally, show an error message to the user
   } finally {
     isLoading.value = false;
   }
@@ -142,22 +281,28 @@ onMounted(() => {
   }
 });
 
-function scrollToTop() {
-  const mainContent = document.querySelector(".main-content");
-  if (mainContent) {
-    mainContent.scrollTo({ top: 0, behavior: "smooth" });
-  }
-}
-
 function areAllInGroupSelected(groupAssets) {
-  return groupAssets.every((asset) =>
-    assetStore.selectedAssets.has(asset.assetGroupAsset.resourceName),
+  // A group is "all selected" if all its PMax assets are selected.
+  // Demand Gen assets are ignored as they cannot be selected.
+  const pmaxAssets = groupAssets.filter((asset) => asset.type === "pmax");
+  if (pmaxAssets.length === 0) {
+    return false; // Cannot be "all selected" if there are no selectable assets.
+  }
+  return pmaxAssets.every((asset) =>
+    assetStore.selectedAssets.has(getAssetUniqueId(asset)),
   );
 }
 
 function areAllInCampaignSelected(campaign) {
-  return Object.values(campaign.assetGroups).every((group) =>
-    areAllInGroupSelected(group.assets),
+  // A campaign is "all selected" if all of its PMax assets are selected.
+  const allPMaxAssets = Object.values(campaign.assetGroups).flatMap(
+    (group) => group.assets,
+  );
+  if (allPMaxAssets.length === 0) {
+    return false; // Nothing to select
+  }
+  return allPMaxAssets.every((asset) =>
+    assetStore.selectedAssets.has(getAssetUniqueId(asset)),
   );
 }
 
@@ -168,15 +313,25 @@ async function handleRemoveAssets() {
   }
   isRemoving.value = true;
   try {
-    const selectedAssets = Array.from(assetStore.selectedAssets);
-    await removeAssetGroupAssets(selectedAssets);
-    assetStore.markAsRemoved(selectedAssets);
-
-    const removedAssetsDetails = selectedAssets
-      .map((resourceName) => {
-        return assetStore.assets.find(
-          (a) => a.assetGroupAsset.resourceName === resourceName,
+    // We only need to consider PMax assets, as Demand Gen assets cannot be removed.
+    const selectedPMaxAssets = Array.from(assetStore.selectedAssets).filter(
+      (uniqueId) => {
+        const asset = assetStore.assets.find(
+          (a) => getAssetUniqueId(a) === uniqueId,
         );
+        return asset && asset.type === "pmax";
+      },
+    );
+
+    // Handle PMax asset removal
+    if (selectedPMaxAssets.length > 0) {
+      await removeAssetGroupAssets(selectedPMaxAssets);
+      assetStore.markAsRemoved(selectedPMaxAssets);
+    }
+
+    const removedAssetsDetails = selectedPMaxAssets
+      .map((uniqueId) => {
+        return assetStore.assets.find((a) => getAssetUniqueId(a) === uniqueId);
       })
       .filter(Boolean);
 
@@ -184,13 +339,19 @@ async function handleRemoveAssets() {
       ...new Set(removedAssetsDetails.map((a) => a.campaign.name)),
     ];
     const assetGroupNames = [
-      ...new Set(removedAssetsDetails.map((a) => a.assetGroup.name)),
+      ...new Set(
+        removedAssetsDetails.map((a) =>
+          a.type === "pmax" ? a.assetGroup.name : a.adGroup.name,
+        ),
+      ),
     ];
 
-    successMessage.value = `${selectedAssets.length} assets removed from ${assetGroupNames.length} asset groups in ${campaignNames.length} campaigns.`;
+    successMessage.value = `${selectedPMaxAssets.length} assets removed from ${assetGroupNames.length} asset groups in ${campaignNames.length} campaigns.`;
     showSuccessMessage.value = true;
-
     assetStore.clearSelections();
+  } catch (error) {
+    console.error("Failed to remove assets:", error);
+    alert("Failed to remove some assets. Check console for details.");
   } finally {
     isRemoving.value = false;
   }
@@ -200,12 +361,24 @@ async function handleRemoveAssets() {
 <template>
   <div>
     <div v-if="removalStep === 1">
-      <h2 class="text-2xl font-bold mb-4">Pull Low-Performing PMax Assets</h2>
+      <h2 class="text-2xl font-bold mb-4">
+        Pull Low-Performing PMax & Demand Gen Assets
+      </h2>
       <div class="bg-gray-800 p-8 rounded-lg">
         <p class="text-gray-400 mb-6">
           Define the performance threshold to identify assets for removal. Add
           multiple conditions using "AND" or "OR".
         </p>
+        <div
+          class="bg-yellow-900 border-l-4 border-yellow-500 text-yellow-100 p-4 mb-6"
+          role="alert"
+        >
+          <p class="font-bold">API Limitation Notice</p>
+          <p>
+            Note: Demand Gen ad creatives cannot be modified or removed
+            programmatically due to a Google Ads API limitation.
+          </p>
+        </div>
         <div class="space-y-4">
           <div v-for="(condition, index) in conditions" :key="condition.id">
             <div class="condition-row flex items-center gap-2 mb-2">
@@ -305,6 +478,16 @@ async function handleRemoveAssets() {
           removed from their respective campaigns.
         </p>
         <div
+          class="bg-yellow-900 border-l-4 border-yellow-500 text-yellow-100 p-4 mb-6"
+          role="alert"
+        >
+          <p class="font-bold">API Limitation Notice</p>
+          <p>
+            Note: Demand Gen ad creatives cannot be modified or removed
+            programmatically due to a Google Ads API limitation.
+          </p>
+        </div>
+        <div
           class="mt-8 pt-6 border-t border-gray-700 flex justify-end gap-4 mb-4"
         >
           <div
@@ -359,48 +542,44 @@ async function handleRemoveAssets() {
           >
             <h3 class="text-xl font-semibold text-white mb-4">
               <input
-                type="checkbox"
-                :checked="areAllInCampaignSelected(campaign)"
-                @change="
-                  assetStore.selectAssets({
-                    assetResourceNames: Object.values(campaign.assetGroups)
-                      .flatMap((g) => g.assets)
-                      .map((a) => a.assetGroupAsset.resourceName),
-                    shouldSelect: $event.target.checked,
-                  })
-                "
-                class="h-5 w-5 rounded mr-2"
-              />
+                  type="checkbox"
+                  :checked="areAllInCampaignSelected(campaign)"
+                  @change="assetStore.selectAssets({ assetResourceNames: Object.values(campaign.assetGroups).flatMap(group => group.assets).map(a => getAssetUniqueId(a)), shouldSelect: $event.target.checked })"
+                  class="h-5 w-5 rounded mr-2"
+                  :disabled="Object.values(campaign.assetGroups).length === 0"
+                />
               {{ campaign.name }}
             </h3>
             <div class="space-y-6">
+              <!-- PMax Asset Groups -->
               <div
-                v-for="group in Object.values(campaign.assetGroups)"
-                :key="group.name"
+                v-for="assetGroup in campaign.assetGroups"
+                :key="assetGroup.name"
                 class="bg-gray-600 rounded-lg p-4 mb-4"
               >
                 <h4 class="text-lg font-medium text-cyan-400 mb-3">
                   <input
                     type="checkbox"
-                    :checked="areAllInGroupSelected(group.assets)"
+                    :checked="areAllInGroupSelected(assetGroup.assets)"
                     @change="
                       assetStore.selectAssets({
-                        assetResourceNames: group.assets.map(
-                          (a) => a.assetGroupAsset.resourceName,
+                        assetResourceNames: assetGroup.assets.map((a) =>
+                          getAssetUniqueId(a),
                         ),
                         shouldSelect: $event.target.checked,
                       })
                     "
                     class="h-5 w-5 rounded mr-2"
                   />
-                  {{ group.name }}
+                  {{ assetGroup.name }} (PMax)
                 </h4>
+                <!-- Asset Grid -->
                 <div
                   class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"
                 >
                   <div
-                    v-for="asset in group.assets"
-                    :key="asset.assetGroupAsset.resourceName"
+                    v-for="asset in assetGroup.assets"
+                    :key="getAssetUniqueId(asset)"
                     class="relative"
                   >
                     <ProxiedImage
@@ -409,7 +588,7 @@ async function handleRemoveAssets() {
                       class="rounded-lg"
                       :class="{
                         'filter grayscale': assetStore.isAssetRemoved(
-                          asset.assetGroupAsset.resourceName,
+                          getAssetUniqueId(asset),
                         ),
                       }"
                     />
@@ -417,85 +596,185 @@ async function handleRemoveAssets() {
                       {{ asset.asset.name }}
                     </div>
                     <div
-                      v-if="
-                        assetStore.isAssetRemoved(
-                          asset.assetGroupAsset.resourceName,
-                        )
-                      "
+                      v-if="assetStore.isAssetRemoved(getAssetUniqueId(asset))"
                       class="absolute inset-0 flex items-center justify-center"
                     >
-                      <svg
-                        class="w-16 h-16 text-red-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
+                      <span
+                        class="material-symbols-outlined text-red-500 text-6xl select-none"
                       >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M6 18L18 6M6 6l12 12"
-                        ></path>
-                      </svg>
+                        cancel
+                      </span>
                     </div>
-                    <input
-                      type="checkbox"
-                      :checked="
-                        assetStore.isAssetSelected(
-                          asset.assetGroupAsset.resourceName,
-                        )
-                      "
-                      @change="
-                        assetStore.toggleAssetSelection(
-                          asset.assetGroupAsset.resourceName,
-                        )
-                      "
-                      class="absolute top-2 left-2 h-5 w-5 rounded"
-                    />
+                   <input
+                     v-if="asset.type === 'pmax'"
+                     type="checkbox"
+                     :checked="
+                       assetStore.isAssetSelected(getAssetUniqueId(asset))
+                     "
+                     @change="
+                       assetStore.toggleAssetSelection(getAssetUniqueId(asset))
+                     "
+                     class="absolute top-2 left-2 h-5 w-5 rounded"
+                   />
                     <div class="metrics-container text-xs mt-1 space-y-1">
                       <div v-if="activeMetrics.has('CTR')">
-                        CTR:
-                        {{
-                          typeof asset.metrics.ctr === "number"
-                            ? asset.metrics.ctr.toFixed(4)
-                            : "N/A"
-                        }}
+                        CTR: {{ formatPercent(asset.metrics.ctr) }}
                       </div>
                       <div v-if="activeMetrics.has('Clicks')">
-                        Clicks: {{ asset.metrics.clicks }}
+                        Clicks: {{ formatNumber(asset.metrics.clicks) }}
                       </div>
                       <div v-if="activeMetrics.has('Impressions')">
-                        Impressions: {{ asset.metrics.impressions }}
+                        Impressions: {{ formatNumber(asset.metrics.impressions) }}
                       </div>
                       <div v-if="activeMetrics.has('Cost')">
-                        Cost: ${{ formatCurrency(asset.metrics.costMicros) }}
+                        Cost:
+                        {{
+                          formatAdsCurrency(
+                            asset.metrics.costMicros,
+                            campaign.currencyCode,
+                          )
+                        }}
                       </div>
                       <div v-if="activeMetrics.has('Conversions')">
                         Conversions:
-                        {{
-                          typeof asset.metrics.conversions === "number"
-                            ? asset.metrics.conversions.toFixed(2)
-                            : "N/A"
-                        }}
+                        {{ formatNumber(asset.metrics.conversions) }}
                       </div>
                       <div v-if="activeMetrics.has('CPA')">
-                        CPA: ${{
-                          formatCurrency(asset.metrics.costPerConversion)
+                        CPA:
+                        {{
+                          formatAdsCurrency(
+                            asset.metrics.costPerConversion,
+                            campaign.currencyCode,
+                          )
                         }}
                       </div>
                       <div v-if="activeMetrics.has('ConvValuePerCost')">
                         Val / Cost:
-                        {{
-                          typeof asset.metrics.valuePerCost === "number"
-                            ? asset.metrics.valuePerCost.toFixed(2)
-                            : "N/A"
-                        }}
+                        {{ formatNumber(asset.metrics.valuePerCost) }}
                       </div>
                       <div v-if="activeMetrics.has('AverageCPC')">
-                        Avg. CPC: ${{
-                          formatCurrency(asset.metrics.averageCpc)
+                        Avg. CPC:
+                        {{
+                          formatAdsCurrency(
+                            asset.metrics.averageCpc,
+                            campaign.currencyCode,
+                          )
                         }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Demand Gen Ad Groups -->
+              <div
+                v-for="adGroup in campaign.adGroups"
+                :key="adGroup.name"
+                class="bg-gray-600 rounded-lg p-4 mb-4"
+              >
+                <h4 class="text-lg font-medium text-cyan-400 mb-3">
+                  <input
+                    type="checkbox"
+                    :checked="false"
+                    :disabled="true"
+                    class="h-5 w-5 rounded mr-2"
+                  />
+                  {{ adGroup.name }} (Demand Gen)
+                </h4>
+                <!-- Ads within Ad Group -->
+                <div
+                  v-for="ad in adGroup.ads"
+                  :key="ad.resourceName"
+                  class="bg-gray-500 rounded-lg p-3 mt-3"
+                >
+                  <h5 class="text-md font-medium text-white mb-2">
+                    <input
+                      type="checkbox"
+                      :checked="false"
+                      :disabled="true"
+                      class="h-4 w-4 rounded mr-2"
+                    />
+                    {{ ad.name }}
+                  </h5>
+                  <!-- Asset Grid -->
+                  <div
+                    class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"
+                  >
+                    <div
+                      v-for="asset in ad.assets"
+                      :key="getAssetUniqueId(asset)"
+                      class="relative"
+                    >
+                      <ProxiedImage
+                        :src="asset.asset.imageAsset.fullSize.url"
+                        alt="Asset"
+                        class="rounded-lg"
+                        :class="{
+                          'filter grayscale': assetStore.isAssetRemoved(
+                            getAssetUniqueId(asset),
+                          ),
+                        }"
+                      />
+                      <div class="text-xs text-gray-400 mt-1 truncate">
+                        {{ asset.asset.name }}
+                      </div>
+                      <div
+                        v-if="assetStore.isAssetRemoved(getAssetUniqueId(asset))"
+                        class="absolute inset-0 flex items-center justify-center"
+                      >
+                        <span
+                          class="material-symbols-outlined text-red-500 text-6xl select-none"
+                        >
+                          cancel
+                        </span>
+                      </div>
+                      <!-- No checkbox for Demand Gen assets -->
+                      <div class="metrics-container text-xs mt-1 space-y-1">
+                        <div v-if="activeMetrics.has('CTR')">
+                          CTR: {{ formatPercent(asset.metrics.ctr) }}
+                        </div>
+                        <div v-if="activeMetrics.has('Clicks')">
+                          Clicks: {{ formatNumber(asset.metrics.clicks) }}
+                        </div>
+                        <div v-if="activeMetrics.has('Impressions')">
+                          Impressions:
+                          {{ formatNumber(asset.metrics.impressions) }}
+                        </div>
+                        <div v-if="activeMetrics.has('Cost')">
+                          Cost:
+                          {{
+                            formatAdsCurrency(
+                              asset.metrics.costMicros,
+                              campaign.currencyCode,
+                            )
+                          }}
+                        </div>
+                        <div v-if="activeMetrics.has('Conversions')">
+                          Conversions:
+                          {{ formatNumber(asset.metrics.conversions) }}
+                        </div>
+                        <div v-if="activeMetrics.has('CPA')">
+                          CPA:
+                          {{
+                            formatAdsCurrency(
+                              asset.metrics.costPerConversion,
+                              campaign.currencyCode,
+                            )
+                          }}
+                        </div>
+                        <div v-if="activeMetrics.has('ConvValuePerCost')">
+                          Val / Cost:
+                          {{ formatNumber(asset.metrics.valuePerCost) }}
+                        </div>
+                        <div v-if="activeMetrics.has('AverageCPC')">
+                          Avg. CPC:
+                          {{
+                            formatAdsCurrency(
+                              asset.metrics.averageCpc,
+                              campaign.currencyCode,
+                            )
+                          }}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -504,14 +783,7 @@ async function handleRemoveAssets() {
             </div>
           </div>
         </div>
-        <div class="mt-8 flex justify-center">
-          <button
-            @click="scrollToTop"
-            class="bg-gray-600 text-white font-bold py-2 px-6 rounded-md hover:bg-gray-700"
-          >
-            Back to Top
-          </button>
-        </div>
+        <ScrollToTopButton />
       </div>
       <div v-else>
         <div class="bg-gray-800 p-8 rounded-lg text-center">

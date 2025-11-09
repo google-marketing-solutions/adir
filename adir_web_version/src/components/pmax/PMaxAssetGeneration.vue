@@ -1,17 +1,16 @@
 <script setup>
+import { useAssetStore } from "@/stores/assetStore";
+import { useCampaignStore } from "@/stores/campaignStore";
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 import AssetGroupNameMode from "./generation/AssetGroupNameMode.vue";
 import CreativeConceptsMode from "./generation/CreativeConceptsMode.vue";
 import SearchSignalKeywordsMode from "./generation/SearchSignalKeywordsMode.vue";
 
 const emit = defineEmits(["change-subpage"]);
-
-const props = defineProps({
-  selectedCampaigns: {
-    type: Array,
-    required: true,
-  },
-});
+const campaignStore = useCampaignStore();
+const assetStore = useAssetStore();
+const router = useRouter();
 
 const activeMode = ref("Creative Concepts");
 const modes = {
@@ -21,12 +20,15 @@ const modes = {
 };
 
 const isLoading = ref(false);
-const generatedImages = ref([]);
 
 const handleGenerationComplete = (imageUrls) => {
-  generatedImages.value.push(...imageUrls);
-  if (imageUrls.length > 0) {
-    emit("change-subpage", "preview");
+  if (imageUrls && imageUrls.length > 0) {
+    const newAssets = imageUrls.map((url) => ({
+      asset: { imageAsset: { fullSize: { url } } },
+    }));
+    assetStore.setAssets(newAssets);
+    assetStore.setNeedsRefresh(true);
+    router.push("/asset-preview");
   }
 };
 </script>
@@ -50,7 +52,7 @@ const handleGenerationComplete = (imageUrls) => {
       <component
         :is="modes[activeMode]"
         v-if="modes[activeMode]"
-        :selected-campaigns="selectedCampaigns"
+        :selected-campaigns="campaignStore.selectedCampaigns"
         @generation-complete="handleGenerationComplete"
         @update:loading="isLoading = $event"
       />
@@ -64,13 +66,5 @@ const handleGenerationComplete = (imageUrls) => {
       <p class="ml-4">Generating images...</p>
     </div>
 
-    <div v-if="generatedImages.length > 0" class="mt-4">
-      <h3 class="text-lg font-bold mb-2">Generated Images:</h3>
-      <div class="grid grid-cols-4 gap-4">
-        <div v-for="url in generatedImages" :key="url">
-          <img :src="url" class="w-full h-auto rounded-md" />
-        </div>
-      </div>
-    </div>
   </div>
 </template>

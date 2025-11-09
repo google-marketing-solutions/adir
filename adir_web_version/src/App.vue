@@ -3,6 +3,7 @@ import { ref } from "vue";
 import { useRoute } from "vue-router";
 import AppHeader from "./components/AppHeader.vue";
 import AppSidebar from "./components/AppSidebar.vue";
+import PMaxCampaignSelector from "./components/pmax/PMaxCampaignSelector.vue";
 import SettingsModal from "./components/SettingsModal.vue";
 import { useAuthStore } from "./stores/auth";
 
@@ -22,15 +23,21 @@ const closeSettings = () => {
 <template>
   <div id="app-container">
     <AppHeader v-if="authStore.isAuthenticated" @open-settings="openSettings" />
+    <PMaxCampaignSelector
+      v-if="authStore.isAuthenticated"
+      class="campaign-selector"
+    />
     <div class="main-container">
       <AppSidebar v-if="authStore.isAuthenticated" />
-      <main class="main-content">
-        <router-view v-slot="{ Component }">
-          <keep-alive>
-            <component :is="Component" />
-          </keep-alive>
-        </router-view>
-      </main>
+      <div class="content-wrapper">
+        <main class="main-content">
+          <router-view v-slot="{ Component }">
+            <keep-alive>
+              <component :is="Component" />
+            </keep-alive>
+          </router-view>
+        </main>
+      </div>
     </div>
     <SettingsModal :isVisible="isSettingsOpen" @close="closeSettings" />
   </div>
@@ -47,6 +54,20 @@ const closeSettings = () => {
   display: flex;
   flex: 1;
   overflow: hidden; /* Prevent scrolling at the layout level */
+}
+
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.campaign-selector {
+  padding: 1rem;
+  border-bottom: 1px solid #4a5568;
+  background-color: #1f2937; /* bg-gray-800 */
+  color: #d1d5db; /* text-gray-300 */
 }
 
 .main-content {

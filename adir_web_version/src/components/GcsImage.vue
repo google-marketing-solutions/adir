@@ -10,6 +10,7 @@
 
 <script setup>
 import { downloadFileAsBase64 } from "@/services/gcsService";
+import { useAssetStore } from "@/stores/assetStore";
 import { onMounted, ref, watch } from "vue";
 
 const props = defineProps({
@@ -20,15 +21,25 @@ const props = defineProps({
 });
 
 const imageDataUrl = ref(null);
+const assetStore = useAssetStore();
 
 const loadImage = async () => {
   if (!props.gcsUri) {
     imageDataUrl.value = null;
     return;
   }
+
+  const cachedImage = assetStore.getImageData(props.gcsUri);
+  if (cachedImage) {
+    imageDataUrl.value = cachedImage;
+    return;
+  }
+
   try {
     const base64Data = await downloadFileAsBase64(props.gcsUri);
-    imageDataUrl.value = `data:image/png;base64,${base64Data}`;
+    const dataUrl = `data:image/png;base64,${base64Data}`;
+    assetStore.cacheImageData({ uri: props.gcsUri, dataUrl });
+    imageDataUrl.value = dataUrl;
   } catch (error) {
     console.error("Failed to load GCS image:", error);
     imageDataUrl.value = null;

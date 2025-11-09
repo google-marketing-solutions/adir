@@ -23,6 +23,7 @@ const aspectRatios = ref([
 const promptTextarea = ref(null);
 const isLoading = ref(false);
 const configStore = useConfigStore();
+const errorMessage = ref("");
 
 const insertPlaceholder = () => {
   const textarea = promptTextarea.value;
@@ -44,7 +45,8 @@ const handleGenerate = async () => {
   emit("update:loading", true);
   const generatedImages = [];
   try {
-    const campaignIds = props.selectedCampaigns.map((c) => c.id);
+    errorMessage.value = "";
+    const campaignIds = props.selectedCampaigns.map((c) => c.campaign.id);
     const assetGroups = await fetchAssetGroupsByCampaignIds(campaignIds);
 
     for (const ar of aspectRatios.value) {
@@ -83,6 +85,7 @@ const handleGenerate = async () => {
     }
     emit("generation-complete", generatedImages);
   } catch (error) {
+    errorMessage.value = "An error occurred during image generation. Please try again.";
     console.error("Error in AssetGroup Name generation:", error);
   } finally {
     isLoading.value = false;
@@ -140,6 +143,9 @@ const handleGenerate = async () => {
       <span v-if="isLoading" class="loading loading-spinner"></span>
       {{ isLoading ? "Generating..." : "Generate Images" }}
     </button>
+    <div v-if="errorMessage" class="text-yellow-500 mt-4">
+      {{ errorMessage }}
+    </div>
   </div>
 </template>
 

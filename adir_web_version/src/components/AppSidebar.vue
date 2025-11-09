@@ -8,37 +8,37 @@ const route = useRoute();
   <aside class="w-64 bg-gray-800 p-4 h-screen">
     <nav>
       <router-link
-        to="/pmax"
+        to="/asset-removal"
         class="block py-2 px-3 rounded-md"
         :class="{
-          'bg-gray-700 text-white': route.name === 'PMax',
+          'bg-gray-700 text-white': route.name === 'AssetRemoval',
           'text-gray-400 hover:bg-gray-700 hover:text-white':
-            route.name !== 'PMax',
+            route.name !== 'AssetRemoval',
         }"
       >
-        PMax
+        Asset Removal
       </router-link>
       <router-link
-        to="/demand-gen"
+        to="/asset-generation"
         class="block py-2 px-3 rounded-md"
         :class="{
-          'bg-gray-700 text-white': route.name === 'DemandGen',
+          'bg-gray-700 text-white': route.name === 'AssetGeneration',
           'text-gray-400 hover:bg-gray-700 hover:text-white':
-            route.name !== 'DemandGen',
+            route.name !== 'AssetGeneration',
         }"
       >
-        Demand Gen
+        Asset Generation
       </router-link>
       <router-link
-        to="/custom-input"
+        to="/asset-preview"
         class="block py-2 px-3 rounded-md"
         :class="{
-          'bg-gray-700 text-white': route.name === 'CustomInput',
+          'bg-gray-700 text-white': route.name === 'AssetPreview',
           'text-gray-400 hover:bg-gray-700 hover:text-white':
-            route.name !== 'CustomInput',
+            route.name !== 'AssetPreview',
         }"
       >
-        Custom Input
+        Asset Preview
       </router-link>
     </nav>
   </aside>

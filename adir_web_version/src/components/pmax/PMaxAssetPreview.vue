@@ -1,19 +1,34 @@
 <script setup>
 import GcsImage from "@/components/GcsImage.vue";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown.vue";
-import { listImages, removeImages } from "@/services/gcsService";
+import ScrollToTopButton from "@/components/ScrollToTopButton.vue";
+import {
+  downloadFileAsBase64,
+  moveImages,
+  removeImages,
+} from "@/services/gcsService";
+import { uploadImageAssets } from "@/services/googleAdsService";
+import { useAssetStore } from "@/stores/assetStore";
 import { useConfigStore } from "@/stores/config";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onActivated, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 
+const assetStore = useAssetStore();
 const emit = defineEmits(["change-subpage"]);
 const showSuccessMessage = ref(false);
+const allImagesCache = ref([]);
 const previewData = ref([]);
 const isLoading = ref(true);
 const isRemoving = ref(false);
+const isUploading = ref(false);
+const uploadMessage = ref("");
 const removalMessage = ref("");
+const showUploaded = ref(false);
 const configStore = useConfigStore();
+const route = useRoute();
+const initialLoad = ref(true);
 
-const fetchImages = async () => {
+const fetchImages = async (force = false) => {
   if (!configStore.customerID) {
     console.error("Customer ID not available in config store.");
     isLoading.value = false;
@@ -21,28 +36,45 @@ const fetchImages = async () => {
   }
   isLoading.value = true;
   try {
-    const images = await listImages(`${configStore.customerID}/`);
+    const images = await assetStore.fetchGcsImages(
+      configStore.customerID,
+      force,
+    );
     console.log("Raw images from GCS:", images);
-    const campaigns = {};
+    allImagesCache.value = images;
+    await processImages();
+  } catch (error) {
+    console.error("Error fetching images:", error);
+  } finally {
+    isLoading.value = false;
+  }
+};
 
-    images.forEach((image, index) => {
-      const parts = image.name.split("/");
-      // 0: account_id, 1: campaign_id or 'manual_mode', 2: asset_group_id or 'GENERATED', ...
-      if (parts.length < 3) return;
+const processImages = async () => {
+  isLoading.value = true;
+  await new Promise((resolve) => setTimeout(resolve, 0)); // Allow UI to update
 
-      let campaignName, assetGroupName;
-      const accountId = parts[0];
+  const campaigns = {};
+  const images = allImagesCache.value; // Process all images once
 
+  images.forEach((image, index) => {
+    const parts = image.name.split("/");
+    // The image path from GCS is expected to the following structure:
+    // customerId/campaignname~id/assetGroupnamd~id/statusFolder/image.jpg
+    // For example: '1234567890/Campaign_Name~123/Asset_Group_Name~456/GENERATED/image.jpg'
+    if (parts.length < 4) return;
+
+    const statusFolder = parts[parts.length - 2];
+
+    let campaignName, assetGroupName;
       if (parts[1] === "manual_mode" && parts[2] === "GENERATED") {
         campaignName = "Manual";
         assetGroupName = "Generated";
-      } else if (parts.length >= 4) {
+      } else {
         const campaignIdentifier = parts[1];
         const assetGroupIdentifier = parts[2];
         campaignName = campaignIdentifier.split("~")[0].replace(/_/g, " ");
         assetGroupName = assetGroupIdentifier.split("~")[0].replace(/_/g, " ");
-      } else {
-        return;
       }
 
       if (!campaigns[campaignName]) {
@@ -55,27 +87,37 @@ const fetchImages = async () => {
         };
       }
 
-      campaigns[campaignName].assetGroups[assetGroupName].assets.push({
-        id: `gen-${index}`,
-        src: image.gcsUri,
-        selected: true,
-      });
+    campaigns[campaignName].assetGroups[assetGroupName].assets.push({
+      id: `gen-${index}`,
+      src: image.gcsUri,
+      name: image.name,
+      selected: statusFolder !== "UPLOADED",
+      uploaded: statusFolder === "UPLOADED",
     });
+  });
 
-    previewData.value = Object.values(campaigns).map((campaign) => ({
-      ...campaign,
-      assetGroups: Object.values(campaign.assetGroups),
-    }));
-    console.log("Processed preview data:", previewData.value);
-    selectedCampaigns.value = campaignOptions.value.map((c) => c.value);
-  } catch (error) {
-    console.error("Error fetching images:", error);
-  } finally {
-    isLoading.value = false;
-  }
+  previewData.value = Object.values(campaigns).map((campaign) => ({
+    ...campaign,
+    assetGroups: Object.values(campaign.assetGroups),
+  }));
+  console.log("Processed preview data:", previewData.value);
+  selectedCampaigns.value = campaignOptions.value.map((c) => c.value);
+  isLoading.value = false;
 };
 
-onMounted(fetchImages);
+onActivated(() => {
+  if (initialLoad.value || assetStore.needsRefresh) {
+    fetchImages(true);
+    assetStore.setNeedsRefresh(false); // Reset the flag if it was set
+    initialLoad.value = false; // Ensure this only runs once on initial load
+  }
+});
+
+watch(showUploaded, () => {
+  // No need to re-process everything, just filter the view
+  // This is handled by the `imagesToProcess` computed property now.
+  // The watcher is kept to trigger re-computation if necessary.
+});
 
 const selectedCampaigns = ref([]);
 const selectedAssetGroups = ref([]);
@@ -104,9 +146,26 @@ watch(
 );
 
 const filteredCampaigns = computed(() => {
-  return previewData.value.filter((c) =>
-    selectedCampaigns.value.includes(c.campaignName),
-  );
+  const filtered = previewData.value
+    .map((campaign) => {
+      const newCampaign = { ...campaign };
+      newCampaign.assetGroups = newCampaign.assetGroups
+        .map((group) => {
+          const newGroup = { ...group };
+          newGroup.assets = newGroup.assets.filter(
+            (asset) => showUploaded.value || !asset.uploaded,
+          );
+          return newGroup;
+        })
+        .filter((group) => group.assets.length > 0);
+      return newCampaign;
+    })
+    .filter(
+      (campaign) =>
+        campaign.assetGroups.length > 0 &&
+        selectedCampaigns.value.includes(campaign.campaignName),
+    );
+  return filtered;
 });
 
 function toggleSelectAll(assets, value) {
@@ -170,7 +229,7 @@ const handleRemoveSelected = async () => {
 
   try {
     await removeImages(selectedImageUris);
-    await fetchImages(); // Refetch images to update the view
+    await fetchImages(true); // Force refetch
     removalMessage.value = "Images removed successfully.";
   } catch (error) {
     console.error("Error removing images:", error);
@@ -180,6 +239,55 @@ const handleRemoveSelected = async () => {
     setTimeout(() => {
       removalMessage.value = "";
     }, 3000);
+  }
+};
+
+const handleUploadSelected = async () => {
+  const selectedImages = [];
+  previewData.value.forEach((campaign) => {
+    campaign.assetGroups.forEach((group) => {
+      group.assets.forEach((asset) => {
+        if (asset.selected && !asset.uploaded) {
+          selectedImages.push({
+            name: asset.name,
+            gcsUri: asset.src,
+          });
+        }
+      });
+    });
+  });
+
+  if (selectedImages.length === 0) {
+    uploadMessage.value = "No new images selected for upload.";
+    setTimeout(() => (uploadMessage.value = ""), 3000);
+    return;
+  }
+
+  isUploading.value = true;
+  uploadMessage.value = `Uploading ${selectedImages.length} images...`;
+
+  try {
+    const imagesWithContent = await Promise.all(
+      selectedImages.map(async (image) => {
+        const base64Content = await downloadFileAsBase64(image.gcsUri);
+        return {
+          name: image.name,
+          content: base64Content,
+        };
+      })
+    );
+
+    await uploadImageAssets(imagesWithContent);
+    const imageNamesToMove = selectedImages.map((img) => img.name);
+    await moveImages(imageNamesToMove);
+    await fetchImages(true); // Force refetch
+    uploadMessage.value = "Images uploaded and moved successfully.";
+  } catch (error) {
+    console.error("Error uploading images:", error);
+    uploadMessage.value = "Error during upload process.";
+  } finally {
+    isUploading.value = false;
+    setTimeout(() => (uploadMessage.value = ""), 3000);
   }
 };
 </script>
@@ -196,7 +304,7 @@ const handleRemoveSelected = async () => {
       <div
         class="flex justify-between items-center mb-6 bg-gray-800 p-4 rounded-lg"
       >
-        <div class="flex gap-4">
+        <div class="flex gap-4 items-center">
           <button
             @click="setAllCheckboxes(true)"
             class="bg-gray-600 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-700"
@@ -209,6 +317,16 @@ const handleRemoveSelected = async () => {
           >
             Deselect All
           </button>
+          <div class="form-control">
+            <label class="label cursor-pointer">
+              <span class="label-text mr-2">Show Uploaded</span>
+              <input
+                type="checkbox"
+                v-model="showUploaded"
+                class="toggle toggle-primary"
+              />
+            </label>
+          </div>
         </div>
         <div class="flex-grow flex justify-end gap-4 items-center">
           <div class="flex-1 max-w-md">
@@ -273,7 +391,14 @@ const handleRemoveSelected = async () => {
                     type="checkbox"
                     v-model="asset.selected"
                     class="absolute top-2 left-2 h-5 w-5 rounded"
+                    :disabled="asset.uploaded"
                   />
+                  <div
+                    v-if="asset.uploaded"
+                    class="absolute top-2 right-2 bg-green-500 text-white rounded-full h-6 w-6 flex items-center justify-center"
+                  >
+                    ✓
+                  </div>
                 </div>
               </div>
             </div>
@@ -285,8 +410,8 @@ const handleRemoveSelected = async () => {
     <div
       class="mt-8 pt-6 border-t border-gray-700 flex justify-between items-center gap-4"
     >
-      <div v-if="showSuccessMessage" class="text-green-400">
-        <strong>Success!</strong> Selected assets uploaded to Asset Library.
+      <div v-if="uploadMessage" class="text-white">
+        {{ uploadMessage }}
       </div>
       <div v-if="removalMessage" class="text-white">
         {{ removalMessage }}
@@ -306,12 +431,14 @@ const handleRemoveSelected = async () => {
           {{ isRemoving ? "Removing..." : "Remove Selected" }}
         </button>
         <button
-          @click.prevent="showSuccessMessage = true"
-          class="bg-cyan-600 text-white font-bold py-2 px-6 rounded-md hover:bg-cyan-700"
+          @click.prevent="handleUploadSelected"
+          :disabled="isUploading"
+          class="bg-cyan-600 text-white font-bold py-2 px-6 rounded-md hover:bg-cyan-700 disabled:bg-gray-400"
         >
-          Upload Selected to Asset Library
+          {{ isUploading ? "Uploading..." : "Upload Selected to Asset Library" }}
         </button>
       </div>
     </div>
+    <ScrollToTopButton />
   </div>
 </template>

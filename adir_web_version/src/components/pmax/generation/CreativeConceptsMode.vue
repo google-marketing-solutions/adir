@@ -24,7 +24,7 @@ If there is no line that starts with Text:, do not include any instructions for 
 *Your entire output must be ONLY the final image generation prompt. Do not add any conversational text, titles, or explanations.*
 Here is the creative vision description:
 `);
-const useGemini = ref(false);
+const useGemini = ref(true);
 const creativeConcepts = ref([{ name: "", description: "" }]);
 const aspectRatios = ref([
   { label: "Square (1:1)", ratio: "1:1", count: 1 },
@@ -33,6 +33,7 @@ const aspectRatios = ref([
 ]);
 const isLoading = ref(false);
 const configStore = useConfigStore();
+const errorMessage = ref("");
 
 const addCreativeConcept = () => {
   creativeConcepts.value.push({ name: "", description: "" });
@@ -47,6 +48,7 @@ const handleGenerate = async () => {
   emit("update:loading", true);
   const generatedImages = [];
   try {
+    errorMessage.value = "";
     for (const concept of creativeConcepts.value) {
       for (const ar of aspectRatios.value) {
         if (ar.count > 0) {
@@ -74,13 +76,14 @@ const handleGenerate = async () => {
             return uploadBase64Image(gcsFileName, dataUrl);
           });
 
-          const uploadedImageUrls = await Promise.all(uploadPromises);
-          generatedImages.push(...uploadedImageUrls);
+          const uploadedImageUris = await Promise.all(uploadPromises);
+          generatedImages.push(...uploadedImageUris);
         }
       }
     }
     emit("generation-complete", generatedImages);
   } catch (error) {
+    errorMessage.value = "An error occurred during image generation. Please try again.";
     console.error("Error generating images:", error);
   } finally {
     isLoading.value = false;
@@ -169,5 +172,8 @@ const handleGenerate = async () => {
       <span v-if="isLoading" class="loading loading-spinner"></span>
       {{ isLoading ? "Generating..." : "Generate Images" }}
     </button>
+    <div v-if="errorMessage" class="text-yellow-500 mt-4">
+      {{ errorMessage }}
+    </div>
   </div>
 </template>

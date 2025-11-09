@@ -87,7 +87,7 @@ class ApiClient {
   }
 
   delete(path: string) {
-    return this.request(path, { method: "DELETE" });
+    return this.request(path, { method: "DELETE" }, {}, "text");
   }
 }
 

@@ -1,9 +1,9 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "../stores/auth";
-import CustomInputView from "../views/CustomInputView.vue";
-import DemandGenView from "../views/DemandGenView.vue";
+import AssetGenerationView from "../views/AssetGenerationView.vue";
+import AssetPreviewView from "../views/AssetPreviewView.vue";
+import AssetRemovalView from "../views/AssetRemovalView.vue";
 import LoginView from "../views/LoginView.vue";
-import PMaxView from "../views/PMaxView.vue";
 import WelcomeView from "../views/WelcomeView.vue";
 
 const routes = [
@@ -19,21 +19,21 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/pmax",
-    name: "PMax",
-    component: PMaxView,
+    path: "/asset-removal",
+    name: "AssetRemoval",
+    component: AssetRemovalView,
     meta: { requiresAuth: true },
   },
   {
-    path: "/demand-gen",
-    name: "DemandGen",
-    component: DemandGenView,
+    path: "/asset-generation",
+    name: "AssetGeneration",
+    component: AssetGenerationView,
     meta: { requiresAuth: true },
   },
   {
-    path: "/custom-input",
-    name: "CustomInput",
-    component: CustomInputView,
+    path: "/asset-preview",
+    name: "AssetPreview",
+    component: AssetPreviewView,
     meta: { requiresAuth: true },
   },
 ];
