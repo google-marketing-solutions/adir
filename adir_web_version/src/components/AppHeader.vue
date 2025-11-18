@@ -16,7 +16,7 @@ const logout = () => {
   <header
     class="flex justify-between items-center p-4 bg-gray-800 border-b border-gray-700"
   >
-    <h1 class="text-xl font-bold">Adir</h1>
+    <img src="@/assets/adir_logo.png" alt="Adir Logo" class="h-16" />
     <div>
       <button
         @click="emit('open-settings')"

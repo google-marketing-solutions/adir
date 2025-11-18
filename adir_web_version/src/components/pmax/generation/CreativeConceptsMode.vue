@@ -5,7 +5,8 @@ import {
   generateTextFromPrompt,
 } from "@/services/vertexAiService";
 import { useConfigStore } from "@/stores/config";
-import { ref } from "vue";
+import { onMounted, ref, watch } from "vue";
+const showPrompt = ref(false);
 
 const emit = defineEmits(["generation-complete", "update:loading"]);
 
@@ -26,6 +27,23 @@ Here is the creative vision description:
 `);
 const useGemini = ref(true);
 const creativeConcepts = ref([{ name: "", description: "" }]);
+const customerId = useConfigStore().customerID;
+const storageKey = `creativeConcepts_${customerId}`;
+
+onMounted(() => {
+  const savedConcepts = localStorage.getItem(storageKey);
+  if (savedConcepts) {
+    creativeConcepts.value = JSON.parse(savedConcepts);
+  }
+});
+
+watch(
+  creativeConcepts,
+  (newConcepts) => {
+    localStorage.setItem(storageKey, JSON.stringify(newConcepts));
+  },
+  { deep: true }
+);
 const aspectRatios = ref([
   { label: "Square (1:1)", ratio: "1:1", count: 1 },
   { label: "Portrait (9:16)", ratio: "9:16", count: 0 },
@@ -43,6 +61,47 @@ const removeCreativeConcept = (index) => {
   creativeConcepts.value.splice(index, 1);
 };
 
+const handlePaste = (event, index) => {
+  const pastedText = event.clipboardData.getData("text");
+  const lines = pastedText.split("\n").filter((line) => line.trim() !== "");
+
+  // Only intervene if multiple lines are pasted
+  if (lines.length > 1) {
+    event.preventDefault();
+
+    const pastedConcepts = lines.map((line) => {
+      const tabIndex = line.indexOf("\t");
+      if (tabIndex !== -1) {
+        return {
+          name: line.substring(0, tabIndex),
+          description: line.substring(tabIndex + 1),
+        };
+      }
+      return { name: "", description: line };
+    });
+
+    // Replace the current empty concept if it's the only one
+    if (
+      creativeConcepts.value.length === 1 &&
+      !creativeConcepts.value[0].name &&
+      !creativeConcepts.value[0].description
+    ) {
+      creativeConcepts.value = pastedConcepts;
+    } else {
+      // Update the current row with the first line of pasted data
+      const firstPasted = pastedConcepts.shift();
+      creativeConcepts.value[index].name = firstPasted.name;
+      creativeConcepts.value[index].description = firstPasted.description;
+
+      // Insert the rest of the pasted concepts as new rows
+      if (pastedConcepts.length > 0) {
+        creativeConcepts.value.splice(index + 1, 0, ...pastedConcepts);
+      }
+    }
+  }
+  // If only one line is pasted, do nothing and let the default paste behavior occur.
+};
+
 const handleGenerate = async () => {
   isLoading.value = true;
   emit("update:loading", true);
@@ -50,16 +109,17 @@ const handleGenerate = async () => {
   try {
     errorMessage.value = "";
     for (const concept of creativeConcepts.value) {
+      let imagePrompt = prompt.value;
+      if (useGemini.value) {
+        const geminiPrompt = `You are a prompt engineer and your job is to provide the best short prompt to generate an image for a digital campaign. Given the following text, provide the optimal Generative AI prompt to generate a realistic style image to be used in an ad of a digital campaign that will best illustrate the concepts defined by the text. Please return only the prompt and start the prompt with "a photo of". Here is the text: ${prompt.value} ${concept.description ? "and the creative concept: " + concept.description : ""}`;
+        imagePrompt = await generateTextFromPrompt(
+          geminiPrompt,
+          configStore.geminiModel,
+        );
+      }
+
       for (const ar of aspectRatios.value) {
         if (ar.count > 0) {
-          let imagePrompt = prompt.value;
-          if (useGemini.value) {
-            const geminiPrompt = `You are a prompt engineer and your job is to provide the best short prompt to generate an image for a digital campaign. Given the following text, provide the optimal Generative AI prompt to generate a realistic style image to be used in an ad of a digital campaign that will best illustrate the concepts defined by the text. Please return only the prompt and start the prompt with "a photo of". Here is the text: ${prompt.value} ${concept.description ? "and the creative concept: " + concept.description : ""}`;
-            imagePrompt = await generateTextFromPrompt(
-              geminiPrompt,
-              configStore.geminiModel,
-            );
-          }
           const base64Images = await generateImagesFromPrompt(
             imagePrompt,
             ar.ratio,
@@ -94,7 +154,15 @@ const handleGenerate = async () => {
 
 <template>
   <div class="flex flex-col gap-4">
+    <button
+      @click="showPrompt = !showPrompt"
+      class="text-left text-cyan-400 hover:text-cyan-500 font-bold text-lg border border-cyan-400 rounded-md p-2"
+    >
+      {{ showPrompt ? "Hide" : "Click here to Show/Edit the" }} Creative Concepts
+      Prompt
+    </button>
     <textarea
+      v-if="showPrompt"
       v-model="prompt"
       placeholder="The default prompt is set. Add your creative vision description here."
       class="bg-gray-700 rounded-md p-2 w-full"
@@ -129,6 +197,7 @@ const handleGenerate = async () => {
       />
       <textarea
         v-model="concept.description"
+        @paste="handlePaste($event, index)"
         placeholder="Creative Concept Description"
         class="bg-gray-700 rounded-md p-2 w-1/2"
         rows="1"

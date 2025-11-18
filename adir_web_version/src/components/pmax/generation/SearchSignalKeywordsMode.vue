@@ -11,6 +11,7 @@ import {
 import { useConfigStore } from "@/stores/config";
 import { ref } from "vue";
 const errorMessage = ref("");
+const showPrompt = ref(false);
 
 const emit = defineEmits(["generation-complete", "update:loading"]);
 const KEYWORD_GENERATION_TEXT_PROMPT =
@@ -121,7 +122,14 @@ const handleGenerate = async () => {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div class="relative">
+    <button
+      @click="showPrompt = !showPrompt"
+      class="text-left text-cyan-400 hover:text-cyan-500 font-bold text-lg border border-cyan-400 rounded-md p-2"
+    >
+      {{ showPrompt ? "Hide" : "Click here to Show/Edit the" }} Search Signal
+      Keywords Prompt
+    </button>
+    <div class="relative" v-if="showPrompt">
       <textarea
         v-model="prompt"
         placeholder="e.g., A futuristic car driving through a neon-lit city..."

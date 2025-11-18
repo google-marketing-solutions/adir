@@ -303,6 +303,44 @@ export async function fetchAssetGroupsByCampaignIds(campaignIds: string[]) {
     throw error;
   }
 }
+/**
+ * Fetches ad groups for a given list of campaign IDs.
+ * @param {string[]} campaignIds - The IDs of the campaigns to fetch ad groups from.
+ * @return {Promise<any[]>} The fetched ad groups.
+ */
+export async function fetchAdGroupsByCampaignIds(campaignIds: string[]) {
+  if (!campaignIds || campaignIds.length === 0) {
+    return [];
+  }
+
+  const configStore = useConfigStore();
+  const { customerID } = configStore;
+  const apiClient = createGoogleAdsApiClient();
+  const url = `/customers/${customerID}/googleAds:search`;
+
+  const gaqlQuery = `
+    SELECT
+      ad_group.name,
+      ad_group.resource_name,
+      campaign.id,
+      campaign.name,
+      ad_group.id,
+      campaign.advertising_channel_type
+    FROM ad_group
+    WHERE campaign.id IN (${campaignIds.join(",")})
+  `;
+
+  const body = { query: gaqlQuery };
+
+  try {
+    const data = await apiClient.post(url, body);
+    console.log("Google Ads API Response:", data);
+    return data.results;
+  } catch (error) {
+    console.error("Error fetching ad groups:", error);
+    throw error;
+  }
+}
 
 /**
  * Fetches search signal keywords for a specific asset group.

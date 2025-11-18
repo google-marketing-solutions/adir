@@ -9,10 +9,10 @@ const route = useRoute();
     <nav>
       <router-link
         to="/asset-removal"
-        class="block py-2 px-3 rounded-md"
+        class="block py-2 px-3 rounded-md font-bold transition-colors duration-300"
         :class="{
-          'bg-gray-700 text-white': route.name === 'AssetRemoval',
-          'text-gray-400 hover:bg-gray-700 hover:text-white':
+          'bg-gray-700 text-blue-300': route.name === 'AssetRemoval',
+          'text-gray-400 hover:bg-gray-600 hover:text-white':
             route.name !== 'AssetRemoval',
         }"
       >
@@ -20,10 +20,10 @@ const route = useRoute();
       </router-link>
       <router-link
         to="/asset-generation"
-        class="block py-2 px-3 rounded-md"
+        class="block py-2 px-3 rounded-md font-bold transition-colors duration-300"
         :class="{
-          'bg-gray-700 text-white': route.name === 'AssetGeneration',
-          'text-gray-400 hover:bg-gray-700 hover:text-white':
+          'bg-gray-700 text-blue-300': route.name === 'AssetGeneration',
+          'text-gray-400 hover:bg-gray-600 hover:text-white':
             route.name !== 'AssetGeneration',
         }"
       >
@@ -31,10 +31,10 @@ const route = useRoute();
       </router-link>
       <router-link
         to="/asset-preview"
-        class="block py-2 px-3 rounded-md"
+        class="block py-2 px-3 rounded-md font-bold transition-colors duration-300"
         :class="{
-          'bg-gray-700 text-white': route.name === 'AssetPreview',
-          'text-gray-400 hover:bg-gray-700 hover:text-white':
+          'bg-gray-700 text-blue-300': route.name === 'AssetPreview',
+          'text-gray-400 hover:bg-gray-600 hover:text-white':
             route.name !== 'AssetPreview',
         }"
       >

@@ -9,7 +9,9 @@ import {
 import { useAssetStore } from "@/stores/assetStore";
 import { useCampaignStore } from "@/stores/campaignStore";
 import { computed, defineEmits, onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
 
+const router = useRouter();
 const assetStore = useAssetStore();
 const campaignStore = useCampaignStore();
 const removalStep = ref(1);
@@ -510,7 +512,7 @@ async function handleRemoveAssets() {
             {{ isRemoving ? "Removing..." : "Remove Assets" }}
           </button>
           <button
-            @click.prevent="emit('change-subpage', 'generation')"
+            @click.prevent="router.push({ name: 'AssetGeneration' })"
             class="bg-green-600 text-white font-bold py-2 px-6 rounded-md hover:bg-green-700"
           >
             Generate New Assets

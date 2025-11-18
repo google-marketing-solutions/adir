@@ -1,6 +1,9 @@
 <script setup>
 import { uploadBase64Image } from "@/services/gcsService";
-import { fetchAssetGroupsByCampaignIds } from "@/services/googleAdsService";
+import {
+  fetchAdGroupsByCampaignIds,
+  fetchAssetGroupsByCampaignIds,
+} from "@/services/googleAdsService";
 import { generateImagesFromPrompt } from "@/services/vertexAiService";
 import { useConfigStore } from "@/stores/config";
 import { ref } from "vue";
@@ -32,10 +35,12 @@ const insertPlaceholder = () => {
     const end = textarea.selectionEnd;
     const text = prompt.value;
     const newText =
-      text.substring(0, start) + "[Asset Group Name]" + text.substring(end);
+      text.substring(0, start) +
+      "[Asset Group / Ad Group Name]" +
+      text.substring(end);
     prompt.value = newText;
     textarea.focus();
-    const newPos = start + "[Asset Group Name]".length;
+    const newPos = start + "[Asset Group / Ad Group Name]".length;
     textarea.setSelectionRange(start, newPos);
   }
 };
@@ -48,17 +53,40 @@ const handleGenerate = async () => {
     errorMessage.value = "";
     const campaignIds = props.selectedCampaigns.map((c) => c.campaign.id);
     const assetGroups = await fetchAssetGroupsByCampaignIds(campaignIds);
+    const pmaxCampaignIds = props.selectedCampaigns
+      .filter((c) => c.campaign.advertisingChannelType === "PERFORMANCE_MAX")
+      .map((c) => c.campaign.id);
+    const demandGenCampaignIds = props.selectedCampaigns
+      .filter((c) => c.campaign.advertisingChannelType === "DEMAND_GEN")
+      .map((c) => c.campaign.id);
+
+    let groups = [];
+    if (pmaxCampaignIds.length > 0) {
+      const assetGroups = await fetchAssetGroupsByCampaignIds(pmaxCampaignIds);
+      groups = groups.concat(assetGroups);
+    }
+    if (demandGenCampaignIds.length > 0) {
+      const adGroups = await fetchAdGroupsByCampaignIds(demandGenCampaignIds);
+      groups = groups.concat(adGroups);
+    }
 
     for (const ar of aspectRatios.value) {
       if (ar.count > 0) {
-        const jobObjects = assetGroups.flatMap((group) => {
+        const jobObjects = groups.flatMap((group) => {
+          const isDemandGen =
+            group.campaign.advertisingChannelType === "DEMAND_GEN";
+          const groupName = isDemandGen
+            ? group.adGroup.name
+            : group.assetGroup.name;
+          const groupId = isDemandGen ? group.adGroup.id : group.assetGroup.id;
+
           const finalPrompt = prompt.value.replace(
-            /\[Asset Group Name\]/g,
-            group.assetGroup.name,
+            /\[Asset Group \/ Ad Group Name\]/g,
+            groupName,
           );
           const campaignIdentifier = `${group.campaign.name.replace(/\s+/g, "_")}~${group.campaign.id}`;
-          const assetGroupIdentifier = `${group.assetGroup.name.replace(/\s+/g, "_")}~${group.assetGroup.id}`;
-          const gcsPath = `${configStore.customerID}/${campaignIdentifier}/${assetGroupIdentifier}/GENERATED/`;
+          const groupIdentifier = `${groupName.replace(/\s+/g, "_")}~${groupId}`;
+          const gcsPath = `${configStore.customerID}/${campaignIdentifier}/${groupIdentifier}/GENERATED/`;
 
           return Array.from({ length: ar.count }, (_, i) => ({
             prompt: finalPrompt,
@@ -100,7 +128,7 @@ const handleGenerate = async () => {
       <textarea
         ref="promptTextarea"
         v-model="prompt"
-        placeholder="e.g., A futuristic car driving through a neon-lit city with [Asset Group Name] in the background"
+        placeholder="e.g., A futuristic car driving through a neon-lit city with [Asset Group / Ad Group Name] in the background"
         class="bg-gray-700 rounded-md p-2 w-full pr-36 custom-placeholder"
         rows="3"
       ></textarea>
@@ -114,8 +142,10 @@ const handleGenerate = async () => {
     <label class="label -mt-2">
       <span class="label-text-alt"
         >Use
-        <code v-pre class="bg-gray-800 p-1 rounded-md">[Asset Group Name]</code>
-        as a placeholder for the asset group name.</span
+        <code v-pre class="bg-gray-800 p-1 rounded-md"
+          >[Asset Group / Ad Group Name]</code
+        >
+        as a placeholder for the asset group or ad group name.</span
       >
     </label>
 

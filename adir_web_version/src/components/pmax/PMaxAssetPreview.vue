@@ -14,7 +14,7 @@ import { computed, onActivated, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 
 const assetStore = useAssetStore();
-const emit = defineEmits(["change-subpage"]);
+const emit = defineEmits(["change-page"]);
 const showSuccessMessage = ref(false);
 const allImagesCache = ref([]);
 const previewData = ref([]);
@@ -345,6 +345,38 @@ const handleUploadSelected = async () => {
           </div>
         </div>
       </div>
+      <div
+        class="mt-8 pt-6 mb-4 border-t border-gray-700 flex justify-between items-center gap-4"
+      >
+        <div v-if="uploadMessage" class="text-white">
+          {{ uploadMessage }}
+        </div>
+        <div v-if="removalMessage" class="text-white">
+          {{ removalMessage }}
+        </div>
+        <div class="flex gap-4 ml-auto">
+          <button
+            @click.prevent="emit('change-page', 'PMaxAssetGeneration')"
+            class="bg-gray-600 text-white font-bold py-2 px-6 rounded-md hover:bg-gray-700"
+          >
+            Back
+          </button>
+          <button
+            @click.prevent="handleRemoveSelected"
+            :disabled="isRemoving"
+            class="bg-red-600 text-white font-bold py-2 px-6 rounded-md hover:bg-red-700 disabled:bg-gray-400"
+          >
+            {{ isRemoving ? "Removing..." : "Remove Selected" }}
+          </button>
+          <button
+            @click.prevent="handleUploadSelected"
+            :disabled="isUploading"
+            class="bg-cyan-600 text-white font-bold py-2 px-6 rounded-md hover:bg-cyan-700 disabled:bg-gray-400"
+          >
+            {{ isUploading ? "Uploading..." : "Upload Selected to Asset Library" }}
+          </button>
+        </div>
+      </div>
 
       <div class="space-y-8">
         <div
@@ -407,38 +439,6 @@ const handleUploadSelected = async () => {
       </div>
     </div>
 
-    <div
-      class="mt-8 pt-6 border-t border-gray-700 flex justify-between items-center gap-4"
-    >
-      <div v-if="uploadMessage" class="text-white">
-        {{ uploadMessage }}
-      </div>
-      <div v-if="removalMessage" class="text-white">
-        {{ removalMessage }}
-      </div>
-      <div class="flex gap-4 ml-auto">
-        <button
-          @click.prevent="emit('change-subpage', 'generation')"
-          class="bg-gray-600 text-white font-bold py-2 px-6 rounded-md hover:bg-gray-700"
-        >
-          Back
-        </button>
-        <button
-          @click.prevent="handleRemoveSelected"
-          :disabled="isRemoving"
-          class="bg-red-600 text-white font-bold py-2 px-6 rounded-md hover:bg-red-700 disabled:bg-gray-400"
-        >
-          {{ isRemoving ? "Removing..." : "Remove Selected" }}
-        </button>
-        <button
-          @click.prevent="handleUploadSelected"
-          :disabled="isUploading"
-          class="bg-cyan-600 text-white font-bold py-2 px-6 rounded-md hover:bg-cyan-700 disabled:bg-gray-400"
-        >
-          {{ isUploading ? "Uploading..." : "Upload Selected to Asset Library" }}
-        </button>
-      </div>
-    </div>
-    <ScrollToTopButton />
+    <ScrollToTopButton :visible="showScrollButton" :scroll-to-top="scrollToTop" />
   </div>
 </template>
