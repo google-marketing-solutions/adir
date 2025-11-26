@@ -105,11 +105,13 @@ const handlePaste = (event, index) => {
 const handleGenerate = async () => {
   isLoading.value = true;
   emit("update:loading", true);
-  const generatedImages = [];
+
   try {
     errorMessage.value = "";
-    for (const concept of creativeConcepts.value) {
+
+    const conceptPromises = creativeConcepts.value.map(async (concept) => {
       let imagePrompt = prompt.value;
+
       if (useGemini.value) {
         const geminiPrompt = `You are a prompt engineer and your job is to provide the best short prompt to generate an image for a digital campaign. Given the following text, provide the optimal Generative AI prompt to generate a realistic style image to be used in an ad of a digital campaign that will best illustrate the concepts defined by the text. Please return only the prompt and start the prompt with "a photo of". Here is the text: ${prompt.value} ${concept.description ? "and the creative concept: " + concept.description : ""}`;
         imagePrompt = await generateTextFromPrompt(
@@ -118,32 +120,39 @@ const handleGenerate = async () => {
         );
       }
 
-      for (const ar of aspectRatios.value) {
-        if (ar.count > 0) {
-          const base64Images = await generateImagesFromPrompt(
-            imagePrompt,
-            ar.ratio,
-            ar.count,
-            configStore.imageGenModel,
-          );
+      const arPromises = aspectRatios.value.map(async (ar) => {
+        if (ar.count <= 0) return [];
 
-          const uploadPromises = base64Images.map((base64String) => {
-            const dataUrl = "data:image/png;base64," + base64String;
-            const gcsPath = concept.name
-              ? `${configStore.customerID}/Creative Concepts/${concept.name}/GENERATED/`
-              : `${configStore.customerID}/Creative Concepts/GENERATED/`;
-            const gcsFileName = `${gcsPath}${Date.now()}.png`;
-            return uploadBase64Image(gcsFileName, dataUrl);
-          });
+        const base64Images = await generateImagesFromPrompt(
+          imagePrompt,
+          ar.ratio,
+          ar.count,
+          configStore.imageGenModel,
+        );
 
-          const uploadedImageUris = await Promise.all(uploadPromises);
-          generatedImages.push(...uploadedImageUris);
-        }
-      }
-    }
+        const uploadPromises = base64Images.map((base64String, index) => {
+          const dataUrl = "data:image/png;base64," + base64String;
+          const gcsPath = concept.name
+            ? `${configStore.customerID}/Creative Concepts/${concept.name}/GENERATED/`
+            : `${configStore.customerID}/Creative Concepts/GENERATED/`;
+          const gcsFileName = `${gcsPath}${Date.now()}_${index}_${Math.random().toString(36).slice(2, 7)}.png`;
+          return uploadBase64Image(gcsFileName, dataUrl);
+        });
+
+        return await Promise.all(uploadPromises);
+      });
+
+      const imagesFromConcept = await Promise.all(arPromises);
+      return imagesFromConcept.flat();
+    });
+
+    const results = await Promise.all(conceptPromises);
+    const generatedImages = results.flat();
+
     emit("generation-complete", generatedImages);
   } catch (error) {
-    errorMessage.value = "An error occurred during image generation. Please try again.";
+    errorMessage.value =
+      "An error occurred during image generation. Please try again.";
     console.error("Error generating images:", error);
   } finally {
     isLoading.value = false;

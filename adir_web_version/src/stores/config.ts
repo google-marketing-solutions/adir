@@ -11,9 +11,10 @@ export const useConfigStore = defineStore("config", {
     mccID: "",
     customerID: "",
     developerToken: "",
-    geminiModel: "",
+    geminiModel: "gemini-2.5-flash",
     imageGenModel: "",
     googleClientId: "",
+    geminiApiKey: "", // Used for image editing using Nano Banana
   }),
   persist: true,
 });

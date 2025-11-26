@@ -10,6 +10,8 @@ import {
 import { uploadImageAssets } from "@/services/googleAdsService";
 import { useAssetStore } from "@/stores/assetStore";
 import { useConfigStore } from "@/stores/config";
+import { editImageWithNanoBanana } from "@/services/nanoBananaService";
+import { uploadBase64Image } from "@/services/gcsService";
 import { computed, onActivated, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 
@@ -23,6 +25,11 @@ const isRemoving = ref(false);
 const isUploading = ref(false);
 const uploadMessage = ref("");
 const removalMessage = ref("");
+const editMessage = ref("");
+const isEditing = ref(false);
+const showEditModal = ref(false);
+const editPrompt = ref("");
+const imageToEdit = ref(null); // null for batch edit, or specific image object
 const showUploaded = ref(false);
 const configStore = useConfigStore();
 const route = useRoute();
@@ -270,8 +277,15 @@ const handleUploadSelected = async () => {
     const imagesWithContent = await Promise.all(
       selectedImages.map(async (image) => {
         const base64Content = await downloadFileAsBase64(image.gcsUri);
+        const parts = image.name.split("/");
+        const filteredParts = parts.filter((part, index) => {
+          if (index === 0) return false; // Skip customer ID
+          if (part === "GENERATED" || part === "UPLOADED") return false; // Skip status folders
+          return true;
+        });
+        const shortName = filteredParts.join("_");
         return {
-          name: image.name,
+          name: shortName,
           content: base64Content,
         };
       })
@@ -288,6 +302,64 @@ const handleUploadSelected = async () => {
   } finally {
     isUploading.value = false;
     setTimeout(() => (uploadMessage.value = ""), 3000);
+  }
+};
+
+const openEditModal = (image = null) => {
+  imageToEdit.value = image;
+  editPrompt.value = "";
+  showEditModal.value = true;
+};
+
+const handleEditSubmit = async () => {
+  if (!editPrompt.value) return;
+  showEditModal.value = false;
+  isEditing.value = true;
+  editMessage.value = "Editing images with Gemini...";
+
+  const imagesToEditList = imageToEdit.value
+    ? [imageToEdit.value]
+    : previewData.value.flatMap(c => c.assetGroups.flatMap(ag => ag.assets.filter(a => a.selected)));
+
+  console.log(`Starting edit for ${imagesToEditList.length} images with prompt: "${editPrompt.value}"`);
+
+  if (imagesToEditList.length === 0) {
+    editMessage.value = "No images selected for editing.";
+    isEditing.value = false;
+    setTimeout(() => (editMessage.value = ""), 3000);
+    return;
+  }
+
+  try {
+    const editPromises = imagesToEditList.map(async (asset, index) => {
+      console.log(`Editing image ${index + 1}/${imagesToEditList.length}: ${asset.name}`);
+      const base64Content = await downloadFileAsBase64(asset.src);
+      const editedBase64 = await editImageWithNanoBanana([base64Content], editPrompt.value);
+      const dataUrl = `data:image/png;base64,${editedBase64}`;
+
+      // Generate new GCS path in the same folder
+      const parts = asset.name.split("/");
+      parts[parts.length - 1] = `${Date.now()}_edited_${parts[parts.length - 1]}`;
+      const newGcsPath = parts.join("/");
+
+      console.log(`Uploading edited image to: ${newGcsPath}`);
+      return uploadBase64Image(newGcsPath, dataUrl);
+    });
+
+    await Promise.all(editPromises);
+    console.log("All images edited and uploaded successfully");
+    await fetchImages(true);
+    editMessage.value = "Images edited successfully.";
+  } catch (error) {
+    console.error("Error editing images:", error);
+    if (error.message === "Gemini API key is mandatory for the usage of Nano Banana") {
+      editMessage.value = error.message;
+    } else {
+      editMessage.value = "Error editing images.";
+    }
+  } finally {
+    isEditing.value = false;
+    setTimeout(() => (editMessage.value = ""), 3000);
   }
 };
 </script>
@@ -354,7 +426,19 @@ const handleUploadSelected = async () => {
         <div v-if="removalMessage" class="text-white">
           {{ removalMessage }}
         </div>
+        <div v-if="editMessage" class="text-white">
+          {{ editMessage }}
+        </div>
         <div class="flex gap-4 ml-auto">
+          <button
+            @click.prevent="openEditModal(null)"
+            :disabled="isEditing"
+            class="bg-yellow-500 text-gray-900 font-bold py-2 px-6 rounded-md hover:bg-yellow-400 disabled:bg-gray-400 flex items-center gap-2"
+          >
+            <span v-if="isEditing" class="loading loading-spinner loading-sm"></span>
+            <span v-else>🍌</span>
+            <span>{{ isEditing ? "Editing..." : "Batch Edit" }}</span>
+          </button>
           <button
             @click.prevent="emit('change-page', 'PMaxAssetGeneration')"
             class="bg-gray-600 text-white font-bold py-2 px-6 rounded-md hover:bg-gray-700"
@@ -431,6 +515,14 @@ const handleUploadSelected = async () => {
                   >
                     ✓
                   </div>
+                  <button
+                    @click.prevent="openEditModal(asset)"
+                    class="absolute bottom-2 right-2 bg-yellow-500 text-gray-900 rounded-md px-2 py-1 text-xs hover:bg-yellow-400 flex items-center gap-1 font-bold"
+                    title="Edit with Nano Banana"
+                  >
+                    <span>🍌</span>
+                    <span>Edit</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -439,6 +531,41 @@ const handleUploadSelected = async () => {
       </div>
     </div>
 
-    <ScrollToTopButton :visible="showScrollButton" :scroll-to-top="scrollToTop" />
+    <ScrollToTopButton />
+
+    <!-- Edit Modal -->
+    <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+      <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md border border-gray-700">
+        <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+          <span>✏️🍌</span>
+          <span>Edit with Nano Banana</span>
+        </h3>
+
+        <div v-if="imageToEdit" class="mb-4 flex justify-center">
+          <GcsImage :gcs-uri="imageToEdit.src" class="max-h-96 rounded-md object-contain" />
+        </div>
+        <div v-else class="mb-4 p-4 bg-gray-700 rounded-md text-center">
+          <p class="text-lg font-semibold">Batch Editing</p>
+          <p class="text-gray-300">{{ previewData.flatMap(c => c.assetGroups.flatMap(ag => ag.assets.filter(a => a.selected))).length }} images selected</p>
+        </div>
+
+        <p class="mb-2 text-gray-300">
+          Enter a prompt to edit {{ imageToEdit ? 'this image' : 'selected images' }}.
+        </p>
+        <textarea
+          v-model="editPrompt"
+          class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 mb-4"
+          rows="3"
+          placeholder="e.g., change background to a beach"
+        ></textarea>
+        <div class="flex justify-end gap-4">
+          <button @click="showEditModal = false" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">Cancel</button>
+          <button @click="handleEditSubmit" class="bg-yellow-500 text-gray-900 px-4 py-2 rounded-md hover:bg-yellow-400 flex items-center gap-2 font-bold" :disabled="!editPrompt">
+            <span>🍌</span>
+            <span>Edit</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

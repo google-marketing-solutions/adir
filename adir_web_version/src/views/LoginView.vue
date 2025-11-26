@@ -18,6 +18,9 @@
         Sign in with Google
       </button>
     </div>
+    <div class="help-link-container">
+      <router-link to="/help" class="help-link">Need Help?</router-link>
+    </div>
   </div>
 </template>
 
@@ -70,6 +73,30 @@ async function handleLogin() {
   align-items: center;
   height: 100%;
   width: 100%;
+  position: relative;
+}
+
+.help-link-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
+
+.help-link {
+  color: #9ca3af;
+  text-decoration: none;
+  font-size: 0.9rem;
+  padding: 8px 16px;
+  border-radius: 6px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  transition: all 0.2s;
+}
+
+.help-link:hover {
+  color: #f3f4f6;
+  background: #374151;
+  border-color: #4b5563;
 }
 
 .login-box {

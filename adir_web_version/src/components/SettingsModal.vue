@@ -40,12 +40,36 @@
                 class="block text-sm font-medium text-gray-300 mb-1"
                 >Cloud Region</label
               >
-              <input
-                v-model="configStore.cloudRegion"
-                type="text"
-                id="cloud-region"
-                class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
-              />
+              <div v-if="!isCustomRegion" class="flex gap-2">
+                <select
+                  v-model="configStore.cloudRegion"
+                  id="cloud-region"
+                  class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
+                  @change="handleRegionChange"
+                >
+                  <option value="us-central1">us-central1</option>
+                  <option value="us-east1">us-east1</option>
+                  <option value="europe-west1">europe-west1</option>
+                  <option value="asia-northeast1">asia-northeast1</option>
+                  <option value="custom">Custom...</option>
+                </select>
+              </div>
+              <div v-else class="flex gap-2">
+                <input
+                  v-model="configStore.cloudRegion"
+                  type="text"
+                  id="cloud-region-custom"
+                  class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
+                  placeholder="Enter region (e.g., us-west1)"
+                />
+                <button
+                  type="button"
+                  @click="isCustomRegion = false; configStore.cloudRegion = 'us-central1'"
+                  class="bg-gray-600 hover:bg-gray-500 text-white px-3 rounded-md"
+                >
+                  Reset
+                </button>
+              </div>
             </div>
             <div>
               <label
@@ -120,8 +144,10 @@
                 id="gemini-model"
                 class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
               >
+                <option>gemini-3-pro-preview</option>
                 <option>gemini-2.5-pro</option>
                 <option>gemini-2.5-flash</option>
+                <option>gemini-2.5-flash-lite</option>
               </select>
             </div>
             <div>
@@ -143,6 +169,24 @@
             </div>
           </div>
         </fieldset>
+        <fieldset class="border border-gray-700 rounded-md p-4">
+          <legend class="text-lg font-semibold px-2">Gemini API</legend>
+          <div class="grid grid-cols-1 gap-4">
+            <div>
+              <label
+                for="gemini-api-key"
+                class="block text-sm font-medium text-gray-300 mb-1"
+                >Gemini API Key (for Nano Banana & Gemini 3)</label
+              >
+              <input
+                v-model="configStore.geminiApiKey"
+                type="password"
+                id="gemini-api-key"
+                class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
+              />
+            </div>
+          </div>
+        </fieldset>
         <div class="flex justify-end">
           <button
             @click="emit('close')"
@@ -158,9 +202,23 @@
 </template>
 
 <script setup>
+import { ref, watch } from "vue";
 import { useConfigStore } from "../stores/config";
 
 const configStore = useConfigStore();
+const isCustomRegion = ref(false);
+
+const handleRegionChange = (event) => {
+  if (event.target.value === "custom") {
+    isCustomRegion.value = true;
+    configStore.cloudRegion = ""; // Clear to allow custom input
+  }
+};
+
+// Check initial state
+if (configStore.cloudRegion && !["us-central1", "us-east1", "europe-west1", "asia-northeast1"].includes(configStore.cloudRegion)) {
+  isCustomRegion.value = true;
+}
 
 defineProps({
   isVisible: Boolean,

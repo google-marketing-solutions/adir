@@ -36,7 +36,6 @@ const configStore = useConfigStore();
 const handleGenerate = async () => {
   isLoading.value = true;
   emit("update:loading", true);
-  const generatedImages = [];
   try {
     errorMessage.value = "";
     console.log("Starting image generation...");
@@ -44,10 +43,19 @@ const handleGenerate = async () => {
     const assetGroups = await fetchAssetGroupsByCampaignIds(campaignIds);
     console.log("Fetched asset groups:", assetGroups);
 
-    for (const ar of aspectRatios.value) {
-      if (ar.count > 0) {
-        const jobObjects = [];
-        for (const group of assetGroups) {
+    const aspectRatiosToGenerate = aspectRatios.value.filter(
+      (ar) => ar.count > 0,
+    );
+    if (aspectRatiosToGenerate.length === 0) {
+      isLoading.value = false;
+      emit("update:loading", false);
+      return;
+    }
+
+    // Prepare groups: fetch keywords and generate prompts in parallel
+    const preparedGroups = await Promise.all(
+      assetGroups.map(async (group) => {
+        try {
           const keywords = await getSearchSignalKeywordsForAdGroup(
             group.assetGroup.id,
           );
@@ -62,13 +70,14 @@ const handleGenerate = async () => {
                 .filter((k) => !!k),
             ),
           ];
+
           if (!keywordList.length) {
-            errorMessage.value = `No search signal keywords for Asset Group ${group.assetGroup.name}, skipping`;
             console.log(
               `No search signal keywords for Asset Group ${group.assetGroup.id}, skipping`,
             );
-            continue;
+            return null;
           }
+
           const keywordsString = keywordList.join(", ");
           const geminiPrompt = `${prompt.value} ${keywordsString}`;
           console.log("Generating prompt with Gemini. Input:", geminiPrompt);
@@ -77,41 +86,61 @@ const handleGenerate = async () => {
             configStore.geminiModel,
           );
           console.log("Final prompt for image generation:", imagePrompt);
-          const campaignIdentifier = `${group.campaign.name.replace(/\s+/g, "_")}~${group.campaign.id}`;
-          const assetGroupIdentifier = `${group.assetGroup.name.replace(/\s+/g, "_")}~${group.assetGroup.id}`;
-          const gcsPath = `${configStore.customerID}/${campaignIdentifier}/${assetGroupIdentifier}/GENERATED/`;
 
-          jobObjects.push(
-            ...Array.from({ length: ar.count }, (_, i) => ({
-              prompt: imagePrompt,
-              aspectRatio: ar.ratio,
-              sampleCount: 1,
-              gcsPath: `${gcsPath}${Date.now()}_${i}.png`,
-            })),
+          return { group, imagePrompt };
+        } catch (e) {
+          console.error(
+            `Error preparing group ${group.assetGroup.name}:`,
+            e,
           );
+          return null;
         }
+      }),
+    );
 
-        console.log("Job objects:", jobObjects);
+    const validGroups = preparedGroups.filter((g) => g !== null);
 
-        const generationPromises = jobObjects.map(async (job) => {
-          const base64Images = await generateImagesFromPrompt(
-            job.prompt,
-            job.aspectRatio,
-            job.sampleCount,
-            configStore.imageGenModel,
-          );
-          const dataUrl = "data:image/png;base64," + base64Images[0];
-          return uploadBase64Image(job.gcsPath, dataUrl);
-        });
-
-        const uploadedImageUrls = await Promise.all(generationPromises);
-        console.log("Generated image URLs:", uploadedImageUrls);
-        generatedImages.push(...uploadedImageUrls);
-      }
+    if (validGroups.length === 0) {
+      errorMessage.value =
+        "No valid asset groups with keywords found to generate images.";
+      return;
     }
+
+    // Create all image generation jobs
+    const jobObjects = validGroups.flatMap(({ group, imagePrompt }) => {
+      const campaignIdentifier = `${group.campaign.name.replace(/\s+/g, "_")}~${group.campaign.id}`;
+      const assetGroupIdentifier = `${group.assetGroup.name.replace(/\s+/g, "_")}~${group.assetGroup.id}`;
+      const gcsPath = `${configStore.customerID}/${campaignIdentifier}/${assetGroupIdentifier}/GENERATED/`;
+
+      return aspectRatiosToGenerate.flatMap((ar) =>
+        Array.from({ length: ar.count }, (_, i) => ({
+          prompt: imagePrompt,
+          aspectRatio: ar.ratio,
+          sampleCount: 1,
+          gcsPath: `${gcsPath}${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}.png`,
+        })),
+      );
+    });
+
+    console.log("Job objects:", jobObjects);
+
+    const generationPromises = jobObjects.map(async (job) => {
+      const base64Images = await generateImagesFromPrompt(
+        job.prompt,
+        job.aspectRatio,
+        job.sampleCount,
+        configStore.imageGenModel,
+      );
+      const dataUrl = "data:image/png;base64," + base64Images[0];
+      return uploadBase64Image(job.gcsPath, dataUrl);
+    });
+
+    const generatedImages = await Promise.all(generationPromises);
+    console.log("Generated image URLs:", generatedImages);
     emit("generation-complete", generatedImages);
   } catch (error) {
-    errorMessage.value = "An error occurred during image generation. Please try again.";
+    errorMessage.value =
+      "An error occurred during image generation. Please try again.";
     console.error("Error in Search Signal Keywords generation:", error);
   } finally {
     isLoading.value = false;

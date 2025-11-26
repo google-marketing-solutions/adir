@@ -18,6 +18,12 @@ const logout = () => {
   >
     <img src="@/assets/adir_logo.png" alt="Adir Logo" class="h-16" />
     <div>
+      <router-link
+        to="/help"
+        class="py-2 px-4 bg-gray-700 rounded-md hover:bg-gray-600 text-white no-underline mr-4 inline-block"
+      >
+        Help
+      </router-link>
       <button
         @click="emit('open-settings')"
         class="py-2 px-4 bg-gray-700 rounded-md hover:bg-gray-600"

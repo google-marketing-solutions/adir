@@ -38,7 +38,7 @@ const route = useRoute();
             route.name !== 'AssetPreview',
         }"
       >
-        Asset Preview
+        Asset Preview & Edit
       </router-link>
     </nav>
   </aside>

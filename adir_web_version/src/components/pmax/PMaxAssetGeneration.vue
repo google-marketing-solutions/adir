@@ -5,6 +5,7 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import AssetGroupNameMode from "./generation/AssetGroupNameMode.vue";
 import CreativeConceptsMode from "./generation/CreativeConceptsMode.vue";
+import ExistingAssetsMode from "./generation/ExistingAssetsMode.vue";
 import SearchSignalKeywordsMode from "./generation/SearchSignalKeywordsMode.vue";
 
 const emit = defineEmits(["change-subpage"]);
@@ -12,11 +13,12 @@ const campaignStore = useCampaignStore();
 const assetStore = useAssetStore();
 const router = useRouter();
 
-const activeMode = ref("Creative Concepts");
+const activeMode = ref("Existing Asset Based Generation 🍌");
 const modes = {
-  "Creative Concepts": CreativeConceptsMode,
+  "Existing Asset Based Generation 🍌": ExistingAssetsMode,
   "Asset Group / Ad Group Name": AssetGroupNameMode,
   "Search Signal Keywords": SearchSignalKeywordsMode,
+  "Creative Concepts": CreativeConceptsMode,
 };
 
 const isLoading = ref(false);

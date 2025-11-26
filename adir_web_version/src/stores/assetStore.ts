@@ -46,9 +46,10 @@ export const useAssetStore = defineStore("assetStore", {
           }
           campaigns[campaignName].assetGroups[groupName].assets.push(asset);
         } else if (asset.type === "demandgen") {
-          const adGroupName = asset.adGroup.name;
-          const adResourceName = asset.adGroupAd.resourceName;
-          const adName = asset.adGroupAd.ad.name;
+          const adGroupName = asset.adGroup?.name || "Unknown Ad Group";
+          const adResourceName =
+            asset.adGroupAd?.resourceName || "Unknown Ad Resource";
+          const adName = asset.adGroupAd?.ad?.name || "Unknown Ad";
 
           if (!campaigns[campaignName].adGroups[adGroupName]) {
             campaigns[campaignName].adGroups[adGroupName] = {

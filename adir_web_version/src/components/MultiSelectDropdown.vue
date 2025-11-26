@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, onMounted, onBeforeUnmount } from "vue";
 
 const props = defineProps({
   options: {
@@ -18,6 +18,7 @@ const emit = defineEmits(["update:modelValue"]);
 
 const isOpen = ref(false);
 const searchTerm = ref("");
+const dropdownRef = ref(null);
 
 const filteredOptions = computed(() => {
   if (!searchTerm.value) {
@@ -40,6 +41,21 @@ const toggleDropdown = () => {
     searchTerm.value = "";
   }
 };
+
+const handleClickOutside = (event) => {
+  if (dropdownRef.value && !dropdownRef.value.contains(event.target)) {
+    isOpen.value = false;
+    searchTerm.value = "";
+  }
+};
+
+onMounted(() => {
+  window.addEventListener("click", handleClickOutside);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("click", handleClickOutside);
+});
 
 const handleCheckboxChange = (event, optionValue) => {
   const newSelectedValues = [...props.modelValue];
@@ -65,7 +81,7 @@ const removeOption = (optionValue) => {
 </script>
 
 <template>
-  <div class="relative">
+  <div class="relative" ref="dropdownRef">
     <div
       @click="toggleDropdown"
       class="w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm pl-3 pr-10 py-2 text-left cursor-default focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-white min-h-[38px] flex flex-wrap items-center"

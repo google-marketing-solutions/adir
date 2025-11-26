@@ -1,60 +1,40 @@
 import { useConfigStore } from "@/stores/config";
 import { createGoogleAdsApiClient } from "./apiService";
 
-const metricMap = {
-  CTR: "metrics.ctr",
-  Clicks: "metrics.clicks",
-  Impressions: "metrics.impressions",
-  Cost: "metrics.cost_micros",
-  Conversions: "metrics.conversions",
-  AverageCPC: "metrics.average_cpc",
-  ConversionValue: "metrics.conversions_value",
-  CPA: "metrics.cost_per_conversion",
-  ConvValuePerCost: "metrics.conversions_value_per_cost",
-};
+export interface Condition {
+  id: number;
+  metric: string;
+  operator: string;
+  value: number;
+  logicalOperator: string;
+}
 
 /**
  * Fetches Performance Max assets based on specified conditions, date range, and campaign IDs.
- * @param {any[]} conditions - The conditions to filter assets by.
+ * @param {Condition[]} conditions - The conditions to filter assets by.
  * @param {string} dateRange - The date range for which to fetch assets.
  * @param {string[]} campaignIds - The IDs of the campaigns to fetch assets from.
  * @return {Promise<any>} The fetched assets.
  */
 export async function fetchPMaxAssets(
-  conditions: any[],
+  conditions: Condition[],
   dateRange: string,
   campaignIds: string[]
 ) {
-  const configStore = useConfigStore();
-  const { customerID } = configStore;
-  const apiClient = createGoogleAdsApiClient();
-  const url = `/customers/${customerID}/googleAds:search`;
-
-  const whereClauses = conditions.map((condition) => {
-    const gaqlField = metricMap[condition.metric as keyof typeof metricMap];
-    if (
-      condition.metric === "Cost" ||
-      condition.metric === "CPA" ||
-      condition.metric === "AverageCPC"
-    ) {
-      return `${gaqlField} ${condition.operator} ${condition.value * 1000000}`;
-    }
-    return `${gaqlField} ${condition.operator} ${condition.value}`;
-  });
-
-  whereClauses.push("asset.type = 'IMAGE'");
-  whereClauses.push("asset_group_asset.status = 'ENABLED'");
-  whereClauses.push("asset.image_asset.full_size.url IS NOT NULL");
-  whereClauses.push("asset.source = 'ADVERTISER'");
-  whereClauses.push(`segments.date DURING ${dateRange}`);
-
+  const assetWhereClauses = [
+    "asset.type = 'IMAGE'",
+    "asset_group_asset.status = 'ENABLED'",
+    "asset.image_asset.full_size.url IS NOT NULL",
+    "asset.source = 'ADVERTISER'",
+    "campaign.advertising_channel_type = 'PERFORMANCE_MAX'",
+  ];
   if (campaignIds && campaignIds.length > 0) {
-    whereClauses.push(`campaign.id IN (${campaignIds.join(",")})`);
+    assetWhereClauses.push(`campaign.id IN (${campaignIds.join(",")})`);
   }
-  whereClauses.push("campaign.advertising_channel_type = 'PERFORMANCE_MAX'");
 
-  const gaqlQuery = `
+  const assetQuery = `
     SELECT
+      campaign.id,
       campaign.name,
       customer.currency_code,
       asset_group.name,
@@ -63,7 +43,23 @@ export async function fetchPMaxAssets(
       asset.source,
       asset_group_asset.resource_name,
       asset.image_asset.full_size.url,
-      asset_group_asset.performance_label,
+      asset_group_asset.performance_label
+    FROM asset_group_asset
+    WHERE ${assetWhereClauses.join(" AND ")}
+  `;
+
+  const metricsWhereClauses = [
+    "asset_group_asset.status = 'ENABLED'",
+    `segments.date DURING ${dateRange}`,
+    "campaign.advertising_channel_type = 'PERFORMANCE_MAX'",
+  ];
+  if (campaignIds && campaignIds.length > 0) {
+    metricsWhereClauses.push(`campaign.id IN (${campaignIds.join(",")})`);
+  }
+
+  const metricsQuery = `
+    SELECT
+      asset_group_asset.resource_name,
       metrics.ctr,
       metrics.impressions,
       metrics.clicks,
@@ -74,64 +70,106 @@ export async function fetchPMaxAssets(
       metrics.cost_per_conversion,
       metrics.conversions_value_per_cost
     FROM asset_group_asset
-    WHERE ${whereClauses.join(" AND ")}
+    WHERE ${metricsWhereClauses.join(" AND ")}
   `;
 
-  const body = { query: gaqlQuery };
-  console.log("GAQL Query:", gaqlQuery);
+  return fetchAssetsWithMetrics(
+    conditions,
+    assetQuery,
+    metricsQuery,
+    (metrics: any[]) => {
+      const metricsMap = new Map();
+      metrics.forEach((m: any) => {
+        metricsMap.set(m.assetGroupAsset.resourceName, m.metrics);
+      });
+      return metricsMap;
+    },
+    (asset: any, metricsMap: Map<string, any>) => {
+      return (
+        metricsMap.get(asset.assetGroupAsset.resourceName) || {
+          ctr: 0,
+          impressions: 0,
+          clicks: 0,
+          costMicros: 0,
+          conversions: 0,
+          averageCpc: 0,
+          conversionsValue: 0,
+          costPerConversion: 0,
+          conversionsValuePerCost: 0,
+        }
+      );
+    }
+  );
+}
 
-  try {
-    const data = await apiClient.post(url, body);
-    console.log("Google Ads API Response:", data);
-    return data.results || [];
-  } catch (error) {
-    console.error("Error fetching PMax assets:", error);
-    throw error;
+function getMetricValue(metrics: any, metricName: string) {
+  switch (metricName) {
+    case "CTR":
+      return metrics.ctr;
+    case "Clicks":
+      return metrics.clicks;
+    case "Impressions":
+      return metrics.impressions;
+    case "Cost":
+      return metrics.costMicros / 1000000;
+    case "Conversions":
+      return metrics.conversions;
+    case "AverageCPC":
+      return metrics.averageCpc / 1000000;
+    case "ConversionValue":
+      return metrics.conversionsValue;
+    case "CPA":
+      return metrics.costPerConversion / 1000000;
+    case "ConvValuePerCost":
+      return metrics.conversionsValuePerCost;
+    default:
+      return 0;
+  }
+}
+
+function compare(a: number, operator: string, b: number) {
+  switch (operator) {
+    case "<":
+      return a < b;
+    case ">":
+      return a > b;
+    case "=":
+      return a === b;
+    case "<=":
+      return a <= b;
+    case ">=":
+      return a >= b;
+    default:
+      return false;
   }
 }
 
 /**
  * Fetches Demand Gen assets based on specified conditions, date range, and campaign IDs.
- * @param {any[]} conditions - The conditions to filter assets by.
+ * @param {Condition[]} conditions - The conditions to filter assets by.
  * @param {string} dateRange - The date range for which to fetch assets.
  * @param {string[]} campaignIds - The IDs of the campaigns to fetch assets from.
  * @return {Promise<any>} The fetched assets.
  */
 export async function fetchDemandGenAssets(
-  conditions: any[],
+  conditions: Condition[],
   dateRange: string,
   campaignIds: string[]
 ) {
-  const configStore = useConfigStore();
-  const { customerID } = configStore;
-  const apiClient = createGoogleAdsApiClient();
-  const url = `/customers/${customerID}/googleAds:search`;
-
-  const whereClauses = conditions.map((condition) => {
-    const gaqlField = metricMap[condition.metric as keyof typeof metricMap];
-    if (
-      condition.metric === "Cost" ||
-      condition.metric === "CPA" ||
-      condition.metric === "AverageCPC"
-    ) {
-      return `${gaqlField} ${condition.operator} ${condition.value * 1000000}`;
-    }
-    return `${gaqlField} ${condition.operator} ${condition.value}`;
-  });
-
-  whereClauses.push("asset.type = 'IMAGE'");
-  whereClauses.push("ad_group_ad.status = 'ENABLED'");
-  whereClauses.push("asset.image_asset.full_size.url IS NOT NULL");
-  whereClauses.push("asset.source = 'ADVERTISER'");
-  whereClauses.push(`segments.date DURING ${dateRange}`);
-
+  const assetWhereClauses = [
+    "asset.type = 'IMAGE'",
+    "ad_group_ad.status = 'ENABLED'",
+    "asset.image_asset.full_size.url IS NOT NULL",
+    "asset.source = 'ADVERTISER'",
+    "campaign.advertising_channel_type = 'DEMAND_GEN'",
+  ];
   if (campaignIds && campaignIds.length > 0) {
-    whereClauses.push(`campaign.id IN (${campaignIds.join(",")})`);
+    assetWhereClauses.push(`campaign.id IN (${campaignIds.join(",")})`);
   }
-  whereClauses.push("campaign.advertising_channel_type = 'DEMAND_GEN'");
 
-  const gaqlQuery = `
+  const assetQuery = `
     SELECT
+      campaign.id,
       campaign.name,
       customer.currency_code,
       ad_group.name,
@@ -140,7 +178,24 @@ export async function fetchDemandGenAssets(
       asset.source,
       ad_group_ad.resource_name,
       ad_group_ad.ad.name,
-      asset.image_asset.full_size.url,
+      asset.image_asset.full_size.url
+    FROM ad_group_ad_asset_view
+    WHERE ${assetWhereClauses.join(" AND ")}
+  `;
+
+  const metricsWhereClauses = [
+    "ad_group_ad.status = 'ENABLED'",
+    `segments.date DURING ${dateRange}`,
+    "campaign.advertising_channel_type = 'DEMAND_GEN'",
+  ];
+  if (campaignIds && campaignIds.length > 0) {
+    metricsWhereClauses.push(`campaign.id IN (${campaignIds.join(",")})`);
+  }
+
+  const metricsQuery = `
+    SELECT
+      ad_group_ad.resource_name,
+      asset.resource_name,
       metrics.ctr,
       metrics.impressions,
       metrics.clicks,
@@ -151,17 +206,89 @@ export async function fetchDemandGenAssets(
       metrics.cost_per_conversion,
       metrics.conversions_value_per_cost
     FROM ad_group_ad_asset_view
-    WHERE ${whereClauses.join(" AND ")}
+    WHERE ${metricsWhereClauses.join(" AND ")}
   `;
 
-  const body = { query: gaqlQuery };
+  return fetchAssetsWithMetrics(
+    conditions,
+    assetQuery,
+    metricsQuery,
+    (metrics: any[]) => {
+      const metricsMap = new Map();
+      metrics.forEach((m: any) => {
+        const adGroupAdResourceName = m.adGroupAd?.resourceName;
+        const assetResourceName = m.asset?.resourceName;
+        if (adGroupAdResourceName && assetResourceName) {
+          const key = `${adGroupAdResourceName}~${assetResourceName}`;
+          metricsMap.set(key, m.metrics);
+        }
+      });
+      return metricsMap;
+    },
+    (asset: any, metricsMap: Map<string, any>) => {
+      const adGroupAdResourceName = asset.adGroupAd?.resourceName;
+      const assetResourceName = asset.asset?.resourceName;
+      const key = `${adGroupAdResourceName}~${assetResourceName}`;
+
+      return (
+        metricsMap.get(key) || {
+          ctr: 0,
+          impressions: 0,
+          clicks: 0,
+          costMicros: 0,
+          conversions: 0,
+          averageCpc: 0,
+          conversionsValue: 0,
+          costPerConversion: 0,
+          conversionsValuePerCost: 0,
+        }
+      );
+    }
+  );
+}
+
+async function fetchAssetsWithMetrics(
+  conditions: Condition[],
+  assetQuery: string,
+  metricsQuery: string,
+  createMetricsMap: (metrics: any[]) => Map<string, any>,
+  getAssetMetrics: (asset: any, metricsMap: Map<string, any>) => any
+) {
+  const configStore = useConfigStore();
+  const { customerID } = configStore;
+  const apiClient = createGoogleAdsApiClient();
+  const url = `/customers/${customerID}/googleAds:search`;
 
   try {
-    const data = await apiClient.post(url, body);
-    console.log("Google Ads API Response (Demand Gen):", data);
-    return data.results || [];
+    const [assetData, metricsData] = await Promise.all([
+      apiClient.post(url, { query: assetQuery }),
+      apiClient.post(url, { query: metricsQuery }),
+    ]);
+
+    const assets = assetData.results || [];
+    const metrics = metricsData.results || [];
+
+    const metricsMap = createMetricsMap(metrics);
+
+    const mergedAssets = assets.map((asset: any) => {
+      const assetMetrics = getAssetMetrics(asset, metricsMap);
+      return {
+        ...asset,
+        metrics: assetMetrics,
+      };
+    });
+
+    const filteredAssets = mergedAssets.filter((asset: any) => {
+      return conditions.every((condition) => {
+        const metricValue = getMetricValue(asset.metrics, condition.metric);
+        const conditionValue = condition.value;
+        return compare(metricValue, condition.operator, conditionValue);
+      });
+    });
+
+    return filteredAssets;
   } catch (error) {
-    console.error("Error fetching Demand Gen assets:", error);
+    console.error("Error fetching assets with metrics:", error);
     throw error;
   }
 }

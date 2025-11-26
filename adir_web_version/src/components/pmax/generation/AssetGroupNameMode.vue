@@ -48,11 +48,8 @@ const insertPlaceholder = () => {
 const handleGenerate = async () => {
   isLoading.value = true;
   emit("update:loading", true);
-  const generatedImages = [];
   try {
     errorMessage.value = "";
-    const campaignIds = props.selectedCampaigns.map((c) => c.campaign.id);
-    const assetGroups = await fetchAssetGroupsByCampaignIds(campaignIds);
     const pmaxCampaignIds = props.selectedCampaigns
       .filter((c) => c.campaign.advertisingChannelType === "PERFORMANCE_MAX")
       .map((c) => c.campaign.id);
@@ -70,50 +67,50 @@ const handleGenerate = async () => {
       groups = groups.concat(adGroups);
     }
 
-    for (const ar of aspectRatios.value) {
-      if (ar.count > 0) {
-        const jobObjects = groups.flatMap((group) => {
-          const isDemandGen =
-            group.campaign.advertisingChannelType === "DEMAND_GEN";
-          const groupName = isDemandGen
-            ? group.adGroup.name
-            : group.assetGroup.name;
-          const groupId = isDemandGen ? group.adGroup.id : group.assetGroup.id;
+    const aspectRatiosToGenerate = aspectRatios.value.filter(
+      (ar) => ar.count > 0,
+    );
 
-          const finalPrompt = prompt.value.replace(
-            /\[Asset Group \/ Ad Group Name\]/g,
-            groupName,
-          );
-          const campaignIdentifier = `${group.campaign.name.replace(/\s+/g, "_")}~${group.campaign.id}`;
-          const groupIdentifier = `${groupName.replace(/\s+/g, "_")}~${groupId}`;
-          const gcsPath = `${configStore.customerID}/${campaignIdentifier}/${groupIdentifier}/GENERATED/`;
+    const jobObjects = groups.flatMap((group) => {
+      const isDemandGen =
+        group.campaign.advertisingChannelType === "DEMAND_GEN";
+      const groupName = isDemandGen ? group.adGroup.name : group.assetGroup.name;
+      const groupId = isDemandGen ? group.adGroup.id : group.assetGroup.id;
 
-          return Array.from({ length: ar.count }, (_, i) => ({
-            prompt: finalPrompt,
-            aspectRatio: ar.ratio,
-            sampleCount: 1,
-            gcsPath: `${gcsPath}${Date.now()}_${i}.png`,
-          }));
-        });
+      const finalPrompt = prompt.value.replace(
+        /\[Asset Group \/ Ad Group Name\]/g,
+        groupName,
+      );
+      const campaignIdentifier = `${group.campaign.name.replace(/\s+/g, "_")}~${group.campaign.id}`;
+      const groupIdentifier = `${groupName.replace(/\s+/g, "_")}~${groupId}`;
+      const gcsPath = `${configStore.customerID}/${campaignIdentifier}/${groupIdentifier}/GENERATED/`;
 
-        const generationPromises = jobObjects.map(async (job) => {
-          const base64Images = await generateImagesFromPrompt(
-            job.prompt,
-            job.aspectRatio,
-            job.sampleCount,
-            configStore.imageGenModel,
-          );
-          const dataUrl = "data:image/png;base64," + base64Images[0];
-          return uploadBase64Image(job.gcsPath, dataUrl);
-        });
+      return aspectRatiosToGenerate.flatMap((ar) =>
+        Array.from({ length: ar.count }, (_, i) => ({
+          prompt: finalPrompt,
+          aspectRatio: ar.ratio,
+          sampleCount: 1,
+          gcsPath: `${gcsPath}${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}.png`,
+        })),
+      );
+    });
 
-        const uploadedImageUrls = await Promise.all(generationPromises);
-        generatedImages.push(...uploadedImageUrls);
-      }
-    }
+    const generationPromises = jobObjects.map(async (job) => {
+      const base64Images = await generateImagesFromPrompt(
+        job.prompt,
+        job.aspectRatio,
+        job.sampleCount,
+        configStore.imageGenModel,
+      );
+      const dataUrl = "data:image/png;base64," + base64Images[0];
+      return uploadBase64Image(job.gcsPath, dataUrl);
+    });
+
+    const generatedImages = await Promise.all(generationPromises);
     emit("generation-complete", generatedImages);
   } catch (error) {
-    errorMessage.value = "An error occurred during image generation. Please try again.";
+    errorMessage.value =
+      "An error occurred during image generation. Please try again.";
     console.error("Error in AssetGroup Name generation:", error);
   } finally {
     isLoading.value = false;

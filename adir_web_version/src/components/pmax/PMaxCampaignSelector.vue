@@ -85,7 +85,8 @@ onMounted(async () => {
     }));
 
     campaigns.value = [...pmaxCampaigns, ...demandGenCampaigns];
-    selectedCampaigns.value = campaigns.value;
+    // Only select campaigns that match the default filter
+    selectedCampaigns.value = campaigns.value.filter(c => c.type === campaignType.value);
     onCampaignSelect(selectedCampaigns.value);
   } catch (error) {
     console.error("Failed to fetch campaigns:", error);

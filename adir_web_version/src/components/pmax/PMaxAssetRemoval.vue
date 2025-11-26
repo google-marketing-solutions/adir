@@ -23,6 +23,7 @@ const showSuccessMessage = ref(false);
 const successMessage = ref("");
 
 const conditions = ref([]);
+let conditionIdCounter = 0;
 const dateRange = ref("LAST_30_DAYS");
 
 const activeMetrics = computed(() => {
@@ -31,20 +32,23 @@ const activeMetrics = computed(() => {
 
 const getAssetFormat = (asset) => {
   if (asset.type === "pmax") {
-    let format = asset.assetGroupAsset.resourceName.split("~").pop();
+    let format = asset.assetGroupAsset?.resourceName?.split("~").pop();
     if (format === "MARKETING_IMAGE") {
       format = "LANDSCAPE_MARKETING_IMAGE";
     }
     return format;
   } else {
-    const { width, height } = asset.asset.imageAsset.fullSize;
-    if (width === height) {
-      return "SQUARE_MARKETING_IMAGE";
-    } else if (width > height) {
-      return "LANDSCAPE_MARKETING_IMAGE";
-    } else {
-      return "PORTRAIT_MARKETING_IMAGE";
+    const { width, height } = asset.asset?.imageAsset?.fullSize || {};
+    if (width && height) {
+      if (width === height) {
+        return "SQUARE_MARKETING_IMAGE";
+      } else if (width > height) {
+        return "LANDSCAPE_MARKETING_IMAGE";
+      } else {
+        return "PORTRAIT_MARKETING_IMAGE";
+      }
     }
+    return "UNKNOWN"; // Or handle appropriately
   }
 };
 
@@ -57,16 +61,17 @@ const getAssetResourceName = (asset) => {
 const getAssetUniqueId = (asset) => {
   if (asset.type === "demandgen") {
     // For Demand Gen, the combination of ad and asset is the one used in the API
-    return `${asset.adGroupAd.resourceName}~${asset.asset.resourceName}`;
+    return `${asset.adGroupAd?.resourceName || 'unknown-ad'}~${asset.asset?.resourceName || 'unknown-asset'}`;
   }
   // For PMax, the asset group asset resource name is enough
-  return asset.assetGroupAsset.resourceName;
+  return asset.assetGroupAsset?.resourceName || 'unknown-pmax-asset';
 };
 
 const assetFormats = [
   "SQUARE_MARKETING_IMAGE",
   "PORTRAIT_MARKETING_IMAGE",
   "LANDSCAPE_MARKETING_IMAGE",
+  "UNKNOWN",
 ];
 const visibleFormats = ref(new Set(assetFormats));
 const filterTrigger = ref(0);
@@ -256,7 +261,7 @@ async function handleCheckAssets() {
 
 function addCondition() {
   conditions.value.push({
-    id: Date.now(),
+    id: ++conditionIdCounter,
     metric: "Clicks",
     operator: "<",
     value: 100,
@@ -455,8 +460,8 @@ async function handleRemoveAssets() {
             class="bg-gray-700 rounded-md p-2"
           >
             <option value="LAST_7_DAYS">Last 7 Days</option>
+            <option value="LAST_14_DAYS">Last 14 Days</option>
             <option value="LAST_30_DAYS">Last 30 Days</option>
-            <option value="LAST_90_DAYS">Last 90 Days</option>
           </select>
         </div>
         <div class="mt-6 flex justify-end">
