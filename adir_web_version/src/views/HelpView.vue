@@ -54,14 +54,50 @@
             </div>
           </div>
 
-          <!-- Step 3: OAuth Client ID -->
+          <!-- Step 3: OAuth Consent Screen -->
           <div class="timeline-item">
             <div class="timeline-marker">3</div>
+            <div class="timeline-content">
+              <h3>Configure OAuth Consent Screen</h3>
+              <p>
+                Configure the OAuth consent screen. Set it to <strong>Internal</strong> if you are within a Google Workspace, or <strong>External</strong> for testing.
+                Add the <strong>Google Ads API</strong> scope.
+              </p>
+              <div class="action-links">
+                <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" class="action-link">
+                  <span class="icon">📝</span> Configure Consent Screen
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4: Grant Permissions -->
+          <div class="timeline-item">
+            <div class="timeline-marker">4</div>
+            <div class="timeline-content">
+              <h3>Grant IAM Permissions</h3>
+              <p>
+                Ensure that all users running Adir have the following roles granted in <strong>IAM & Admin</strong>:
+              </p>
+              <ul class="settings-list" style="margin-bottom: 16px;">
+                <li><strong>Storage Admin</strong> (<code>roles/storage.admin</code>)</li>
+                <li><strong>Vertex AI User</strong> (<code>roles/aiplatform.user</code>)</li>
+              </ul>
+              <div class="action-links">
+                <a href="https://console.cloud.google.com/iam-admin/iam" target="_blank" class="action-link">
+                  <span class="icon">👥</span> IAM & Admin
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 5: OAuth Client ID -->
+          <div class="timeline-item">
+            <div class="timeline-marker">5</div>
             <div class="timeline-content">
               <h3>Create OAuth Client ID</h3>
               <p>
                 Create an OAuth 2.0 Client ID of type <strong>Web application</strong>.
-                Set it to <strong>Internal</strong> if you are within a Google Workspace, or <strong>External</strong> for testing.
               </p>
               <div class="code-block">
                 <p><strong>Authorized JavaScript origins:</strong></p>
@@ -80,32 +116,9 @@
             </div>
           </div>
 
-          <!-- Step 4: Create Gemini API Key -->
+          <!-- Step 6: Configure Settings -->
           <div class="timeline-item">
-            <div class="timeline-marker">4</div>
-            <div class="timeline-content">
-              <h3>Create Gemini API Key</h3>
-              <p>
-                To use Nano Banana features and Gemini 3, you need a Gemini API Key.
-                We recommend creating this through your GCP project.
-              </p>
-              <p class="note">
-                Under <strong>Create Credentials</strong>, select <strong>API Key</strong>.
-              </p>
-              <div class="action-links">
-                <a href="https://console.cloud.google.com/apis/credentials" target="_blank" class="action-link">
-                  <span class="icon">🔑</span> GCP Credentials
-                </a>
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" class="action-link">
-                  <span class="icon">🤖</span> Google AI Studio (Alternative)
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 5: Configure Settings -->
-          <div class="timeline-item">
-            <div class="timeline-marker">5</div>
+            <div class="timeline-marker">6</div>
             <div class="timeline-content">
               <h3>Configure Settings</h3>
               <p>
@@ -122,7 +135,7 @@
                 </li>
                 <li><strong>MCC ID:</strong> A Google Ads Manager Account (MCC) you have direct access to.</li>
                 <li><strong>Customer ID:</strong> A child account under the specified MCC.</li>
-                <li><strong>Gemini API Key:</strong> Required for Nano Banana features.</li>
+
                 <li><strong>Google Ads Developer Token:</strong> Basic or Standard level access.</li>
               </ul>
             </div>

@@ -337,8 +337,9 @@ const handleEditSubmit = async () => {
       const editedBase64 = await editImageWithNanoBanana([base64Content], editPrompt.value);
       const dataUrl = `data:image/png;base64,${editedBase64}`;
 
-      // Generate new GCS path in the same folder
+      // Generate new GCS path in the same folder but ensure it is in GENERATED
       const parts = asset.name.split("/");
+      parts[parts.length - 2] = "GENERATED"; // Force status folder to GENERATED
       parts[parts.length - 1] = `${Date.now()}_edited_${parts[parts.length - 1]}`;
       const newGcsPath = parts.join("/");
 
@@ -352,11 +353,7 @@ const handleEditSubmit = async () => {
     editMessage.value = "Images edited successfully.";
   } catch (error) {
     console.error("Error editing images:", error);
-    if (error.message === "Gemini API key is mandatory for the usage of Nano Banana") {
-      editMessage.value = error.message;
-    } else {
-      editMessage.value = "Error editing images.";
-    }
+    editMessage.value = "Error editing images.";
   } finally {
     isEditing.value = false;
     setTimeout(() => (editMessage.value = ""), 3000);
@@ -413,6 +410,7 @@ const handleEditSubmit = async () => {
             <MultiSelectDropdown
               :options="availableAssetGroups"
               v-model="selectedAssetGroups"
+              placeholder="Select asset groups..."
             />
           </div>
         </div>

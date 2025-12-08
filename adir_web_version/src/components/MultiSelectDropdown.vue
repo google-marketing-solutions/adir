@@ -12,6 +12,10 @@ const props = defineProps({
     required: true,
     default: () => [],
   },
+  placeholder: {
+    type: String,
+    default: "Select campaigns...",
+  },
 });
 
 const emit = defineEmits(["update:modelValue"]);
@@ -101,7 +105,7 @@ const removeOption = (optionValue) => {
           </button>
         </span>
       </template>
-      <span v-else class="text-gray-400">Select campaigns...</span>
+      <span v-else class="text-gray-400">{{ placeholder }}</span>
 
       <span
         class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none"

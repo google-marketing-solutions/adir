@@ -28,7 +28,7 @@ const handleGenerationComplete = (imageUrls) => {
     const newAssets = imageUrls.map((url) => ({
       asset: { imageAsset: { fullSize: { url } } },
     }));
-    assetStore.setAssets(newAssets);
+    // assetStore.setAssets(newAssets); // Removed to prevent store pollution with incompatible assets
     assetStore.setNeedsRefresh(true);
     router.push("/asset-preview");
   }

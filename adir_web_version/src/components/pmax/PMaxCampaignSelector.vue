@@ -1,35 +1,38 @@
 <template>
-  <div>
-    <h2>Select Pmax And/Or Demand Gen Campaigns</h2>
-    <div class="flex items-center mb-4">
-      <label class="mr-4">Filter by campaign type:</label>
+  <div class="bg-gray-800/50 p-6 rounded-xl border border-gray-700/50 backdrop-blur-sm">
+    <h2 class="text-lg font-bold text-white tracking-tight mb-6 flex items-center gap-2">
+      <span class="text-indigo-500">/</span>
+      CAMPAIGN SELECTION
+    </h2>
+    <div class="flex items-center mb-6">
+      <label class="mr-4 text-sm font-mono font-medium text-gray-400 uppercase tracking-widest">Filter Mode:</label>
       <div class="flex gap-4">
-        <label class="flex items-center">
+        <label class="flex items-center cursor-pointer group">
           <input
             type="radio"
             v-model="campaignType"
             value="all"
-            class="mr-1"
+            class="mr-2 text-indigo-500 focus:ring-indigo-500 bg-gray-700 border-gray-600"
           />
-          All
+          <span class="text-base font-bold text-gray-300 group-hover:text-white transition-colors">All</span>
         </label>
-        <label class="flex items-center">
+        <label class="flex items-center cursor-pointer group">
           <input
             type="radio"
             v-model="campaignType"
             value="pmax"
-            class="mr-1"
+            class="mr-2 text-indigo-500 focus:ring-indigo-500 bg-gray-700 border-gray-600"
           />
-          PMax
+          <span class="text-base font-bold text-gray-300 group-hover:text-white transition-colors">PMax</span>
         </label>
-        <label class="flex items-center">
+        <label class="flex items-center cursor-pointer group">
           <input
             type="radio"
             v-model="campaignType"
             value="demandgen"
-            class="mr-1"
+            class="mr-2 text-indigo-500 focus:ring-indigo-500 bg-gray-700 border-gray-600"
           />
-          Demand Gen
+          <span class="text-base font-bold text-gray-300 group-hover:text-white transition-colors">Demand Gen</span>
         </label>
       </div>
     </div>
@@ -37,6 +40,7 @@
       :options="campaignOptions"
       v-model="selectedCampaigns"
       @update:modelValue="onCampaignSelect"
+      placeholder="SELECT CAMPAIGNS..."
     />
   </div>
 </template>
@@ -99,10 +103,4 @@ function onCampaignSelect(selected) {
 }
 </script>
 
-<style scoped>
-h2 {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-</style>
+

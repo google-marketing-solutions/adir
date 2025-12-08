@@ -26,6 +26,7 @@ export const useAssetStore = defineStore("assetStore", {
     groupedAssets: (state) => {
       const campaigns = {};
       state.assets.forEach((asset) => {
+        if (!asset.campaign?.name) return;
         const campaignName = asset.campaign.name;
         if (!campaigns[campaignName]) {
           campaigns[campaignName] = {

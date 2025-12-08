@@ -70,8 +70,7 @@ const handleGenerate = async () => {
       .filter((c) => c.campaign.advertisingChannelType === "DEMAND_GEN")
       .map((c) => c.campaign.id);
 
-    console.log("PMax Campaign IDs for fetching:", pmaxCampaignIds);
-    console.log("Demand Gen Campaign IDs for fetching:", demandGenCampaignIds);
+
 
     let allAssets = [];
     const dateRange = "LAST_30_DAYS"; // Default date range for performance data
@@ -222,7 +221,7 @@ const handleGenerate = async () => {
       });
     }
 
-    console.log(`Created ${jobObjects.length} generation jobs.`);
+
 
     const generationPromises = jobObjects.map(async (job) => {
       try {
@@ -248,9 +247,7 @@ const handleGenerate = async () => {
         return uploadBase64Image(job.gcsPath, dataUrl);
       } catch (e) {
         console.error("Error generating image for job:", job, e);
-        if (e.message === "Gemini API key is mandatory for the usage of Nano Banana") {
-          throw e; // Rethrow to stop all generation if API key is missing
-        }
+
         return null;
       }
     });
@@ -265,12 +262,8 @@ const handleGenerate = async () => {
       emit("generation-complete", generatedImages);
     }
   } catch (error) {
-    if (error.message === "Gemini API key is mandatory for the usage of Nano Banana") {
-      errorMessage.value = error.message;
-    } else {
-      errorMessage.value =
-        "An error occurred during image generation. Please try again.";
-    }
+    errorMessage.value =
+      "An error occurred during image generation. Please try again.";
     console.error("Error in Existing Assets generation:", error);
   } finally {
     isLoading.value = false;

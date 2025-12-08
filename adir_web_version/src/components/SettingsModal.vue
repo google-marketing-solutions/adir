@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="isVisible"
-    class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center"
+    class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-[100]"
     @click="emit('close')"
   >
     <div
@@ -169,24 +169,7 @@
             </div>
           </div>
         </fieldset>
-        <fieldset class="border border-gray-700 rounded-md p-4">
-          <legend class="text-lg font-semibold px-2">Gemini API</legend>
-          <div class="grid grid-cols-1 gap-4">
-            <div>
-              <label
-                for="gemini-api-key"
-                class="block text-sm font-medium text-gray-300 mb-1"
-                >Gemini API Key (for Nano Banana & Gemini 3)</label
-              >
-              <input
-                v-model="configStore.geminiApiKey"
-                type="password"
-                id="gemini-api-key"
-                class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
-              />
-            </div>
-          </div>
-        </fieldset>
+
         <div class="flex justify-end">
           <button
             @click="emit('close')"

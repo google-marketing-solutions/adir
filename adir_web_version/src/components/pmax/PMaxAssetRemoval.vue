@@ -157,16 +157,11 @@ const groupedAssets = computed(() => {
 
 // Pass the currency code dynamically (e.g., 'ILS', 'EUR', 'USD')
 const formatAdsCurrency = (micros, currencyCode = "USD") => {
-  // 1. Safety Check
   if (micros === undefined || micros === null) {
     return "N/A";
   }
-
-  // 2. The Google Ads "Micros" Math
   const actualAmount = micros / 1000000;
 
-  // 3. We use 'en-US' for the locale so numbers look like "1,000.00" (comma separator)
-  // But we pass the specific currencyCode to get the right symbol (€, ₪, ¥)
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currencyCode,
@@ -187,7 +182,7 @@ const formatters = {
   number: (val) =>
     new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 0,
-      maximumFractionDigits: 2, // Conversions can be fractional in Google Ads
+      maximumFractionDigits: 2,
     }).format(val),
 
   // For CTR, Conv. Rate
@@ -248,7 +243,7 @@ async function handleCheckAssets() {
     }
 
     const allAssets = [...pmaxResults, ...demandGenResults];
-    console.log("Fetched assets:", allAssets);
+
     assetStore.setAssets(allAssets || []);
     removalStep.value = 2;
   } catch (error) {
@@ -276,15 +271,22 @@ function removeCondition(index) {
   }
 }
 
-function showConditions() {
-  console.log(conditions.value);
-}
+
 
 onMounted(() => {
-  if (assetStore.assets.length > 0) {
+  const hasValidAssets =
+    assetStore.assets.length > 0 &&
+    assetStore.assets.every((a) => a.campaign?.name);
+
+  if (hasValidAssets) {
     removalStep.value = 2;
-  } else if (conditions.value.length === 0) {
-    addCondition();
+  } else {
+    if (assetStore.assets.length > 0) {
+      assetStore.setAssets([]);
+    }
+    if (conditions.value.length === 0) {
+      addCondition();
+    }
   }
 });
 

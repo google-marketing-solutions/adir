@@ -1,9 +1,38 @@
 import { useAuthStore } from "@/stores/auth";
 import { useConfigStore } from "@/stores/config";
 
+/**
+ * Default security settings for Vertex AI models.
+ */
+export const DefaultSecuritySettings = [
+  {
+    category: "HARM_CATEGORY_HATE_SPEECH",
+    threshold: "BLOCK_NONE",
+  },
+  {
+    category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+    threshold: "BLOCK_NONE",
+  },
+  {
+    category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+    threshold: "BLOCK_NONE",
+  },
+  {
+    category: "HARM_CATEGORY_HARASSMENT",
+    threshold: "BLOCK_NONE",
+  },
+];
+
 interface ApiClientOptions {
   baseUrl: string;
   headers?: Record<string, string>;
+}
+
+interface ApiErrorResponse {
+  error?: {
+    message?: string;
+  };
+  message?: string;
 }
 
 class ApiClient {
@@ -26,9 +55,19 @@ class ApiClient {
     };
   }
 
-  private handleApiError(response: Response, errorData: any) {
+  private async handleApiError(response: Response, errorData: unknown) {
     console.error("API request failed:", errorData);
-    throw new Error(`API request failed: ${response.statusText}`);
+
+    let errorMessage = `API request failed: ${response.statusText}`;
+
+    if (typeof errorData === "string") {
+      errorMessage = errorData;
+    } else if (typeof errorData === "object" && errorData !== null) {
+      const error = errorData as ApiErrorResponse;
+      errorMessage = error.error?.message || error.message || errorMessage;
+    }
+
+    throw new Error(errorMessage);
   }
 
   async request(
@@ -74,7 +113,7 @@ class ApiClient {
     return this.request(path, { method: "GET" }, params, responseType);
   }
 
-  post(path: string, body: any, params: Record<string, string> = {}) {
+  post(path: string, body: unknown, params: Record<string, string> = {}) {
     return this.request(
       path,
       {
@@ -124,17 +163,36 @@ export function createGcsApiClient(upload: boolean = false) {
   return new ApiClient({ baseUrl });
 }
 
+interface VertexAiApiClientOptions {
+  apiVersion?: string;
+  useGlobalEndpoint?: boolean;
+}
+
 /**
  * Creates and configures an ApiClient for the Vertex AI API.
+ * @param {VertexAiApiClientOptions} options - Configuration options.
  * @return {ApiClient} An ApiClient instance for Vertex AI.
  */
-export function createVertexAiApiClient() {
+export function createVertexAiApiClient(
+  options: VertexAiApiClientOptions = {}
+) {
   const configStore = useConfigStore();
   const { cloudProjectID, cloudRegion } = configStore;
 
   if (!cloudProjectID || !cloudRegion) {
     throw new Error("Google Cloud Project ID and Region are not configured.");
   }
-  const baseUrl = `https://${cloudRegion}-aiplatform.googleapis.com/v1/projects/${cloudProjectID}/locations/${cloudRegion}`;
+
+  const { apiVersion = "v1", useGlobalEndpoint = false } = options;
+
+  let baseUrl: string;
+  if (useGlobalEndpoint) {
+    baseUrl = `https://aiplatform.googleapis.com/${apiVersion}/projects/${cloudProjectID}/locations/${cloudRegion}`;
+  } else {
+    baseUrl = `https://${cloudRegion}-aiplatform.googleapis.com/${apiVersion}/projects/${cloudProjectID}/locations/${cloudRegion}`;
+  }
+
   return new ApiClient({ baseUrl });
 }
+
+

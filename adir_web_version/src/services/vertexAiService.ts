@@ -1,6 +1,4 @@
-import { useConfigStore } from "@/stores/config";
-import { createVertexAiApiClient } from "./apiService";
-
+import {createVertexAiApiClient, DefaultSecuritySettings} from "./apiService";
 /**
  * Generates images from a text prompt using a specified Vertex AI model.
  * @param {string} prompt - The text prompt to generate images from.
@@ -59,12 +57,14 @@ export async function generateTextFromPrompt(
   prompt: string,
   modelId: string
 ): Promise<string> {
-  const configStore = useConfigStore();
-  const { geminiApiKey } = configStore;
   const modelIdLowerCase = modelId.toLowerCase();
 
-  if (modelIdLowerCase.includes("gemini-3") && geminiApiKey) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelIdLowerCase}:generateContent?key=${geminiApiKey}`;
+  if (modelIdLowerCase.includes("gemini-3")) {
+    const apiClient = createVertexAiApiClient({
+      apiVersion: "v1beta1",
+      useGlobalEndpoint: true,
+    });
+    const endpoint = `/publishers/google/models/${modelIdLowerCase}:generateContent`;
     const body = {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
@@ -73,20 +73,22 @@ export async function generateTextFromPrompt(
         maxOutputTokens: 8192,
       },
     };
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (response.ok) {
-      const data = await response.json();
+    try {
+      const response = await apiClient.post(endpoint, body);
       if (
-        data.candidates &&
-        data.candidates[0].content &&
-        data.candidates[0].content.parts[0]
+        response.candidates &&
+        response.candidates[0].content &&
+        response.candidates[0].content.parts[0]
       ) {
-        return data.candidates[0].content.parts[0].text;
+        const generatedText = response.candidates[0].content.parts[0].text;
+        return generatedText;
       }
+    } catch (error) {
+      console.error(
+        "Error generating text with Gemini 3 via Vertex AI:",
+        error
+      );
+      throw error;
     }
   }
 
@@ -110,24 +112,7 @@ export async function generateTextFromPrompt(
       topP: 0.95,
       maxOutputTokens: 8192,
     },
-    safetySettings: [
-      {
-        category: "HARM_CATEGORY_HATE_SPEECH",
-        threshold: "BLOCK_NONE",
-      },
-      {
-        category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-        threshold: "BLOCK_NONE",
-      },
-      {
-        category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-        threshold: "BLOCK_NONE",
-      },
-      {
-        category: "HARM_CATEGORY_HARASSMENT",
-        threshold: "BLOCK_NONE",
-      },
-    ],
+    safetySettings: DefaultSecuritySettings,
   };
 
   const response = await apiClient.post(path, body);
