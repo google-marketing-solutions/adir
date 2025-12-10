@@ -152,6 +152,7 @@ const handleGenerate = async () => {
     emit("generation-complete", generatedImages);
   } catch (error) {
     errorMessage.value =
+      error.message ||
       "An error occurred during image generation. Please try again.";
     console.error("Error generating images:", error);
   } finally {

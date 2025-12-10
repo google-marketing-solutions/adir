@@ -263,6 +263,7 @@ const handleGenerate = async () => {
     }
   } catch (error) {
     errorMessage.value =
+      error.message ||
       "An error occurred during image generation. Please try again.";
     console.error("Error in Existing Assets generation:", error);
   } finally {
