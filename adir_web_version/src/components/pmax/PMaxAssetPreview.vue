@@ -283,7 +283,7 @@ const handleUploadSelected = async () => {
           if (part === "GENERATED" || part === "UPLOADED") return false; // Skip status folders
           return true;
         });
-        const shortName = filteredParts.join("_");
+        const shortName = `adir_${filteredParts.join("_")}`;
         return {
           name: shortName,
           content: base64Content,
@@ -340,7 +340,7 @@ const handleEditSubmit = async () => {
       // Generate new GCS path in the same folder but ensure it is in GENERATED
       const parts = asset.name.split("/");
       parts[parts.length - 2] = "GENERATED"; // Force status folder to GENERATED
-      parts[parts.length - 1] = `${Date.now()}_edited_${parts[parts.length - 1]}`;
+      parts[parts.length - 1] = `${Date.now()}_edited_${Math.random().toString(36).slice(2, 7)}.png`;
       const newGcsPath = parts.join("/");
 
       console.log(`Uploading edited image to: ${newGcsPath}`);
