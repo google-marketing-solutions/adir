@@ -55,8 +55,12 @@ class ApiClient {
     };
   }
 
-  private async handleApiError(response: Response, errorData: unknown) {
+  private handleApiError(response: Response, errorData: unknown) {
     console.error("API request failed:", errorData);
+
+    if (response.status === 401) {
+      throw new Error("Your token has expired, please logout and login again.");
+    }
 
     let errorMessage = `API request failed: ${response.statusText}`;
 

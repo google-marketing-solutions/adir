@@ -25,7 +25,7 @@
 </template>
 
 <script setup>
-import { createTokenClient, verifyUserDomain } from "@/services/googleAuth";
+import { createTokenClient } from "@/services/googleAuth";
 import { useAuthStore } from "@/stores/auth";
 import { useConfigStore } from "@/stores/config";
 import { useRouter } from "vue-router";
@@ -48,14 +48,8 @@ async function handleLogin() {
     if (tokenResponse && tokenResponse.access_token) {
       const token = tokenResponse.access_token;
       const expiresIn = tokenResponse.expires_in;
-      const isVerified = await verifyUserDomain(token);
-      if (isVerified) {
-        authStore.setAccessToken(token, expiresIn);
-        router.push("/");
-      } else {
-        alert("Login failed: User domain is not allowed.");
-        google.accounts.oauth2.revoke(token, () => {});
-      }
+      authStore.setAccessToken(token, expiresIn);
+      router.push("/");
     } else {
       alert("Login failed. Please try again.");
     }
