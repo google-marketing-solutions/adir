@@ -22,6 +22,10 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  showPausedAssetGroups: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const prompt = ref(KEYWORD_GENERATION_TEXT_PROMPT);
@@ -40,7 +44,10 @@ const handleGenerate = async () => {
     errorMessage.value = "";
     console.log("Starting image generation...");
     const campaignIds = props.selectedCampaigns.map((c) => c.campaign.id);
-    const assetGroups = await fetchAssetGroupsByCampaignIds(campaignIds);
+    const assetGroups = await fetchAssetGroupsByCampaignIds(
+      campaignIds,
+      props.showPausedAssetGroups
+    );
     console.log("Fetched asset groups:", assetGroups);
 
     const aspectRatiosToGenerate = aspectRatios.value.filter(

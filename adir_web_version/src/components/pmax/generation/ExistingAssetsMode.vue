@@ -15,6 +15,10 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  showPausedAssetGroups: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const prompt = ref(
@@ -76,14 +80,20 @@ const handleGenerate = async () => {
     const dateRange = "LAST_30_DAYS"; // Default date range for performance data
 
     if (pmaxCampaignIds.length > 0) {
-      const pmaxAssets = await fetchPMaxAssets([], dateRange, pmaxCampaignIds);
+      const pmaxAssets = await fetchPMaxAssets(
+        [],
+        dateRange,
+        pmaxCampaignIds,
+        props.showPausedAssetGroups
+      );
       allAssets = allAssets.concat(pmaxAssets);
     }
     if (demandGenCampaignIds.length > 0) {
       const dgAssets = await fetchDemandGenAssets(
         [],
         dateRange,
-        demandGenCampaignIds
+        demandGenCampaignIds,
+        props.showPausedAssetGroups
       );
       allAssets = allAssets.concat(dgAssets);
     }
