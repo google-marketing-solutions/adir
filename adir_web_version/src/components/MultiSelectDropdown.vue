@@ -82,6 +82,31 @@ const removeOption = (optionValue) => {
   );
   emit("update:modelValue", newSelectedValues);
 };
+
+const isAllSelected = computed(() => {
+  if (filteredOptions.value.length === 0) return false;
+  return filteredOptions.value.every((option) =>
+    props.modelValue.includes(option.value),
+  );
+});
+
+const toggleSelectAll = () => {
+  if (isAllSelected.value) {
+    // Deselect all visible
+    const filteredValues = new Set(filteredOptions.value.map((o) => o.value));
+    const newSelectedValues = props.modelValue.filter(
+      (value) => !filteredValues.has(value),
+    );
+    emit("update:modelValue", newSelectedValues);
+  } else {
+    // Select all visible
+    const newSelectedValues = new Set(props.modelValue);
+    filteredOptions.value.forEach((option) => {
+      newSelectedValues.add(option.value);
+    });
+    emit("update:modelValue", Array.from(newSelectedValues));
+  }
+};
 </script>
 
 <template>
@@ -134,8 +159,17 @@ const removeOption = (optionValue) => {
           type="text"
           v-model="searchTerm"
           placeholder="Search..."
-          class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm mb-2"
         />
+        <label class="flex items-center px-1 py-1 cursor-pointer hover:bg-gray-600/50 rounded transition-colors">
+          <input
+            type="checkbox"
+            :checked="isAllSelected"
+            @change="toggleSelectAll"
+            class="h-4 w-4 text-indigo-600 border-gray-500 rounded bg-gray-600 focus:ring-indigo-500"
+          />
+          <span class="ml-3 text-sm font-medium text-gray-300">Select All</span>
+        </label>
       </div>
       <ul
         class="max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm"

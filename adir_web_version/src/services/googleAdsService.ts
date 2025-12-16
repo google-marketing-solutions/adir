@@ -19,7 +19,8 @@ export interface Condition {
 export async function fetchPMaxAssets(
   conditions: Condition[],
   dateRange: string,
-  campaignIds: string[]
+  campaignIds: string[],
+  includePaused = false
 ) {
   const assetWhereClauses = [
     "asset.type = 'IMAGE'",
@@ -28,6 +29,13 @@ export async function fetchPMaxAssets(
     "asset.source = 'ADVERTISER'",
     "campaign.advertising_channel_type = 'PERFORMANCE_MAX'",
   ];
+
+  if (includePaused) {
+    assetWhereClauses.push("asset_group.status IN ('ENABLED', 'PAUSED')");
+  } else {
+    assetWhereClauses.push("asset_group.status = 'ENABLED'");
+  }
+
   if (campaignIds && campaignIds.length > 0) {
     assetWhereClauses.push(`campaign.id IN (${campaignIds.join(",")})`);
   }
@@ -54,6 +62,13 @@ export async function fetchPMaxAssets(
     `segments.date DURING ${dateRange}`,
     "campaign.advertising_channel_type = 'PERFORMANCE_MAX'",
   ];
+
+  if (includePaused) {
+    metricsWhereClauses.push("asset_group.status IN ('ENABLED', 'PAUSED')");
+  } else {
+    metricsWhereClauses.push("asset_group.status = 'ENABLED'");
+  }
+
   if (campaignIds && campaignIds.length > 0) {
     metricsWhereClauses.push(`campaign.id IN (${campaignIds.join(",")})`);
   }
@@ -150,12 +165,14 @@ function compare(a: number, operator: string, b: number) {
  * @param {Condition[]} conditions - The conditions to filter assets by.
  * @param {string} dateRange - The date range for which to fetch assets.
  * @param {string[]} campaignIds - The IDs of the campaigns to fetch assets from.
+ * @param {boolean} includePaused - Whether to include paused ad groups.
  * @return {Promise<any>} The fetched assets.
  */
 export async function fetchDemandGenAssets(
   conditions: Condition[],
   dateRange: string,
-  campaignIds: string[]
+  campaignIds: string[],
+  includePaused = false
 ) {
   const assetWhereClauses = [
     "asset.type = 'IMAGE'",
@@ -164,6 +181,13 @@ export async function fetchDemandGenAssets(
     "asset.source = 'ADVERTISER'",
     "campaign.advertising_channel_type = 'DEMAND_GEN'",
   ];
+
+  if (includePaused) {
+    assetWhereClauses.push("ad_group.status IN ('ENABLED', 'PAUSED')");
+  } else {
+    assetWhereClauses.push("ad_group.status = 'ENABLED'");
+  }
+
   if (campaignIds && campaignIds.length > 0) {
     assetWhereClauses.push(`campaign.id IN (${campaignIds.join(",")})`);
   }
@@ -190,6 +214,13 @@ export async function fetchDemandGenAssets(
     `segments.date DURING ${dateRange}`,
     "campaign.advertising_channel_type = 'DEMAND_GEN'",
   ];
+
+  if (includePaused) {
+    metricsWhereClauses.push("ad_group.status IN ('ENABLED', 'PAUSED')");
+  } else {
+    metricsWhereClauses.push("ad_group.status = 'ENABLED'");
+  }
+
   if (campaignIds && campaignIds.length > 0) {
     metricsWhereClauses.push(`campaign.id IN (${campaignIds.join(",")})`);
   }
@@ -344,7 +375,7 @@ export async function removeAssetGroupAssets(
 }
 
 /**
- * Fetches all enabled Performance Max campaigns from a Google Ads account.
+ * Fetches all enabled and paused Performance Max campaigns from a Google Ads account.
  * @return {Promise<any>} The fetched campaigns.
  */
 export async function fetchPMaxCampaigns() {
@@ -354,7 +385,7 @@ export async function fetchPMaxCampaigns() {
   const url = `/customers/${customerID}/googleAds:search`;
 
   const gaqlQuery = `
-    SELECT campaign.id, campaign.name, campaign.advertising_channel_type FROM campaign WHERE campaign.advertising_channel_type = 'PERFORMANCE_MAX' AND campaign.status = 'ENABLED' ORDER BY campaign.name
+    SELECT campaign.id, campaign.name, campaign.advertising_channel_type, campaign.status FROM campaign WHERE campaign.advertising_channel_type = 'PERFORMANCE_MAX' AND campaign.status IN ('ENABLED', 'PAUSED') ORDER BY campaign.name
   `;
 
   const body = { query: gaqlQuery };
@@ -370,7 +401,7 @@ export async function fetchPMaxCampaigns() {
 }
 
 /**
- * Fetches all enabled Demand Gen campaigns from a Google Ads account.
+ * Fetches all enabled and paused Demand Gen campaigns from a Google Ads account.
  * @return {Promise<any>} The fetched campaigns.
  */
 export async function fetchDemandGenCampaigns() {
@@ -380,7 +411,7 @@ export async function fetchDemandGenCampaigns() {
   const url = `/customers/${customerID}/googleAds:search`;
 
   const gaqlQuery = `
-    SELECT campaign.id, campaign.name, campaign.advertising_channel_type FROM campaign WHERE campaign.advertising_channel_type = 'DEMAND_GEN' AND campaign.status = 'ENABLED' ORDER BY campaign.name
+    SELECT campaign.id, campaign.name, campaign.advertising_channel_type, campaign.status FROM campaign WHERE campaign.advertising_channel_type = 'DEMAND_GEN' AND campaign.status IN ('ENABLED', 'PAUSED') ORDER BY campaign.name
   `;
 
   const body = { query: gaqlQuery };
@@ -398,9 +429,13 @@ export async function fetchDemandGenCampaigns() {
 /**
  * Fetches asset groups for a given list of campaign IDs.
  * @param {string[]} campaignIds - The IDs of the campaigns to fetch asset groups from.
+ * @param {boolean} includePaused - Whether to include paused asset groups.
  * @return {Promise<any[]>} The fetched asset groups.
  */
-export async function fetchAssetGroupsByCampaignIds(campaignIds: string[]) {
+export async function fetchAssetGroupsByCampaignIds(
+  campaignIds: string[],
+  includePaused = false
+) {
   if (!campaignIds || campaignIds.length === 0) {
     return [];
   }
@@ -410,6 +445,13 @@ export async function fetchAssetGroupsByCampaignIds(campaignIds: string[]) {
   const apiClient = createGoogleAdsApiClient();
   const url = `/customers/${customerID}/googleAds:search`;
 
+  let whereClause = `campaign.id IN (${campaignIds.join(",")})`;
+  if (includePaused) {
+    whereClause += " AND asset_group.status IN ('ENABLED', 'PAUSED')";
+  } else {
+    whereClause += " AND asset_group.status = 'ENABLED'";
+  }
+
   const gaqlQuery = `
     SELECT
       asset_group.name,
@@ -418,7 +460,7 @@ export async function fetchAssetGroupsByCampaignIds(campaignIds: string[]) {
       campaign.name,
       asset_group.id
     FROM asset_group
-    WHERE campaign.id IN (${campaignIds.join(",")})
+    WHERE ${whereClause}
   `;
 
   const body = { query: gaqlQuery };
@@ -435,9 +477,13 @@ export async function fetchAssetGroupsByCampaignIds(campaignIds: string[]) {
 /**
  * Fetches ad groups for a given list of campaign IDs.
  * @param {string[]} campaignIds - The IDs of the campaigns to fetch ad groups from.
+ * @param {boolean} includePaused - Whether to include paused ad groups.
  * @return {Promise<any[]>} The fetched ad groups.
  */
-export async function fetchAdGroupsByCampaignIds(campaignIds: string[]) {
+export async function fetchAdGroupsByCampaignIds(
+  campaignIds: string[],
+  includePaused = false
+) {
   if (!campaignIds || campaignIds.length === 0) {
     return [];
   }
@@ -446,6 +492,13 @@ export async function fetchAdGroupsByCampaignIds(campaignIds: string[]) {
   const { customerID } = configStore;
   const apiClient = createGoogleAdsApiClient();
   const url = `/customers/${customerID}/googleAds:search`;
+
+  let whereClause = `campaign.id IN (${campaignIds.join(",")})`;
+  if (includePaused) {
+    whereClause += " AND ad_group.status IN ('ENABLED', 'PAUSED')";
+  } else {
+    whereClause += " AND ad_group.status = 'ENABLED'";
+  }
 
   const gaqlQuery = `
     SELECT
@@ -456,7 +509,7 @@ export async function fetchAdGroupsByCampaignIds(campaignIds: string[]) {
       ad_group.id,
       campaign.advertising_channel_type
     FROM ad_group
-    WHERE campaign.id IN (${campaignIds.join(",")})
+    WHERE ${whereClause}
   `;
 
   const body = { query: gaqlQuery };

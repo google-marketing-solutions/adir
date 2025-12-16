@@ -15,6 +15,10 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  showPausedAssetGroups: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const prompt = ref("");
@@ -59,11 +63,17 @@ const handleGenerate = async () => {
 
     let groups = [];
     if (pmaxCampaignIds.length > 0) {
-      const assetGroups = await fetchAssetGroupsByCampaignIds(pmaxCampaignIds);
+      const assetGroups = await fetchAssetGroupsByCampaignIds(
+        pmaxCampaignIds,
+        props.showPausedAssetGroups
+      );
       groups = groups.concat(assetGroups);
     }
     if (demandGenCampaignIds.length > 0) {
-      const adGroups = await fetchAdGroupsByCampaignIds(demandGenCampaignIds);
+      const adGroups = await fetchAdGroupsByCampaignIds(
+        demandGenCampaignIds,
+        props.showPausedAssetGroups
+      );
       groups = groups.concat(adGroups);
     }
 
