@@ -103,7 +103,7 @@
                 <p><strong>Authorized JavaScript origins:</strong></p>
                 <code>https://adir-prod.web.app</code>
                 <p><strong>Authorized redirect URIs:</strong></p>
-                <code>https://adir-prod.web.app</code>
+                <code>https://adir-prod.web.app/</code>
               </div>
               <p class="note">
                 Copy the <strong>Client ID</strong>. You will need to enter this on the Sign In page.
