@@ -6,6 +6,7 @@ import {
   fetchPMaxAssets,
   removeAssetGroupAssets,
 } from "@/services/googleAdsService.ts";
+import { useConfigStore } from "@/stores/config";
 import { useAssetStore } from "@/stores/assetStore";
 import { useCampaignStore } from "@/stores/campaignStore";
 import { computed, defineEmits, onMounted, ref } from "vue";
@@ -14,6 +15,7 @@ import { useRouter } from "vue-router";
 const router = useRouter();
 const assetStore = useAssetStore();
 const campaignStore = useCampaignStore();
+const configStore = useConfigStore();
 const removalStep = ref(1);
 const emit = defineEmits(["change-subpage"]);
 const showRemovalNotice = ref(false);
@@ -65,6 +67,36 @@ const getAssetUniqueId = (asset) => {
   }
   // For PMax, the asset group asset resource name is enough
   return asset.assetGroupAsset?.resourceName || 'unknown-pmax-asset';
+};
+
+const getGoogleAdsLink = (campaignId, adGroupId, adId) => {
+  // Pattern identified from user:
+  // https://ads.google.com/aw/unifiedassetreport/demandgenassetdetails?campaignId=...&adGroupId=...&adId=...&ocid=...&__c=...
+  const baseUrl = "https://ads.google.com/aw/unifiedassetreport/demandgenassetdetails";
+  const params = new URLSearchParams({
+    campaignId: campaignId,
+    adGroupId: adGroupId,
+  });
+
+  // Use MCC ID as 'ocid' if available (Operating Customer ID), otherwise use the direct Customer ID.
+  // The 'ocid' technically usually refers to the logged-in account context (MCC or Direct).
+  const ocid = configStore.mccID || configStore.customerID;
+  if (ocid) {
+    params.set("ocid", ocid);
+  }
+
+  // The '__c' parameter typically represents the Client Account ID (the actual ad account).
+  // This is crucial when accessing via an MCC.
+  if (configStore.customerID) {
+    params.set("__c", configStore.customerID);
+  }
+
+  if (adId) {
+    params.append("adId", adId);
+    params.append("entityId", adId); // Added based on user URL
+    params.append("adGroupIdForEntity", adGroupId); // Added based on user URL
+  }
+  return `${baseUrl}?${params.toString()}`;
 };
 
 const assetFormats = [
@@ -696,7 +728,7 @@ async function handleRemoveAssets() {
                   :key="ad.resourceName"
                   class="bg-gray-500 rounded-lg p-3 mt-3"
                 >
-                  <h5 class="text-md font-medium text-white mb-2">
+                  <h5 class="text-md font-medium text-white mb-2 flex items-center">
                     <input
                       type="checkbox"
                       :checked="false"
@@ -704,6 +736,16 @@ async function handleRemoveAssets() {
                       class="h-4 w-4 rounded mr-2"
                     />
                     {{ ad.name }}
+                    <a
+                      v-if="campaign.id && adGroup.id"
+                      :href="getGoogleAdsLink(campaign.id, adGroup.id, ad.id)"
+                      target="_blank"
+                      class="ml-2 text-cyan-400 hover:text-cyan-300 transform transition-transform hover:scale-110"
+                      title="Open in Google Ads"
+                      @click.stop
+                    >
+                      <span class="material-symbols-outlined text-sm font-bold">open_in_new</span>
+                    </a>
                   </h5>
                   <!-- Asset Grid -->
                   <div

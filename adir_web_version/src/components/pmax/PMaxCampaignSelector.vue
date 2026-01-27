@@ -66,8 +66,9 @@ import { computed, onMounted, ref, watch } from "vue";
 
 const campaigns = ref([]);
 const selectedCampaigns = ref([]);
-const campaignType = ref("pmax");
+const campaignType = ref("all");
 const showPaused = ref(false);
+const previousVisibleIds = ref(new Set());
 
 const campaignStore = useCampaignStore();
 
@@ -94,9 +95,22 @@ const campaignOptions = computed(() =>
 
 // Watch for changes in filters and deselect campaigns that are no longer visible
 watch([campaignType, showPaused], () => {
-  const visibleCampaignIds = new Set(filteredCampaigns.value.map(c => c.campaign.id));
-  selectedCampaigns.value = selectedCampaigns.value.filter(c => visibleCampaignIds.has(c.campaign.id));
+  const currentVisibleCampaigns = filteredCampaigns.value;
+  const currentVisibleIds = new Set(currentVisibleCampaigns.map(c => c.campaign.id));
+
+  // 1. Keep selected campaigns that are still visible
+  const retainedSelection = selectedCampaigns.value.filter(c => currentVisibleIds.has(c.campaign.id));
+
+  // 2. Identify newly visible campaigns (present in current but not in previous)
+  const newlyVisibleCampaigns = currentVisibleCampaigns.filter(c => !previousVisibleIds.value.has(c.campaign.id));
+
+  // 3. Combine: Retained + Newly Visible
+  const newSelection = [...retainedSelection, ...newlyVisibleCampaigns];
+
+  selectedCampaigns.value = newSelection;
   onCampaignSelect(selectedCampaigns.value);
+  // Update tracking
+  previousVisibleIds.value = currentVisibleIds;
 });
 
 onMounted(async () => {
@@ -115,8 +129,9 @@ onMounted(async () => {
 
     campaigns.value = [...pmaxCampaigns, ...demandGenCampaigns];
     // Initial selection based on default filters
-    const visibleCampaignIds = new Set(filteredCampaigns.value.map(c => c.campaign.id));
-    selectedCampaigns.value = campaigns.value.filter(c => visibleCampaignIds.has(c.campaign.id));
+    const currentVisibleIds = new Set(filteredCampaigns.value.map(c => c.campaign.id));
+    selectedCampaigns.value = campaigns.value.filter(c => currentVisibleIds.has(c.campaign.id));
+    previousVisibleIds.value = currentVisibleIds;
     onCampaignSelect(selectedCampaigns.value);
   } catch (error) {
     console.error("Failed to fetch campaigns:", error);

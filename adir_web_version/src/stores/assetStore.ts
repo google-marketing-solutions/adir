@@ -28,9 +28,13 @@ export const useAssetStore = defineStore("assetStore", {
       state.assets.forEach((asset) => {
         if (!asset.campaign?.name) return;
         const campaignName = asset.campaign.name;
+        // Use the first ID found for the campaign (assuming name mapping is 1:1 for simplicity in this view)
+        const campaignId = asset.campaign.id;
+
         if (!campaigns[campaignName]) {
           campaigns[campaignName] = {
             name: campaignName,
+            id: campaignId,
             assetGroups: {},
             adGroups: {},
           };
@@ -38,9 +42,11 @@ export const useAssetStore = defineStore("assetStore", {
 
         if (asset.type === "pmax") {
           const groupName = asset.assetGroup.name;
+          const groupId = asset.assetGroup.id;
           if (!campaigns[campaignName].assetGroups[groupName]) {
             campaigns[campaignName].assetGroups[groupName] = {
               name: groupName,
+              id: groupId,
               assets: [],
               type: "pmax",
             };
@@ -48,13 +54,19 @@ export const useAssetStore = defineStore("assetStore", {
           campaigns[campaignName].assetGroups[groupName].assets.push(asset);
         } else if (asset.type === "demandgen") {
           const adGroupName = asset.adGroup?.name || "Unknown Ad Group";
+          const adGroupId = asset.adGroup?.id;
           const adResourceName =
             asset.adGroupAd?.resourceName || "Unknown Ad Resource";
+          // Try to extract Ad ID from resource name (format: customers/{customerId}/adGroupAds/{adGroupId}~{adId})
+          const adIdMatch = adResourceName.match(/~(\d+)$/);
+          const adId = adIdMatch ? adIdMatch[1] : null;
+
           const adName = asset.adGroupAd?.ad?.name || "Unknown Ad";
 
           if (!campaigns[campaignName].adGroups[adGroupName]) {
             campaigns[campaignName].adGroups[adGroupName] = {
               name: adGroupName,
+              id: adGroupId,
               type: "demandgen",
               ads: {},
             };
@@ -67,6 +79,7 @@ export const useAssetStore = defineStore("assetStore", {
               {
                 name: adName,
                 resourceName: adResourceName,
+                id: adId,
                 assets: [],
               };
           }
