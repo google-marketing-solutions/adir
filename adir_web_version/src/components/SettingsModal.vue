@@ -5,7 +5,7 @@
     @click="emit('close')"
   >
     <div
-      class="bg-gray-800 rounded-lg p-6 w-full max-w-lg border border-gray-700 max-h-[80vh] overflow-y-auto"
+      class="bg-gray-800 rounded-lg p-6 w-full max-w-2xl border border-gray-700 max-h-[80vh] overflow-y-auto overflow-x-hidden"
       @click.stop
     >
       <div class="flex justify-between items-center mb-4">
@@ -115,7 +115,40 @@
                 class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
               />
             </div>
-            <div>
+            <div class="flex items-start gap-2">
+              <input
+                v-model="configStore.useSecretManager"
+                type="checkbox"
+                id="use-secret-manager"
+                class="mt-1 w-4 h-4 text-cyan-600 bg-gray-700 border-gray-600 rounded focus:ring-cyan-500 flex-shrink-0"
+              />
+              <div class="flex flex-col gap-2 w-full">
+                <label for="use-secret-manager" class="text-sm font-medium text-gray-300 flex items-center gap-2 flex-wrap">
+                  Use Google Cloud Secret Manager for Developer Token
+                  <div
+                    class="relative group inline-block"
+                    @mouseenter="showTooltip"
+                    @mouseleave="hideTooltip"
+                    ref="infoIconRef"
+                  >
+                    <!-- Info Icon -->
+                    <span class="material-symbols-outlined text-gray-400 cursor-help hover:text-white transition-colors duration-200 text-2xl">info</span>
+                    <!-- Tooltip using Teleport -->
+                    <Teleport to="body">
+                      <div
+                        v-if="tooltipVisible"
+                        :style="tooltipStyle"
+                        class="fixed z-[9999] w-72 p-3 bg-gray-900 border border-gray-700 text-white text-sm rounded-lg shadow-xl pointer-events-none leading-relaxed"
+                      >
+                        Check this box if you are reading secrets that are saved in GCP Secret Manager. The key should be named <span class="font-mono text-cyan-300">google_ads_developer_token</span> and saved in the same project as the one associated with the Google Client ID. You need to be granted the role <span class="font-bold">Secret Manager Secret Accessor</span> in IAM.
+                      </div>
+                    </Teleport>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div v-if="!configStore.useSecretManager">
               <label
                 for="dev-token"
                 class="block text-sm font-medium text-gray-300 mb-1"
@@ -123,7 +156,7 @@
               >
               <input
                 v-model="configStore.developerToken"
-                type="text"
+                type="password"
                 id="dev-token"
                 class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
               />
@@ -145,6 +178,7 @@
                 class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
               >
                 <option>gemini-3-pro-preview</option>
+                <option>gemini-3-flash-preview</option>
                 <option>gemini-2.5-pro</option>
                 <option>gemini-2.5-flash</option>
                 <option>gemini-2.5-flash-lite</option>
@@ -190,6 +224,27 @@ import { useConfigStore } from "../stores/config";
 
 const configStore = useConfigStore();
 const isCustomRegion = ref(false);
+
+// Tooltip Logic
+const tooltipVisible = ref(false);
+const tooltipStyle = ref({});
+const infoIconRef = ref(null);
+
+const showTooltip = () => {
+  if (infoIconRef.value) {
+    const rect = infoIconRef.value.getBoundingClientRect();
+    tooltipStyle.value = {
+      top: `${rect.top - 10}px`, // Slightly above
+      left: `${rect.left + rect.width / 2}px`, // Center horizontally relative to icon
+      transform: 'translate(-50%, -100%)', // Move up by 100% of own height and left by 50%
+    };
+    tooltipVisible.value = true;
+  }
+};
+
+const hideTooltip = () => {
+  tooltipVisible.value = false;
+};
 
 const handleRegionChange = (event) => {
   if (event.target.value === "custom") {

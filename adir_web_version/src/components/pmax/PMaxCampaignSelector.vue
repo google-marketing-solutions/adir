@@ -4,6 +4,21 @@
       <span class="text-indigo-500">/</span>
       CAMPAIGN SELECTION
     </h2>
+    <div v-if="errorMessage" class="mb-6 p-4 bg-red-900/50 border border-red-700 rounded-lg flex items-start gap-3">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+      </svg>
+      <div class="flex-1">
+        <h3 class="text-sm font-bold text-red-400">Failed to load campaigns</h3>
+        <p class="text-sm text-red-200 mt-1">{{ errorMessage }}</p>
+        <button
+          @click="fetchCampaigns"
+          class="mt-3 text-xs font-semibold text-red-300 hover:text-white underline"
+        >
+          Try Again
+        </button>
+      </div>
+    </div>
     <div class="flex items-center mb-6 justify-between">
       <div class="flex items-center">
         <label class="mr-4 text-sm font-mono font-medium text-gray-400 uppercase tracking-widest">Filter Mode:</label>
@@ -69,6 +84,7 @@ const selectedCampaigns = ref([]);
 const campaignType = ref("all");
 const showPaused = ref(false);
 const previousVisibleIds = ref(new Set());
+const errorMessage = ref("");
 
 const campaignStore = useCampaignStore();
 
@@ -113,7 +129,8 @@ watch([campaignType, showPaused], () => {
   previousVisibleIds.value = currentVisibleIds;
 });
 
-onMounted(async () => {
+async function fetchCampaigns() {
+  errorMessage.value = "";
   try {
     const pmaxCampaignsData = await fetchPMaxCampaigns();
     const demandGenCampaignsData = await fetchDemandGenCampaigns();
@@ -135,7 +152,12 @@ onMounted(async () => {
     onCampaignSelect(selectedCampaigns.value);
   } catch (error) {
     console.error("Failed to fetch campaigns:", error);
+    errorMessage.value = error.message || "An unexpected error occurred.";
   }
+}
+
+onMounted(() => {
+  fetchCampaigns();
 });
 
 function onCampaignSelect(selected) {

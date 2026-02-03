@@ -1,5 +1,6 @@
 import { useAuthStore } from "@/stores/auth";
 import { useConfigStore } from "@/stores/config";
+import { secretManagerService } from "./secretManager";
 
 /**
  * Default security settings for Vertex AI models.
@@ -136,20 +137,39 @@ class ApiClient {
 
 /**
  * Creates and configures an ApiClient for the Google Ads API.
- * @return {ApiClient} An ApiClient instance for Google Ads.
+ * @return {Promise<ApiClient>} An ApiClient instance for Google Ads.
  */
-export function createGoogleAdsApiClient() {
+export async function createGoogleAdsApiClient() {
   const configStore = useConfigStore();
-  const { developerToken, mccID } = configStore;
+  const { developerToken, mccID, useSecretManager, googleClientId } =
+    configStore;
 
-  if (!developerToken || !mccID) {
+  let finalDeveloperToken = developerToken;
+
+  if (useSecretManager) {
+    if (!googleClientId) {
+      throw new Error(
+        "Google Client ID is missing. Cannot derive Project Number for Secret Manager.",
+      );
+    }
+    const projectNumber = googleClientId.split("-")[0];
+    if (!projectNumber) {
+      throw new Error(
+        "Invalid Google Client ID format. Cannot derive Project Number.",
+      );
+    }
+    const resourceId = `projects/${projectNumber}/secrets/google_ads_developer_token/versions/latest`;
+    finalDeveloperToken = await secretManagerService.getSecret(resourceId);
+  }
+
+  if (!finalDeveloperToken || !mccID) {
     throw new Error("Missing Google Ads API credentials");
   }
 
   return new ApiClient({
     baseUrl: "https://googleads.googleapis.com/v21",
     headers: {
-      "developer-token": `${developerToken}`,
+      "developer-token": `${finalDeveloperToken}`,
       "login-customer-id": `${mccID}`,
     },
   });

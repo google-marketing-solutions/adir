@@ -289,7 +289,7 @@ async function fetchAssetsWithMetrics(
 ) {
   const configStore = useConfigStore();
   const { customerID } = configStore;
-  const apiClient = createGoogleAdsApiClient();
+  const apiClient = await createGoogleAdsApiClient();
   const url = `/customers/${customerID}/googleAds:search`;
 
   try {
@@ -335,7 +335,7 @@ export async function removeAssetGroupAssets(
 ) {
   const configStore = useConfigStore();
   const { customerID } = configStore;
-  const apiClient = createGoogleAdsApiClient();
+  const apiClient = await createGoogleAdsApiClient();
   const url = `/customers/${customerID}/googleAds:mutate`;
 
   const mutateOperations = assetGroupAssetResourceNames
@@ -381,7 +381,7 @@ export async function removeAssetGroupAssets(
 export async function fetchPMaxCampaigns() {
   const configStore = useConfigStore();
   const { customerID } = configStore;
-  const apiClient = createGoogleAdsApiClient();
+  const apiClient = await createGoogleAdsApiClient();
   const url = `/customers/${customerID}/googleAds:search`;
 
   const gaqlQuery = `
@@ -407,7 +407,7 @@ export async function fetchPMaxCampaigns() {
 export async function fetchDemandGenCampaigns() {
   const configStore = useConfigStore();
   const { customerID } = configStore;
-  const apiClient = createGoogleAdsApiClient();
+  const apiClient = await createGoogleAdsApiClient();
   const url = `/customers/${customerID}/googleAds:search`;
 
   const gaqlQuery = `
@@ -442,7 +442,7 @@ export async function fetchAssetGroupsByCampaignIds(
 
   const configStore = useConfigStore();
   const { customerID } = configStore;
-  const apiClient = createGoogleAdsApiClient();
+  const apiClient = await createGoogleAdsApiClient();
   const url = `/customers/${customerID}/googleAds:search`;
 
   let whereClause = `campaign.id IN (${campaignIds.join(",")})`;
@@ -490,7 +490,7 @@ export async function fetchAdGroupsByCampaignIds(
 
   const configStore = useConfigStore();
   const { customerID } = configStore;
-  const apiClient = createGoogleAdsApiClient();
+  const apiClient = await createGoogleAdsApiClient();
   const url = `/customers/${customerID}/googleAds:search`;
 
   let whereClause = `campaign.id IN (${campaignIds.join(",")})`;
@@ -532,7 +532,7 @@ export async function fetchAdGroupsByCampaignIds(
 export async function getSearchSignalKeywordsForAdGroup(assetGroupId: string) {
   const configStore = useConfigStore();
   const { customerID } = configStore;
-  const apiClient = createGoogleAdsApiClient();
+  const apiClient = await createGoogleAdsApiClient();
   const url = `/customers/${customerID}/googleAds:search`;
 
   const gaqlQuery = `
@@ -564,7 +564,7 @@ export async function getSearchSignalKeywordsForAdGroup(assetGroupId: string) {
 export async function uploadImageAssets(images: any[]) {
   const configStore = useConfigStore();
   const { customerID } = configStore;
-  const apiClient = createGoogleAdsApiClient();
+  const apiClient = await createGoogleAdsApiClient();
   const url = `/customers/${customerID}/googleAds:mutate`;
 
   const operations = images.map((image) => ({

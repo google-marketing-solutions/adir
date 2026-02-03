@@ -50,6 +50,9 @@
                 <a href="https://console.cloud.google.com/marketplace/product/google/googleads.googleapis.com" target="_blank" class="action-link">
                   <span class="icon">📈</span> Google Ads API
                 </a>
+                <a href="https://console.cloud.google.com/marketplace/product/google/secretmanager.googleapis.com" target="_blank" class="action-link">
+                  <span class="icon">🔒</span> Secret Manager API (Optional - needed if you use Secret Manager)
+                </a>
               </div>
             </div>
           </div>
@@ -82,6 +85,7 @@
               <ul class="settings-list" style="margin-bottom: 16px;">
                 <li><strong>Storage Admin</strong> (<code>roles/storage.admin</code>)</li>
                 <li><strong>Vertex AI User</strong> (<code>roles/aiplatform.user</code>)</li>
+                <li><strong>Secret Manager Secret Accessor</strong> (<code>roles/secretmanager.secretAccessor</code>) (Optional - needed if you use Secret Manager)</li>
               </ul>
               <div class="action-links">
                 <a href="https://console.cloud.google.com/iam-admin/iam" target="_blank" class="action-link">
@@ -137,6 +141,7 @@
                 <li><strong>Customer ID:</strong> A child account under the specified MCC.</li>
 
                 <li><strong>Google Ads Developer Token:</strong> Basic or Standard level access.</li>
+                <li><strong>Secret Manager (Optional):</strong> Securely store your Developer Token in Google Cloud Secret Manager. The key should be named <code>google_ads_developer_token</code>, and saved in the same project as the one associated with the Google Client ID. You need to be granted the role <strong>Secret Manager Secret Accessor</strong> in the IAM.</li>
               </ul>
             </div>
           </div>
