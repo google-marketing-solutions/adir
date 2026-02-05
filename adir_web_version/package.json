@@ -30,7 +30,7 @@
     "eslint": "^9.38.0",
     "prettier": "^3.6.2",
     "tailwindcss": "^4.1.13",
-    "vite": "^7.0.6",
+    "vite": "^7.2.7",
     "vite-plugin-vue-devtools": "^8.0.0"
   }
 }
