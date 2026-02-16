@@ -1,6 +1,7 @@
 <script setup>
 import ProxiedImage from "@/components/ProxiedImage.vue";
 import ScrollToTopButton from "@/components/ScrollToTopButton.vue";
+import ConfirmationModal from "@/components/ConfirmationModal.vue";
 import {
   fetchDemandGenAssets,
   fetchPMaxAssets,
@@ -23,6 +24,9 @@ const isLoading = ref(false);
 const isRemoving = ref(false);
 const showSuccessMessage = ref(false);
 const successMessage = ref("");
+const showConfirmationModal = ref(false);
+const confirmationMessage = ref("");
+const confirmationTitle = ref("");
 
 const conditions = ref([]);
 let conditionIdCounter = 0;
@@ -352,6 +356,27 @@ async function handleRemoveAssets() {
     alert("No assets selected for removal.");
     return;
   }
+  // Calculate stats for confirmation message
+  const selectedPMaxAssets = Array.from(assetStore.selectedAssets).filter(
+    (uniqueId) => {
+      const asset = assetStore.assets.find(
+        (a) => getAssetUniqueId(a) === uniqueId,
+      );
+      return asset && asset.type === "pmax";
+    },
+  );
+
+  if (selectedPMaxAssets.length === 0) {
+     alert("No PMax assets selected. Demand Gen assets cannot be removed via API.");
+     return;
+  }
+
+  confirmationTitle.value = "Confirm Asset Removal";
+  confirmationMessage.value = `Are you sure you want to remove ${selectedPMaxAssets.length} assets? This action cannot be undone.`;
+  showConfirmationModal.value = true;
+}
+
+async function confirmRemoval() {
   isRemoving.value = true;
   try {
     // We only need to consider PMax assets, as Demand Gen assets cannot be removed.
@@ -395,12 +420,23 @@ async function handleRemoveAssets() {
     alert("Failed to remove some assets. Check console for details.");
   } finally {
     isRemoving.value = false;
+    showConfirmationModal.value = false;
   }
 }
 </script>
 
 <template>
   <div>
+    <ConfirmationModal
+      :isVisible="showConfirmationModal"
+      :title="confirmationTitle"
+      :message="confirmationMessage"
+      confirmText="Yes, Remove"
+      cancelText="Cancel"
+      :isProcessing="isRemoving"
+      @close="showConfirmationModal = false"
+      @confirm="confirmRemoval"
+    />
     <div v-if="removalStep === 1">
       <h2 class="text-2xl font-bold mb-4">
         Pull Low-Performing PMax & Demand Gen Assets

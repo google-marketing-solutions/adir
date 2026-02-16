@@ -2,6 +2,7 @@
 import GcsImage from "@/components/GcsImage.vue";
 import MultiSelectDropdown from "@/components/MultiSelectDropdown.vue";
 import ScrollToTopButton from "@/components/ScrollToTopButton.vue";
+import ConfirmationModal from "@/components/ConfirmationModal.vue";
 import {
   downloadFileAsBase64,
   moveImages,
@@ -34,6 +35,9 @@ const showUploaded = ref(false);
 const configStore = useConfigStore();
 const route = useRoute();
 const initialLoad = ref(true);
+const showConfirmationModal = ref(false);
+const confirmationMessage = ref("");
+const confirmationTitle = ref("");
 
 const fetchImages = async (force = false) => {
   if (!configStore.customerID) {
@@ -231,6 +235,23 @@ const handleRemoveSelected = async () => {
     return;
   }
 
+  confirmationTitle.value = "Confirm Delete";
+  confirmationMessage.value = `Are you sure you want to delete ${selectedImageUris.length} images? This action cannot be undone.`;
+  showConfirmationModal.value = true;
+};
+
+const confirmRemoval = async () => {
+  const selectedImageUris = [];
+  previewData.value.forEach((campaign) => {
+    campaign.assetGroups.forEach((group) => {
+      group.assets.forEach((asset) => {
+        if (asset.selected) {
+          selectedImageUris.push(asset.src);
+        }
+      });
+    });
+  });
+
   isRemoving.value = true;
   removalMessage.value = "Removing the requested images...";
 
@@ -243,6 +264,7 @@ const handleRemoveSelected = async () => {
     removalMessage.value = "Error removing images.";
   } finally {
     isRemoving.value = false;
+    showConfirmationModal.value = false;
     setTimeout(() => {
       removalMessage.value = "";
     }, 3000);
@@ -363,6 +385,16 @@ const handleEditSubmit = async () => {
 
 <template>
   <div>
+    <ConfirmationModal
+      :isVisible="showConfirmationModal"
+      :title="confirmationTitle"
+      :message="confirmationMessage"
+      confirmText="Yes, Delete"
+      cancelText="Cancel"
+      :isProcessing="isRemoving"
+      @close="showConfirmationModal = false"
+      @confirm="confirmRemoval"
+    />
     <h2 class="text-2xl font-bold mb-4">Generated Asset Preview</h2>
 
     <div v-if="isLoading" class="flex justify-center items-center h-64">
