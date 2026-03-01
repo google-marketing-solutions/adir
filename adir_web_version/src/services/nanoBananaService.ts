@@ -1,4 +1,6 @@
-import {createVertexAiApiClient, DefaultSecuritySettings} from "./apiService";
+import { useConfigStore } from "../stores/config";
+import { createVertexAiApiClient, DefaultSecuritySettings } from "./apiService";
+
 /**
  * Edits an image using Gemini 3 Pro Image (Nano Banana) via Vertex AI.
  * @param {string[]} base64Images - The base64 encoded images to edit.
@@ -7,7 +9,7 @@ import {createVertexAiApiClient, DefaultSecuritySettings} from "./apiService";
  */
 export async function editImageWithNanoBanana(
   base64Images: string | string[],
-  prompt: string
+  prompt: string,
 ): Promise<string> {
   // Ensure base64Images is an array
   const imagesArray = Array.isArray(base64Images)
@@ -16,7 +18,7 @@ export async function editImageWithNanoBanana(
 
   if (imagesArray.length > 14) {
     console.warn(
-      `Gemini 3 Pro Image supports up to 14 images. Truncating from ${imagesArray.length} to 14.`
+      `Gemini 3 Pro Image supports up to 14 images. Truncating from ${imagesArray.length} to 14.`,
     );
     imagesArray.splice(14);
   }
@@ -36,7 +38,9 @@ export async function editImageWithNanoBanana(
     },
   ];
 
-  const modelId = "gemini-3-pro-image-preview";
+  const configStore = useConfigStore();
+  const modelId =
+    configStore.nanoBananaModel || "gemini-3.1-flash-image-preview";
   const generateContentApi = "generateContent";
   const endpoint = `/publishers/google/models/${modelId}:${generateContentApi}`;
 
@@ -64,7 +68,7 @@ export async function editImageWithNanoBanana(
       response.candidates[0].content.parts
     ) {
       const imagePart = response.candidates[0].content.parts.find(
-        (part: any) => part.inlineData
+        (part: any) => part.inlineData,
       );
       if (imagePart) {
         return imagePart.inlineData.data;
