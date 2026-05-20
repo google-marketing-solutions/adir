@@ -9,6 +9,8 @@ import AssetGroupNameMode from "./generation/AssetGroupNameMode.vue";
 import CreativeConceptsMode from "./generation/CreativeConceptsMode.vue";
 import ExistingAssetsMode from "./generation/ExistingAssetsMode.vue";
 import SearchSignalKeywordsMode from "./generation/SearchSignalKeywordsMode.vue";
+import ImageReview from "./generation/ImageReview.vue";
+import { removeImages } from "@/services/gcsService";
 
 const emit = defineEmits(["change-subpage"]);
 const campaignStore = useCampaignStore();
@@ -29,15 +31,81 @@ const loadingMessage = ref("Generating images...");
 
 const showPausedAssetGroups = ref(false);
 
-const handleGenerationComplete = (imageUrls) => {
-  if (imageUrls && imageUrls.length > 0) {
-    const newAssets = imageUrls.map((url) => ({
-      asset: { imageAsset: { fullSize: { url } } },
-    }));
-    // assetStore.setAssets(newAssets); // Removed to prevent store pollution with incompatible assets
-    assetStore.setNeedsRefresh(true);
-    router.push("/asset-preview");
+// Step Management
+const step = ref("configure"); // 'configure' | 'review'
+const generatedImages = ref([]);
+const activeModeComponent = ref(null);
+
+const handleGenerationComplete = (images) => {
+  if (images && images.length > 0) {
+    // Check if the first item is a rich object or just a string (GCS URI)
+    // If it's a string, we might need to wrap it, but we updated CreativeConceptsMode to return rich objects.
+    // Other modes still return strings, so we should normalize them here for backward compatibility.
+    const normalizedImages = images.map((img, index) => {
+      if (typeof img === "string") {
+        return {
+          id: `gen-${index}-${Date.now()}`,
+          gcsUri: img,
+          conceptName: "Generated Image",
+          conceptDescription: "Generated via " + activeMode.value,
+          prompt: "",
+          aspectRatio: "Unknown",
+          status: "pending",
+          feedback: "",
+          attempt: 1,
+        };
+      }
+      return img;
+    });
+
+    generatedImages.value = normalizedImages;
+    step.value = "review";
   }
+};
+
+const handleRegenerate = async (rejectedImages) => {
+  if (!activeModeComponent.value?.regenerateImages) {
+    console.warn("Regeneration is not supported in this mode yet.");
+    return;
+  }
+
+  try {
+    const newImages = await activeModeComponent.value.regenerateImages(rejectedImages);
+    
+    // Delete the old rejected images from GCS
+    const oldUris = rejectedImages.map((img) => img.gcsUri);
+    removeImages(oldUris).catch((err) =>
+      console.error("Failed to delete old images from GCS:", err)
+    );
+
+    // Update the generatedImages list
+    generatedImages.value = generatedImages.value.map((img) => {
+      const regenerated = newImages.find((r) => r.id === img.id);
+      return regenerated || img;
+    });
+  } catch (error) {
+    console.error("Regeneration failed:", error);
+  }
+};
+
+const handleFinish = async (approvedImages) => {
+  // Delete any remaining rejected images
+  const rejectedImages = generatedImages.value.filter((img) => img.status === "rejected");
+  if (rejectedImages.length > 0) {
+    const rejectedUris = rejectedImages.map((img) => img.gcsUri);
+    try {
+      await removeImages(rejectedUris);
+    } catch (err) {
+      console.error("Failed to delete rejected images on finish:", err);
+    }
+  }
+
+  // Reset generation state to allow creating new assets on next visit
+  step.value = "configure";
+  generatedImages.value = [];
+
+  assetStore.setNeedsRefresh(true);
+  router.push("/asset-preview");
 };
 </script>
 
@@ -49,26 +117,54 @@ const handleGenerationComplete = (imageUrls) => {
     <div class="flex items-center justify-between mb-8 max-w-2xl mx-auto">
       <!-- Step 1 -->
       <div class="flex flex-col items-center gap-2">
-        <div class="w-10 h-10 rounded-full bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] flex items-center justify-center font-bold">1</div>
-        <span class="text-sm font-medium text-[var(--color-text-primary)]">Configure</span>
+        <div
+          class="w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors duration-300"
+          :class="step === 'configure' && !isLoading ? 'bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)]' : 'bg-green-600 text-white'"
+        >
+          <span v-if="step !== 'configure' || isLoading">✓</span>
+          <span v-else>1</span>
+        </div>
+        <span class="text-sm font-medium" :class="step === 'configure' && !isLoading ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'">Configure</span>
       </div>
-      <!-- Line -->
-      <div class="flex-1 h-1 bg-[var(--color-bg-tertiary)] mx-4" :class="{'bg-[var(--color-interactive-primary)]': isLoading}"></div>
+      <!-- Line 1 -->
+      <div
+        class="flex-1 h-1 transition-colors duration-300 mx-4"
+        :class="isLoading || step === 'review' ? 'bg-green-600' : 'bg-[var(--color-bg-tertiary)]'"
+      ></div>
       <!-- Step 2 -->
       <div class="flex flex-col items-center gap-2">
-        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold" :class="isLoading ? 'bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)]' : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]'">2</div>
+        <div
+          class="w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors duration-300"
+          :class="[
+            isLoading
+              ? 'bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] animate-pulse'
+              : (step === 'review' ? 'bg-green-600 text-white' : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]')
+          ]"
+        >
+          <span v-if="step === 'review'">✓</span>
+          <span v-else>2</span>
+        </div>
         <span class="text-sm font-medium" :class="isLoading ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'">Generate</span>
       </div>
-      <!-- Line -->
-      <div class="flex-1 h-1 bg-[var(--color-bg-tertiary)] mx-4"></div>
+      <!-- Line 2 -->
+      <div
+        class="flex-1 h-1 transition-colors duration-300 mx-4"
+        :class="step === 'review' ? 'bg-green-600' : 'bg-[var(--color-bg-tertiary)]'"
+      ></div>
       <!-- Step 3 -->
       <div class="flex flex-col items-center gap-2">
-        <div class="w-10 h-10 rounded-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] flex items-center justify-center font-bold">3</div>
-        <span class="text-sm font-medium text-[var(--color-text-muted)]">Review</span>
+        <div
+          class="w-10 h-10 rounded-full flex items-center justify-center font-bold transition-colors duration-300"
+          :class="step === 'review' ? 'bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)]' : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]'"
+        >
+          3
+        </div>
+        <span class="text-sm font-medium" :class="step === 'review' ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'">Review</span>
       </div>
     </div>
 
-    <div class="bg-[var(--color-bg-secondary)] p-6 rounded-xl mb-6 border border-[var(--color-bg-tertiary)]">
+    <!-- Step 1: Configure -->
+    <div v-show="step === 'configure'" class="bg-[var(--color-bg-secondary)] p-6 rounded-xl mb-6 border border-[var(--color-bg-tertiary)]">
       <div class="mb-6 flex justify-between items-end">
         <div>
           <label class="label mb-2">
@@ -124,6 +220,7 @@ const handleGenerationComplete = (imageUrls) => {
         <component
           :is="modes[activeMode]"
           v-if="modes[activeMode]"
+          ref="activeModeComponent"
           :key="activeMode + '-' + showPausedAssetGroups"
           :selected-campaigns="campaignStore.selectedCampaigns"
           :show-paused-asset-groups="showPausedAssetGroups"
@@ -142,7 +239,19 @@ const handleGenerationComplete = (imageUrls) => {
         />
       </div>
     </div>
+
+    <!-- Step 3: Review -->
+    <div v-show="step === 'review'" class="bg-[var(--color-bg-secondary)] p-6 rounded-xl mb-6 border border-[var(--color-bg-tertiary)]">
+      <ImageReview
+        :images="generatedImages"
+        @regenerate="handleRegenerate"
+        @finish="handleFinish"
+        @approve-all="handleFinish(generatedImages)"
+        @update:images="generatedImages = $event"
+      />
+    </div>
   </div>
 </template>
+
 
 
