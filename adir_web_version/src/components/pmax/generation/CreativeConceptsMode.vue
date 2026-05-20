@@ -172,6 +172,7 @@ const handlePaste = (event, index) => {
 const handleGenerate = async () => {
   isLoading.value = true;
   emit("update:loading", true);
+  emit("update:loading-message", "Analyzing concepts with Gemini...");
 
   try {
     errorMessage.value = "";
@@ -180,6 +181,7 @@ const handleGenerate = async () => {
       let imagePrompt = prompt.value;
 
       if (useGemini.value) {
+        emit("update:loading-message", "Generating detailed image prompt with Gemini...");
         imagePrompt = await createCreativeConceptPrompt(
           prompt.value,
           concept.description,
@@ -188,15 +190,14 @@ const handleGenerate = async () => {
           brandStore.useGuidelinesInGeneration ? brandStore.guidelines : undefined
         );
       } else if (concept.description) {
-        // If not using Gemini, at least append the concept description to the base prompt
         imagePrompt = `${prompt.value}\n\nCreative Concept: ${concept.description}`;
       }
 
-      // Append context instructions if reference images are used
       if (referenceImages.value.length > 0 && imageContextInstructions.value) {
         imagePrompt += `\n\nInstructions for using the attached reference images:\n${imageContextInstructions.value}`;
       }
 
+      emit("update:loading-message", "Generating images with Imagen...");
       const arPromises = aspectRatios.value.map(async (ar) => {
         if (ar.count <= 0) return [];
 

@@ -25,6 +25,7 @@ const modes = {
 };
 
 const isLoading = ref(false);
+const loadingMessage = ref("Generating images...");
 
 const showPausedAssetGroups = ref(false);
 
@@ -43,6 +44,30 @@ const handleGenerationComplete = (imageUrls) => {
 <template>
   <div>
     <h1 class="mb-6">Image Generation</h1>
+    
+    <!-- Workflow Stepper -->
+    <div class="flex items-center justify-between mb-8 max-w-2xl mx-auto">
+      <!-- Step 1 -->
+      <div class="flex flex-col items-center gap-2">
+        <div class="w-10 h-10 rounded-full bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] flex items-center justify-center font-bold">1</div>
+        <span class="text-sm font-medium text-[var(--color-text-primary)]">Configure</span>
+      </div>
+      <!-- Line -->
+      <div class="flex-1 h-1 bg-[var(--color-bg-tertiary)] mx-4" :class="{'bg-[var(--color-interactive-primary)]': isLoading}"></div>
+      <!-- Step 2 -->
+      <div class="flex flex-col items-center gap-2">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold" :class="isLoading ? 'bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)]' : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)]'">2</div>
+        <span class="text-sm font-medium" :class="isLoading ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-muted)]'">Generate</span>
+      </div>
+      <!-- Line -->
+      <div class="flex-1 h-1 bg-[var(--color-bg-tertiary)] mx-4"></div>
+      <!-- Step 3 -->
+      <div class="flex flex-col items-center gap-2">
+        <div class="w-10 h-10 rounded-full bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] flex items-center justify-center font-bold">3</div>
+        <span class="text-sm font-medium text-[var(--color-text-muted)]">Review</span>
+      </div>
+    </div>
+
     <div class="bg-[var(--color-bg-secondary)] p-6 rounded-xl mb-6 border border-[var(--color-bg-tertiary)]">
       <div class="mb-6 flex justify-between items-end">
         <div>
@@ -104,6 +129,7 @@ const handleGenerationComplete = (imageUrls) => {
           :show-paused-asset-groups="showPausedAssetGroups"
           @generation-complete="handleGenerationComplete"
           @update:loading="isLoading = $event"
+          @update:loading-message="loadingMessage = $event"
         />
         <div v-else>
           <p class="text-[var(--color-text-muted)]">This mode is not yet implemented.</p>
@@ -112,7 +138,7 @@ const handleGenerationComplete = (imageUrls) => {
 
       <div v-if="isLoading" class="mt-6 p-4 bg-[var(--color-bg-tertiary)] rounded-lg">
         <LoadingSpinner
-          message="Generating images with Gemini..."
+          :message="loadingMessage"
         />
       </div>
     </div>
