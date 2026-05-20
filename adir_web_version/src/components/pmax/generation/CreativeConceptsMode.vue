@@ -1,38 +1,54 @@
 <script setup>
 import { uploadBase64Image } from "@/services/gcsService";
 import { editImageWithNanoBanana } from "@/services/nanoBananaService";
-import { generateTextFromPrompt } from "@/services/vertexAiService";
 import { useBrandStore } from "@/stores/brandStore";
+import {
+  generateTextFromPrompt,
+  createCreativeConceptPrompt,
+  getCreativeConceptsInstruction,
+} from "@/services/vertexAiService";
 import { useConfigStore } from "@/stores/config";
 import { onMounted, ref, watch } from "vue";
 const showPrompt = ref(false);
 
 const emit = defineEmits(["generation-complete", "update:loading"]);
 
-const prompt = ref(` # ROLE & GOAL
-You are a technical art director and expert prompt engineer. Your specialty is translating a creative director's written vision into a precise, highly-detailed, and technically optimized prompt for advanced AI image generation models like Imagen.Your task is to read the following creative vision description and translate it into a single, comprehensive image generation prompt.
-You must meticulously extract all the key details from the description: the subject, setting, action, mood, lighting style, and color palette. Synthesize these details into a keyword-rich, comma-separated string optimized for a photorealistic output.
-Your generated prompt must also contain a clear negative constraint to ensure that no brand logos, identifiable brand marks, or website URLs appear in the image. The image should by realistic, looking like it was taken in real life.
-A critical part of your task involves handling the text overlay conditionally:
-If you find a line at the end of the description that starts with Text:, you must incorporate that exact text into your prompt as a clean, modern, and prominent overlay on the image. The text can have a colored background.
-If there is no line that starts with Text:, do not include any instructions for adding text. The final visual should be completely text-free.  **Make sure to follow these guidlines: ** 1.Make the product the primary focal point of the image.
-2. Generate a single, cohesive scene; do not create a collage.
-3. The background must be simple and uncluttered to avoid distraction.
-4. Place any text in empty space, not on top of the main subject.
-5. Use lighting that is natural for the environment and clearly illuminates the subject.
-6. The setting should be directly relevant to the product's use or target audience.
-*Your entire output must be ONLY the final image generation prompt. Do not add any conversational text, titles, or explanations.*
-Here is the creative vision description:
-`);
-const useGemini = ref(true);
-const creativeConcepts = ref([{ name: "", description: "" }]);
-const customerId = useConfigStore().customerID;
-const storageKey = `creativeConcepts_${customerId}`;
+const brandStore = useBrandStore();
 
 // Reference Images State
 const referenceImages = ref([]); // Array of base64 Data URLs
 const imageContextInstructions = ref("");
 const showImageModal = ref(false);
+
+const prompt = ref(
+  getCreativeConceptsInstruction(
+    brandStore.useGuidelinesInGeneration ? brandStore.guidelines : undefined,
+    referenceImages.value,
+    imageContextInstructions.value
+  )
+);
+
+watch(
+  [
+    () => brandStore.guidelines,
+    () => brandStore.useGuidelinesInGeneration,
+    referenceImages,
+    imageContextInstructions,
+  ],
+  ([newGuidelines, useGuidelines, newImages, newInstructions]) => {
+    prompt.value = getCreativeConceptsInstruction(
+      useGuidelines ? newGuidelines : undefined,
+      newImages,
+      newInstructions
+    );
+  },
+  { deep: true }
+);
+
+const useGemini = ref(true);
+const creativeConcepts = ref([{ name: "", description: "" }]);
+const customerId = useConfigStore().customerID;
+const storageKey = `creativeConcepts_${customerId}`;
 
 const handleFileSelect = (event) => {
   const files = event.target.files;
@@ -50,7 +66,7 @@ const loadFiles = (files) => {
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     if (!file.type.startsWith("image/")) continue;
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
       if (e.target?.result) {
@@ -149,7 +165,7 @@ const handleGenerate = async () => {
 
       if (useGemini.value) {
         let geminiPrompt = `You are a prompt engineer and your job is to provide the best short prompt to generate an image for a digital campaign. Given the following text, provide the optimal Generative AI prompt to generate a realistic style image to be used in an ad of a digital campaign that will best illustrate the concepts defined by the text. Please return only the prompt and start the prompt with "a photo of". Here is the text: ${prompt.value} ${concept.description ? "and the creative concept: " + concept.description : ""}`;
-        
+
         const brandStore = useBrandStore();
         if (brandStore.useGuidelinesInGeneration && brandStore.guidelines) {
           geminiPrompt += `\n\nYou MUST follow these Brand Guidelines when generating the image prompt:\n${brandStore.guidelines}`;
@@ -330,21 +346,21 @@ const handleGenerate = async () => {
     <div v-if="showImageModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
       <div class="bg-gray-900 rounded-lg p-6 max-w-2xl w-full flex flex-col gap-4 max-h-[90vh] overflow-y-auto border border-gray-700 text-white">
         <h2 class="text-xl font-bold">Configure Reference Images</h2>
-        
+
         <!-- Upload Zone -->
-        <div 
-          @dragover.prevent 
+        <div
+          @dragover.prevent
           @drop.prevent="handleDrop"
           @click="$refs.fileInput.click()"
           class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:border-cyan-400 transition-colors bg-gray-800/50"
         >
           <p class="text-gray-400">Drag & drop images here or click to browse</p>
-          <input 
-            type="file" 
-            ref="fileInput" 
-            multiple 
-            accept="image/*" 
-            class="hidden" 
+          <input
+            type="file"
+            ref="fileInput"
+            multiple
+            accept="image/*"
+            class="hidden"
             @change="handleFileSelect"
           />
         </div>
@@ -353,8 +369,8 @@ const handleGenerate = async () => {
         <div v-if="referenceImages.length > 0" class="grid grid-cols-4 gap-4 mt-2">
           <div v-for="(img, idx) in referenceImages" :key="idx" class="relative group aspect-square bg-gray-900 rounded-md overflow-hidden border border-gray-700">
             <img :src="img" class="w-full h-full object-cover" />
-            <button 
-              @click="removeImage(idx)" 
+            <button
+              @click="removeImage(idx)"
               class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity"
             >
               X
