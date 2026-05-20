@@ -6,10 +6,12 @@ import {
   generateTextFromPrompt,
   createCreativeConceptPrompt,
   getCreativeConceptsInstruction,
+  extractBrandGuidelines,
 } from "@/services/vertexAiService";
 import { evaluateImage, generateEvaluationRules } from "@/services/evaluationService";
 import { useConfigStore } from "@/stores/config";
 import { onMounted, ref, watch, computed } from "vue";
+import LoadingSpinner from "@/components/LoadingSpinner.vue";
 const showPrompt = ref(false);
 
 const emit = defineEmits(["generation-complete", "update:loading"]);
@@ -20,6 +22,22 @@ const brandStore = useBrandStore();
 const referenceImages = ref([]); // Array of base64 Data URLs
 const imageContextInstructions = ref("");
 const showImageModal = ref(false);
+
+// Brand Guidelines Modal State
+const showBrandGuidelinesModal = ref(false);
+const guidelinesActiveTab = ref("upload");
+const guidelinesText = ref(brandStore.guidelines);
+const selectedBrandFiles = ref([]);
+const websiteUrl = ref("");
+const isProcessingGuidelines = ref(false);
+const brandNotification = ref({ show: false, message: "", type: "info" });
+
+// Sync guidelines textarea when modal opens
+watch(showBrandGuidelinesModal, (isOpen) => {
+  if (isOpen) {
+    guidelinesText.value = brandStore.guidelines;
+  }
+});
 
 const prompt = ref(
   getCreativeConceptsInstruction(
@@ -199,6 +217,71 @@ const handlePaste = (event, index) => {
     }
   }
   // If only one line is pasted, do nothing and let the default paste behavior occur.
+};
+
+const handleBrandFileChange = (event) => {
+  selectedBrandFiles.value = Array.from(event.target.files);
+};
+
+const brandFileToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+const showBrandNotification = (message, type = "info") => {
+  brandNotification.value = { show: true, message, type };
+  setTimeout(() => {
+    brandNotification.value.show = false;
+  }, 3000);
+};
+
+const processGuidelines = async () => {
+  isProcessingGuidelines.value = true;
+  try {
+    const modelId = configStore.geminiModel || "gemini-1.5-flash";
+    let result = "";
+
+    if (guidelinesActiveTab.value === "upload") {
+      if (selectedBrandFiles.value.length === 0) {
+        showBrandNotification("Please select at least one file.", "warning");
+        return;
+      }
+      const file = selectedBrandFiles.value[0];
+      const base64Data = await brandFileToBase64(file);
+      const fileData = { mimeType: file.type, data: base64Data };
+      const prompt = "Extract brand guidelines from this file. Focus on color palette, typography, and visual style. Do NOT include any introductory or concluding text. Start directly with the guidelines.";
+      result = await extractBrandGuidelines(prompt, modelId, false, fileData);
+    } else if (guidelinesActiveTab.value === "inference") {
+      if (!websiteUrl.value) {
+        showBrandNotification("Please enter a website URL.", "warning");
+        return;
+      }
+      const prompt = `Analyze the website ${websiteUrl.value} and infer its brand guidelines. Focus on color palette, typography, tone of voice, and visual style based on the site content. Do NOT include any introductory or concluding text. Start directly with the guidelines.`;
+      result = await extractBrandGuidelines(prompt, modelId, true);
+    }
+
+    if (result) {
+      guidelinesText.value = result;
+      brandStore.setGuidelines(result);
+      showBrandNotification("Guidelines inferred and saved!", "success");
+    } else {
+      showBrandNotification("No guidelines could be extracted.", "warning");
+    }
+  } catch (error) {
+    console.error("Error processing guidelines:", error);
+    showBrandNotification("Failed to process guidelines.", "error");
+  } finally {
+    isProcessingGuidelines.value = false;
+  }
+};
+
+const handleSaveGuidelines = () => {
+  brandStore.setGuidelines(guidelinesText.value);
+  showBrandNotification("Guidelines saved!", "success");
 };
 
 const generateRules = async () => {
@@ -445,6 +528,16 @@ const handleGenerate = async () => {
           {{ referenceImages.length }}
         </span>
       </button>
+      <button
+        @click="showBrandGuidelinesModal = true"
+        class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-gray-600 border border-[var(--color-text-dim)] self-start flex items-center gap-2 transition-colors"
+      >
+        <span class="material-symbols-outlined text-sm">menu_book</span>
+        Configure Brand Guidelines
+        <span v-if="brandStore.guidelines" class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] text-xs rounded-full px-2 py-0.5">
+          Configured
+        </span>
+      </button>
     </div>
 
     <div class="form-control max-w-xs">
@@ -627,5 +720,151 @@ const handleGenerate = async () => {
         </div>
       </div>
     </div>
+
+    <!-- Brand Guidelines Modal -->
+    <div v-if="showBrandGuidelinesModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
+      <div class="bg-[var(--color-bg-secondary)] rounded-2xl p-6 max-w-3xl w-full flex flex-col gap-6 max-h-[90vh] overflow-y-auto border border-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] shadow-2xl">
+        
+        <div class="flex justify-between items-center border-b border-[var(--color-bg-tertiary)] pb-3">
+          <h2 class="text-xl font-bold text-[var(--color-text-primary)]">Configure Brand Guidelines</h2>
+          <button @click="showBrandGuidelinesModal = false" class="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] font-bold">✕</button>
+        </div>
+
+        <!-- Tabs selector -->
+        <div class="flex rounded-lg bg-[var(--color-bg-tertiary)] p-1">
+          <button
+            v-for="(label, key) in { upload: 'File Upload', inference: 'Website Inference' }"
+            :key="key"
+            class="flex-1 font-medium py-2 px-4 rounded-md transition-colors duration-200 text-sm"
+            :class="[
+              {
+                'bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)]': guidelinesActiveTab === key,
+                'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]': guidelinesActiveTab !== key,
+              }
+            ]"
+            @click="guidelinesActiveTab = key"
+          >
+            {{ label }}
+          </button>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="flex flex-col gap-4">
+          <!-- File Upload -->
+          <div v-if="guidelinesActiveTab === 'upload'" class="flex flex-col gap-2">
+            <label class="block text-sm font-medium text-[var(--color-text-muted)]">
+              Upload Brand Documents (PDF, DOC, Images, etc.)
+            </label>
+            <input
+              type="file"
+              @change="handleBrandFileChange"
+              class="block w-full text-sm text-[var(--color-text-muted)] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-interactive-primary)] file:text-[var(--color-text-primary)] hover:file:bg-[var(--color-interactive-hover)] cursor-pointer"
+            />
+            <div v-if="selectedBrandFiles.length > 0" class="mt-2 bg-[var(--color-bg-tertiary)] p-3 rounded-lg">
+              <p class="text-sm font-medium text-[var(--color-text-primary)]">Selected file:</p>
+              <ul class="list-disc list-inside text-sm text-[var(--color-text-muted)] mt-1">
+                <li v-for="file in selectedBrandFiles" :key="file.name">
+                  {{ file.name }} ({{ (file.size / 1024 / 1024).toFixed(2) }} MB)
+                </li>
+              </ul>
+            </div>
+            <p class="text-xs text-[var(--color-text-dim)]">
+              Select a PDF, DOC, or Image document for Gemini to analyze.
+            </p>
+          </div>
+
+          <!-- Website Inference -->
+          <div v-if="guidelinesActiveTab === 'inference'" class="flex flex-col gap-2">
+            <label class="block text-sm font-medium text-[var(--color-text-muted)]">
+              Customer Website URL
+            </label>
+            <input
+              v-model="websiteUrl"
+              type="url"
+              placeholder="https://example.com"
+              class="w-full p-2.5 rounded-md bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none text-sm"
+            />
+            <p class="text-xs text-[var(--color-text-dim)]">
+              Provide a URL and let Gemini infer the brand identity from the public website content.
+            </p>
+          </div>
+
+          <!-- Extract Button -->
+          <div class="flex justify-end">
+            <button
+              @click="processGuidelines"
+              :disabled="isProcessingGuidelines"
+              class="bg-[var(--color-interactive-primary)] hover:bg-[var(--color-interactive-hover)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md transition-colors duration-200 disabled:opacity-50 text-sm flex items-center gap-2"
+            >
+              <span v-if="isProcessingGuidelines" class="loading loading-spinner loading-xs"></span>
+              {{ isProcessingGuidelines ? "Processing with Gemini..." : "Process with Gemini" }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Resulting guidelines text block -->
+        <div class="flex flex-col gap-3 border-t border-[var(--color-bg-tertiary)] pt-4">
+          <div class="flex justify-between items-center">
+            <h3 class="text-base font-bold text-[var(--color-text-primary)]">Resulting Brand Guidelines</h3>
+            <button
+              @click="handleSaveGuidelines"
+              class="bg-[var(--color-interactive-primary)] hover:bg-[var(--color-interactive-hover)] text-[var(--color-text-primary)] font-bold py-1.5 px-4 rounded-md text-xs transition-colors"
+            >
+              Save Guidelines
+            </button>
+          </div>
+
+          <!-- Empty state -->
+          <div v-if="!guidelinesText" class="flex flex-col items-center justify-center p-10 bg-[var(--color-bg-tertiary)]/30 rounded-lg border border-dashed border-[var(--color-text-dim)] text-center">
+            <span class="material-symbols-outlined text-3xl text-[var(--color-text-muted)] mb-2">menu_book</span>
+            <h4 class="text-sm font-bold text-[var(--color-text-primary)] mb-1">No Brand Guidelines Yet</h4>
+            <p class="text-[var(--color-text-muted)] text-xs max-w-sm">
+              Upload brand documents or provide a website URL, then click "Process with Gemini" to generate.
+            </p>
+          </div>
+
+          <!-- Text area editor -->
+          <textarea
+            v-else
+            v-model="guidelinesText"
+            rows="8"
+            class="w-full p-3 rounded-md bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none text-xs leading-relaxed"
+            placeholder="The inferred brand guidelines will appear here..."
+          ></textarea>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="flex justify-end gap-3 border-t border-[var(--color-bg-tertiary)] pt-4 mt-auto">
+          <button
+            @click="showBrandGuidelinesModal = false"
+            class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-md font-bold text-sm transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guidelines Notification Toast -->
+    <div v-if="brandNotification.show" class="fixed top-4 right-4 z-50 max-w-sm w-full">
+      <div :class="[
+        'p-4 rounded-lg shadow-lg text-white font-medium flex items-center justify-between',
+        brandNotification.type === 'success' ? 'bg-green-600' : '',
+        brandNotification.type === 'error' ? 'bg-red-600' : '',
+        brandNotification.type === 'info' ? 'bg-blue-600' : '',
+        brandNotification.type === 'warning' ? 'bg-yellow-600' : '',
+      ]">
+        <span>{{ brandNotification.message }}</span>
+        <button @click="brandNotification.show = false" class="ml-4 text-white/80 hover:text-white">&times;</button>
+      </div>
+    </div>
+
+    <!-- Fullscreen extraction spinner overlay -->
+    <LoadingSpinner
+      v-if="isProcessingGuidelines"
+      fullscreen
+      title="Extracting Brand Essence"
+      message="Gemini is analyzing the data and distilling guidelines. This takes a moment to ensure quality..."
+    />
   </div>
 </template>
