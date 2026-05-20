@@ -21,6 +21,23 @@ export const useConfigStore = defineStore("config", {
       { label: "Portrait (9:16)", ratio: "9:16", count: 0 },
       { label: "Landscape (16:9)", ratio: "16:9", count: 0 },
     ],
+    promptTemplates: [
+      {
+        label: "Outpaint & Keep Content Intact",
+        prompt: `Crop or outpaint the provided image to the requested aspect ratio.
+RESTRICTION: DO NOT modify, rotate, reposition, or alter any existing objects, people, or text in the original image. The original content must remain exactly as it is.
+ACTION: Extend the image PURELY with environmental background (e.g., sky, walls, floors, empty space) to fill the new aspect ratio. Maintain the same style, lighting, and tone.
+CRITICAL: NO NEW ADDITIONS. Do not add any new icons, symbols, writing, or objects. The new areas must be completely empty.`,
+      },
+      {
+        label: "Remove Background",
+        prompt: "Remove the background of the image and replace it with a clean, minimalist studio background with soft lighting.",
+      },
+      {
+        label: "Black Friday Theme",
+        prompt: "Add subtle Black Friday elements to the background, like dark aesthetic, red accents, and a mood of high-end retail sale, without altering the main subject.",
+      },
+    ],
   }),
   getters: {
     allAllowedAspectRatios: () => [
@@ -46,6 +63,9 @@ export const useConfigStore = defineStore("config", {
       if (!exists) {
         this.aspectRatios.push({ label, ratio, count: 0 });
       }
+    },
+    addPromptTemplate(label: string, prompt: string) {
+      this.promptTemplates.push({ label, prompt });
     },
     resetAspectRatios() {
       this.aspectRatios = [
