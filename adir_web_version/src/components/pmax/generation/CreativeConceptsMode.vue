@@ -215,7 +215,7 @@ const handleGenerate = async () => {
               const gcsPath = concept.name
                 ? `${configStore.customerID}/Creative Concepts/${concept.name}/GENERATED/`
                 : `${configStore.customerID}/Creative Concepts/GENERATED/`;
-              const gcsFileName = `${gcsPath}${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}.png`;
+              const gcsFileName = `${gcsPath}${Date.now()}_${i}_${ar.ratio.replace(":", "-")}_${Math.random().toString(36).slice(2, 7)}.png`;
               return await uploadBase64Image(gcsFileName, dataUrl);
             } catch (e) {
               console.error("Error generating image with Nano Banana:", e);

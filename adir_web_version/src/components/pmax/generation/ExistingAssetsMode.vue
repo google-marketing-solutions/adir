@@ -284,7 +284,7 @@ const handleGenerate = async () => {
             imageUrls: imageInfos.map((img) => img.url),
             prompt: finalPrompt,
             aspectRatio: ar.ratio,
-            gcsPath: `${gcsPath}${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}.png`,
+            gcsPath: `${gcsPath}${Date.now()}_${i}_${ar.ratio.replace(":", "-")}_${Math.random().toString(36).slice(2, 7)}.png`,
           });
         }
       });

@@ -100,12 +100,20 @@ const processImages = async () => {
         };
       }
 
+    const filename = parts[parts.length - 1];
+    const filenameParts = filename.split("_");
+    let aspectRatio = "";
+    if (filenameParts.length >= 4) {
+      aspectRatio = filenameParts[2].replace("-", ":");
+    }
+
     campaigns[campaignName].assetGroups[assetGroupName].assets.push({
       id: `gen-${index}`,
       src: image.gcsUri,
       name: image.name,
       selected: statusFolder !== "UPLOADED",
       uploaded: statusFolder === "UPLOADED",
+      aspectRatio: aspectRatio,
     });
   });
 
@@ -555,6 +563,10 @@ const handleEditSubmit = async () => {
                     alt="Asset"
                     class="rounded-lg"
                   />
+                  <!-- Aspect Ratio Overlay -->
+                  <div v-if="asset.aspectRatio" class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-md z-10">
+                    {{ asset.aspectRatio }}
+                  </div>
                   <input
                     type="checkbox"
                     v-model="asset.selected"
