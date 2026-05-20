@@ -69,6 +69,8 @@ const closeSettings = () => {
   border-bottom: 1px solid #4a5568;
   background-color: #1f2937; /* bg-gray-800 */
   color: #d1d5db; /* text-gray-300 */
+  position: relative;
+  z-index: 40;
 }
 
 .main-content {

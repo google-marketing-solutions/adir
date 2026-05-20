@@ -567,9 +567,17 @@ const handleGenerate = async () => {
                   console.log(`[Evaluation] Refining prompt for attempt ${attempts} with feedback: ${evaluationFeedback}`);
                 }
 
+                let finalPrompt = currentPrompt;
+                if (brandStore.useGuidelinesInGeneration && brandStore.guidelines) {
+                  finalPrompt += `\n\nYou MUST strictly follow these Brand Guidelines:\n${brandStore.guidelines}`;
+                }
+                if (configStore.enableEvaluation && configStore.evaluationRules) {
+                  finalPrompt += `\n\nYou MUST strictly adhere to these Image Constraints/Rules:\n${configStore.evaluationRules}`;
+                }
+
                 generatedBase64 = await editImageWithNanoBanana(
                   referenceImages.value,
-                  currentPrompt,
+                  finalPrompt,
                   ar.ratio
                 );
 
@@ -683,9 +691,17 @@ const regenerateImages = async (rejectedImages) => {
 
       addLog('generating', `Regenerating image with feedback: ${img.feedback}`);
 
+      let finalPrompt = refinedPrompt;
+      if (brandStore.useGuidelinesInGeneration && brandStore.guidelines) {
+        finalPrompt += `\n\nYou MUST strictly follow these Brand Guidelines:\n${brandStore.guidelines}`;
+      }
+      if (configStore.enableEvaluation && configStore.evaluationRules) {
+        finalPrompt += `\n\nYou MUST strictly adhere to these Image Constraints/Rules:\n${configStore.evaluationRules}`;
+      }
+
       const generatedBase64 = await editImageWithNanoBanana(
         referenceImages.value,
-        refinedPrompt,
+        finalPrompt,
         img.aspectRatio
       );
 
