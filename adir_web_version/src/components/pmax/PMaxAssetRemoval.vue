@@ -32,6 +32,32 @@ const conditions = ref([]);
 let conditionIdCounter = 0;
 const dateRange = ref("LAST_30_DAYS");
 
+const presets = [
+  {
+    name: "Low CTR (< 0.5%)",
+    rules: [{ metric: "CTR", operator: "<", value: 0.5, logicalOperator: "AND" }],
+  },
+  {
+    name: "High Cost, No Clicks",
+    rules: [
+      { metric: "Cost", operator: ">", value: 50, logicalOperator: "AND" },
+      { metric: "Clicks", operator: "=", value: 0, logicalOperator: "AND" },
+    ],
+  },
+  {
+    name: "Low Conversions",
+    rules: [{ metric: "Conversions", operator: "<", value: 1, logicalOperator: "AND" }],
+  },
+];
+
+const applyPreset = (preset) => {
+  conditions.value = preset.rules.map((rule, index) => ({
+    id: index + 1,
+    ...rule,
+  }));
+  conditionIdCounter = preset.rules.length;
+};
+
 const activeMetrics = computed(() => {
   return new Set(conditions.value.map((c) => c.metric));
 });
@@ -454,6 +480,21 @@ async function confirmRemoval() {
             programmatically due to a Google Ads API limitation.
           </p>
         </div>
+        <!-- Presets -->
+        <div class="mb-6">
+          <span class="text-caption mb-2 block">Quick Presets</span>
+          <div class="flex flex-wrap gap-3">
+            <button
+              v-for="preset in presets"
+              :key="preset.name"
+              @click="applyPreset(preset)"
+              class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] px-4 py-2 rounded-md hover:bg-[var(--color-bg-secondary)] border border-[var(--color-bg-tertiary)] hover:border-[var(--color-interactive-primary)] transition-colors text-sm"
+            >
+              {{ preset.name }}
+            </button>
+          </div>
+        </div>
+
         <div class="space-y-4">
           <div v-for="(condition, index) in conditions" :key="condition.id">
             <div class="condition-row flex items-center gap-2 mb-2">

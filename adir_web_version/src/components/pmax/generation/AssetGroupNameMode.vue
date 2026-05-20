@@ -4,8 +4,9 @@ import {
   fetchAdGroupsByCampaignIds,
   fetchAssetGroupsByCampaignIds,
 } from "@/services/googleAdsService";
-import { generateImagesFromPrompt } from "@/services/vertexAiService";
+import { generateImagesFromPrompt, generateTextFromPrompt } from "@/services/vertexAiService";
 import { useConfigStore } from "@/stores/config";
+import { useBrandStore } from "@/stores/brandStore";
 import { computed, onMounted, ref, watch } from "vue";
 
 const emit = defineEmits(["generation-complete", "update:loading"]);
@@ -97,16 +98,40 @@ const handleGenerate = async () => {
       (ar) => ar.count > 0,
     );
 
-    const jobObjects = groups.flatMap((group) => {
+    const brandStore = useBrandStore();
+    
+    const jobObjectsPromises = groups.map(async (group) => {
       const isDemandGen =
         group.campaign.advertisingChannelType === "DEMAND_GEN";
       const groupName = isDemandGen ? group.adGroup.name : group.assetGroup.name;
       const groupId = isDemandGen ? group.adGroup.id : group.assetGroup.id;
 
-      const finalPrompt = prompt.value.replace(
+      let finalPrompt = prompt.value.replace(
         /\[Asset Group \/ Ad Group Name\]/g,
         groupName,
       );
+
+      if (brandStore.useGuidelinesInGeneration && brandStore.guidelines) {
+        emit("update:loading-message", `Refining prompt for group ${groupName}...`);
+        const geminiPrompt = `You are an expert advertising copywriter and image prompt engineer.
+Your task is to refine the following image generation prompt based on the Brand Guidelines.
+
+Base Prompt: ${finalPrompt}
+
+Brand Guidelines:
+${brandStore.guidelines}
+
+Instructions:
+1. Incorporate the color palette, style, and tone from the guidelines into the prompt.
+2. Keep the prompt concise and effective for an image generator (Imagen).
+3. Return ONLY the refined prompt text.`;
+
+        finalPrompt = await generateTextFromPrompt(
+          geminiPrompt,
+          configStore.geminiModel,
+        );
+      }
+
       const campaignIdentifier = `${group.campaign.name.replace(/\s+/g, "_")}~${group.campaign.id}`;
       const groupIdentifier = `${groupName.replace(/\s+/g, "_")}~${groupId}`;
       const gcsPath = `${configStore.customerID}/${campaignIdentifier}/${groupIdentifier}/GENERATED/`;
@@ -120,6 +145,9 @@ const handleGenerate = async () => {
         })),
       );
     });
+
+    const jobObjectsNested = await Promise.all(jobObjectsPromises);
+    const jobObjects = jobObjectsNested.flat();
 
     const generationPromises = jobObjects.map(async (job) => {
       const base64Images = await generateImagesFromPrompt(

@@ -66,3 +66,657 @@
     color: var(--color-text-dim);
   }
 }
+
+/* ==========================================
+   Global High-Contrast Inputs, Textareas & Selects (Dark Mode Base)
+   ========================================== */
+select,
+textarea,
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  background: rgba(31, 41, 55, 0.4) !important;
+  border-radius: 8px !important;
+  color: #f3f4f6 !important;
+  transition: all 0.3s ease !important;
+}
+
+select:focus,
+textarea:focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3) !important;
+  background: rgba(31, 41, 55, 0.6) !important;
+  outline: none !important;
+}
+
+/* ==========================================
+   Global Premium Primary Action Buttons Style
+   ========================================== */
+button.bg-blue-600,
+button.bg-cyan-600,
+button.bg-indigo-600 {
+  background: #2563eb !important;
+  border: none !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.025em !important;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  color: #ffffff !important;
+}
+
+button.bg-blue-600:hover:not(:disabled),
+button.bg-cyan-600:hover:not(:disabled),
+button.bg-indigo-600:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 22px rgba(37, 99, 235, 0.4) !important;
+  background: #1d4ed8 !important;
+}
+
+button.bg-blue-600:active:not(:disabled),
+button.bg-cyan-600:active:not(:disabled),
+button.bg-indigo-600:active:not(:disabled) {
+  transform: translateY(0) !important;
+}
+
+/* ==========================================
+   Light Mode Global Theme Overrides (CSS-Only)
+   ========================================== */
+:root:has(#theme-checkbox:checked) {
+  --color-bg-primary: oklch(0.98 0.005 240);
+  --color-bg-secondary: oklch(0.96 0.008 240);
+  --color-bg-tertiary: oklch(0.91 0.01 240);
+
+  --color-text-primary: oklch(0.15 0.01 240);
+  --color-text-muted: oklch(0.35 0.01 240);
+  --color-text-dim: oklch(0.55 0.01 240);
+  --color-text-highlight: oklch(0.08 0.01 240);
+
+  --color-interactive-primary: oklch(0.55 0.22 240);
+  --color-interactive-hover: oklch(0.45 0.22 240);
+  --color-interactive-focus: oklch(0.65 0.18 240);
+}
+
+:root:has(#theme-checkbox:checked) body,
+:root:has(#theme-checkbox:checked) #app-container,
+:root:has(#theme-checkbox:checked) .bg-gray-900,
+:root:has(#theme-checkbox:checked) .min-h-screen {
+  background-color: var(--color-bg-primary) !important;
+  color: var(--color-text-primary) !important;
+}
+
+:root:has(#theme-checkbox:checked) header {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03) !important;
+}
+
+:root:has(#theme-checkbox:checked) header img {
+  filter: invert(0.1) !important;
+}
+
+:root:has(#theme-checkbox:checked) aside,
+:root:has(#theme-checkbox:checked) .bg-gray-800 {
+  background-color: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.06) !important;
+  color: #0f172a !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Override gray-700 form groups and options in Light Mode */
+:root:has(#theme-checkbox:checked) .bg-gray-700,
+:root:has(#theme-checkbox:checked) .bg-gray-700\/30 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+:root:has(#theme-checkbox:checked) .hover\:bg-gray-700\/50:hover {
+  background-color: #e2e8f0 !important;
+}
+
+:root:has(#theme-checkbox:checked) .peer:checked + div {
+  background-color: #eff6ff !important;
+  border-color: #3b82f6 !important;
+}
+
+/* Campaign selector light style */
+:root:has(#theme-checkbox:checked) .campaign-selector {
+  background-color: #f1f5f9 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+}
+
+/* Input, Textarea & Select tags in light theme */
+:root:has(#theme-checkbox:checked) textarea,
+:root:has(#theme-checkbox:checked) input,
+:root:has(#theme-checkbox:checked) select {
+  background: rgba(248, 250, 252, 0.8) !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+:root:has(#theme-checkbox:checked) textarea:focus,
+:root:has(#theme-checkbox:checked) input:focus,
+:root:has(#theme-checkbox:checked) select:focus {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.2), inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  background: #ffffff !important;
+}
+
+/* Custom Toggle Switches visibility in Light Mode */
+:root:has(#theme-checkbox:checked) .relative div[class*="w-11 h-6"] {
+  background-color: #cbd5e1 !important;
+  border: 1px solid #94a3b8 !important;
+}
+
+:root:has(#theme-checkbox:checked) input:checked + div[class*="w-11 h-6"] {
+  background-color: #2563eb !important;
+  border-color: #1d4ed8 !important;
+}
+
+/* Header utility buttons */
+:root:has(#theme-checkbox:checked) header a,
+:root:has(#theme-checkbox:checked) header button {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  color: #475569 !important;
+}
+
+:root:has(#theme-checkbox:checked) header a:hover,
+:root:has(#theme-checkbox:checked) header button:hover {
+  background-color: rgba(15, 23, 42, 0.08) !important;
+  border-color: rgba(37, 99, 235, 0.3) !important;
+  color: #0f172a !important;
+}
+
+/* Sidebar elements */
+:root:has(#theme-checkbox:checked) aside a {
+  color: #475569 !important;
+}
+
+:root:has(#theme-checkbox:checked) aside a:hover {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+  color: #0f172a !important;
+}
+
+:root:has(#theme-checkbox:checked) aside a.router-link-active {
+  background-color: #eff6ff !important;
+  color: #2563eb !important;
+}
+
+/* Label, headings & campaign selection text light styles */
+:root:has(#theme-checkbox:checked) h2,
+:root:has(#theme-checkbox:checked) h3,
+:root:has(#theme-checkbox:checked) h4,
+:root:has(#theme-checkbox:checked) .text-white,
+:root:has(#theme-checkbox:checked) .text-gray-200 {
+  color: #0f172a !important;
+}
+
+:root:has(#theme-checkbox:checked) .text-gray-400,
+:root:has(#theme-checkbox:checked) .text-gray-300,
+:root:has(#theme-checkbox:checked) .label-text,
+:root:has(#theme-checkbox:checked) span.label-text,
+:root:has(#theme-checkbox:checked) span {
+  color: #334155 !important;
+}
+
+/* Prevent overriding text colors of primary action buttons with white text */
+:root:has(#theme-checkbox:checked) button.bg-blue-600,
+:root:has(#theme-checkbox:checked) button.bg-cyan-600,
+:root:has(#theme-checkbox:checked) button.bg-cyan-500,
+:root:has(#theme-checkbox:checked) button[class*="bg-indigo-500"],
+:root:has(#theme-checkbox:checked) span[class*="bg-indigo-500"],
+:root:has(#theme-checkbox:checked) .tab-btn.active,
+:root:has(#theme-checkbox:checked) .bg-emerald-600,
+:root:has(#theme-checkbox:checked) .bg-green-600,
+:root:has(#theme-checkbox:checked) button.btn-primary,
+:root:has(#theme-checkbox:checked) button.bg-red-600 {
+  color: #ffffff !important;
+}
+
+/* Specific rules for MultiSelectDropdown inside the campaign selector */
+:root:has(#theme-checkbox:checked) .relative > div[class*="bg-gray-700"],
+:root:has(#theme-checkbox:checked) .relative div[class*="bg-gray-700"] {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+:root:has(#theme-checkbox:checked) .relative input[class*="bg-gray-800"] {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+/* Accent accordion button */
+:root:has(#theme-checkbox:checked) button.text-cyan-400 {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.04), rgba(6, 182, 212, 0.04)) !important;
+  border: 1px solid rgba(37, 99, 235, 0.2) !important;
+  color: #1d4ed8 !important;
+}
+
+:root:has(#theme-checkbox:checked) button.text-cyan-400:hover {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(6, 182, 212, 0.08)) !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 0 15px rgba(37, 99, 235, 0.15) !important;
+}
+
+/* Image modals in light theme */
+:root:has(#theme-checkbox:checked) .bg-gray-900.rounded-lg {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.25), 0 0 40px rgba(37, 99, 235, 0.06) !important;
+}
+
+:root:has(#theme-checkbox:checked) .fixed.inset-0 {
+  background: rgba(15, 23, 42, 0.4) !important;
+}
+
+/* Aspect ratio & tabs container */
+:root:has(#theme-checkbox:checked) .tabs-container {
+  background: #f1f5f9 !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.05) !important;
+}
+
+:root:has(#theme-checkbox:checked) .tab-btn {
+  color: #64748b !important;
+}
+
+:root:has(#theme-checkbox:checked) .tab-btn:hover {
+  color: #0f172a !important;
+  background: rgba(15, 23, 42, 0.03) !important;
+}
+
+:root:has(#theme-checkbox:checked) .tab-btn.active {
+  color: #ffffff !important;
+  background: #2563eb !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* Global Label Spacing Overrides */
+.label {
+  margin-bottom: 0.5rem !important;
+  display: flex;
+  align-items: center;
+}
+
+/* ==========================================
+   Premium Sidebar & Layout Overhaul
+   ========================================== */
+aside {
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(20px) !important;
+}
+
+:root:has(#theme-checkbox:checked) aside {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  border-right: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+aside nav a {
+  position: relative;
+  overflow: hidden;
+  padding: 12px 16px !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: flex !important;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+aside nav a[class*="bg-gray-700"],
+aside nav a.router-link-active {
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.15) 0%, rgba(37, 99, 235, 0.02) 100%) !important;
+  color: #60a5fa !important;
+  border-left: 3px solid #2563eb !important;
+  border-radius: 0 8px 8px 0 !important;
+  box-shadow: inset 4px 0 15px rgba(37, 99, 235, 0.1) !important;
+}
+
+:root:has(#theme-checkbox:checked) aside nav a[class*="bg-gray-700"],
+:root:has(#theme-checkbox:checked) aside nav a.router-link-active {
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.01) 100%) !important;
+  color: #1d4ed8 !important;
+  border-left: 3px solid #2563eb !important;
+}
+
+aside nav a:hover:not([class*="bg-gray-700"]):not(.router-link-active) {
+  background: rgba(255, 255, 255, 0.03) !important;
+  color: #ffffff !important;
+  transform: translateX(4px);
+}
+
+:root:has(#theme-checkbox:checked) aside nav a:hover:not([class*="bg-gray-700"]):not(.router-link-active) {
+  background: rgba(15, 23, 42, 0.03) !important;
+  color: #0f172a !important;
+}
+
+/* ==========================================
+   Premium Section & Campaign Selection Cards
+   ========================================== */
+.campaign-selector,
+.bg-gray-800\/50,
+.bg-gray-800 {
+  background: rgba(30, 41, 59, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(24px) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.05) !important;
+  border-radius: 16px !important;
+}
+
+:root:has(#theme-checkbox:checked) .campaign-selector,
+:root:has(#theme-checkbox:checked) .bg-gray-800\/50,
+:root:has(#theme-checkbox:checked) .bg-gray-800 {
+  background: rgba(255, 255, 255, 0.75) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.9) !important;
+}
+
+/* ==========================================
+   Custom Premium Input Controls (Checkbox / Radio)
+   ========================================== */
+input[type="checkbox"].checkbox {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 1.35rem !important;
+  height: 1.35rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 6px !important;
+  background: rgba(31, 41, 55, 0.4) !important;
+  cursor: pointer !important;
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+input[type="checkbox"].checkbox:hover {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 8px rgba(37, 99, 235, 0.2) !important;
+}
+
+input[type="checkbox"].checkbox:checked {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.35) !important;
+}
+
+input[type="checkbox"].checkbox:checked::after {
+  content: "" !important;
+  display: block !important;
+  width: 0.35rem !important;
+  height: 0.6rem !important;
+  border: solid #ffffff !important;
+  border-width: 0 2px 2px 0 !important;
+  transform: rotate(45deg) translate(-0.5px, -1px) !important;
+}
+
+:root:has(#theme-checkbox:checked) input[type="checkbox"].checkbox {
+  border: 1px solid #cbd5e1 !important;
+  background: #ffffff !important;
+}
+
+:root:has(#theme-checkbox:checked) input[type="checkbox"].checkbox:checked {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+}
+
+/* Custom Premium Radio Button Overhaul */
+input[type="radio"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 1.2rem !important;
+  height: 1.2rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 50% !important;
+  background: rgba(31, 41, 55, 0.4) !important;
+  cursor: pointer !important;
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  margin-right: 0.5rem !important;
+}
+
+input[type="radio"]:hover {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 8px rgba(37, 99, 235, 0.2) !important;
+}
+
+input[type="radio"]:checked {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.35) !important;
+}
+
+input[type="radio"]:checked::after {
+  content: "" !important;
+  display: block !important;
+  width: 0.55rem !important;
+  height: 0.55rem !important;
+  background: #2563eb !important;
+  border-radius: 50% !important;
+}
+
+:root:has(#theme-checkbox:checked) input[type="radio"] {
+  border: 1px solid #cbd5e1 !important;
+  background: #ffffff !important;
+}
+
+:root:has(#theme-checkbox:checked) input[type="radio"]:checked {
+  border-color: #2563eb !important;
+}
+
+:root:has(#theme-checkbox:checked) input[type="radio"]:checked::after {
+  background: #2563eb !important;
+}
+
+/* ==========================================
+   Premium Multi-Select Dropdown Overrides
+   ========================================== */
+div[ref="dropdownRef"] > div {
+  background: rgba(31, 41, 55, 0.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  padding: 10px 14px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+div[ref="dropdownRef"] > div:focus-within {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 14px rgba(37, 99, 235, 0.25) !important;
+}
+
+span.bg-indigo-500 {
+  background: #2563eb !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2) !important;
+  font-weight: 600 !important;
+  padding: 4px 12px !important;
+  border-radius: 20px !important;
+}
+
+div[ref="dropdownRef"] > div.absolute {
+  background: rgba(17, 24, 39, 0.95) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5) !important;
+  border-radius: 12px !important;
+  padding: 8px !important;
+}
+
+:root:has(#theme-checkbox:checked) div[ref="dropdownRef"] > div {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+:root:has(#theme-checkbox:checked) div[ref="dropdownRef"] > div.absolute {
+  background: #ffffff !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08) !important;
+}
+
+/* ==========================================
+   Global Premium Secondary Action Buttons Style
+   ========================================== */
+button.bg-gray-700 {
+  background: rgba(55, 65, 81, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  backdrop-filter: blur(12px);
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+button.bg-gray-700:hover:not(:disabled) {
+  background: rgba(75, 85, 99, 0.65) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
+  transform: translateY(-1.5px) !important;
+}
+
+:root:has(#theme-checkbox:checked) button.bg-gray-700 {
+  background: rgba(15, 23, 42, 0.04) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  color: #475569 !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02) !important;
+}
+
+:root:has(#theme-checkbox:checked) button.bg-gray-700:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.08) !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  color: #0f172a !important;
+  transform: translateY(-1.5px) !important;
+}
+
+/* ==========================================
+   Theme Toggle Slider Styles (Extracted)
+   ========================================== */
+.theme-toggle-label {
+  position: relative;
+  display: inline-block;
+  width: 58px;
+  height: 32px;
+  cursor: pointer;
+}
+
+.theme-checkbox {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.theme-toggle-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(31, 41, 55, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 30px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+}
+
+.theme-toggle-slider::before {
+  content: "";
+  position: absolute;
+  height: 24px;
+  width: 24px;
+  left: 3px;
+  bottom: 3px;
+  background: linear-gradient(135deg, #22d3ee, #2563eb);
+  border-radius: 50%;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+}
+
+.theme-checkbox:checked + .theme-toggle-slider {
+  background-color: #e5e7eb;
+  border-color: #cbd5e1;
+}
+
+.theme-checkbox:checked + .theme-toggle-slider::before {
+  transform: translateX(26px);
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+}
+
+.moon-icon, .sun-icon {
+  width: 16px;
+  height: 16px;
+  transition: opacity 0.3s ease;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.moon-icon {
+  color: #22d3ee;
+  opacity: 1;
+}
+
+.sun-icon {
+  color: #d97706;
+  opacity: 0.2;
+}
+
+.theme-checkbox:checked + .theme-toggle-slider .moon-icon {
+  opacity: 0.2;
+  color: #9ca3af;
+}
+
+.theme-checkbox:checked + .theme-toggle-slider .sun-icon {
+  opacity: 1;
+}
+
+/* ==========================================
+   Tab Navigation Styles (Extracted)
+   ========================================== */
+.tabs-container {
+  display: flex;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 6px;
+  border-radius: 14px;
+  backdrop-filter: blur(16px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.tab-btn {
+  padding: 10px 22px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  letter-spacing: 0.03em;
+  color: #9ca3af;
+  border: none !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tab-btn:hover {
+  color: #f3f4f6;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.tab-btn.active {
+  color: #ffffff !important;
+  background: #2563eb !important;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3) !important;
+  transform: scale(1.02);
+}
+

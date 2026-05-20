@@ -318,6 +318,7 @@ const handleGenerate = async () => {
   generationLogs.value = []; // Clear previous logs
   showDetailedLogs.value = false; // Reset collapse state
   emit("update:loading", true);
+  emit("update:loading-message", "Analyzing concepts with Gemini...");
 
   try {
     errorMessage.value = "";
@@ -326,6 +327,7 @@ const handleGenerate = async () => {
       let imagePrompt = prompt.value;
 
       if (useGemini.value) {
+        emit("update:loading-message", "Generating detailed image prompt with Gemini...");
         imagePrompt = await createCreativeConceptPrompt(
           prompt.value,
           concept.description,
@@ -334,15 +336,14 @@ const handleGenerate = async () => {
           brandStore.useGuidelinesInGeneration ? brandStore.guidelines : undefined
         );
       } else if (concept.description) {
-        // If not using Gemini, at least append the concept description to the base prompt
         imagePrompt = `${prompt.value}\n\nCreative Concept: ${concept.description}`;
       }
 
-      // Append context instructions if reference images are used
       if (referenceImages.value.length > 0 && imageContextInstructions.value) {
         imagePrompt += `\n\nInstructions for using the attached reference images:\n${imageContextInstructions.value}`;
       }
 
+      emit("update:loading-message", "Generating images with Imagen...");
       const arPromises = aspectRatios.value.map(async (ar) => {
         if (ar.count <= 0) return [];
 
@@ -481,7 +482,7 @@ const handleGenerate = async () => {
         >
       </label>
     </div>
-    
+
     <div class="flex flex-col gap-4">
       <div
         v-for="(concept, index) in creativeConcepts"
@@ -592,7 +593,7 @@ const handleGenerate = async () => {
           </select>
         </div>
       </div>
-      
+
       <!-- Add Custom Ratio Form -->
       <div class="flex gap-2 mt-4 items-end border-t border-gray-700 pt-4">
         <div class="form-control">
@@ -667,7 +668,7 @@ const handleGenerate = async () => {
     <div v-if="showImageModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
       <div class="bg-[var(--color-bg-secondary)] rounded-2xl p-6 max-w-2xl w-full flex flex-col gap-4 max-h-[90vh] overflow-y-auto border border-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] shadow-2xl">
         <h2 class="text-xl font-bold text-[var(--color-text-primary)]">Configure Reference Images</h2>
-        
+
         <!-- Upload Zone -->
         <div
           @dragover.prevent
@@ -676,11 +677,11 @@ const handleGenerate = async () => {
           class="border-2 border-dashed border-[var(--color-text-dim)] rounded-lg p-8 text-center cursor-pointer hover:border-[var(--color-interactive-primary)] transition-colors bg-[var(--color-bg-tertiary)]/50"
         >
           <p class="text-[var(--color-text-muted)]">Drag & drop images here or click to browse</p>
-          <input 
-            type="file" 
-            ref="fileInput" 
-            multiple 
-            accept="image/*" 
+          <input
+            type="file"
+            ref="fileInput"
+            multiple
+            accept="image/*"
             class="hidden"
             @change="handleFileSelect"
           />
@@ -868,3 +869,8 @@ const handleGenerate = async () => {
     />
   </div>
 </template>
+
+<style scoped>
+@import "./CreativeConceptsMode.css";
+</style>
+
