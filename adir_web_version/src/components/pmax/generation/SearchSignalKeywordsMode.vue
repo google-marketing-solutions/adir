@@ -8,6 +8,7 @@ import {
   generateImagesFromPrompt,
   generateTextFromPrompt,
 } from "@/services/vertexAiService";
+import { useBrandStore } from "@/stores/brandStore";
 import { useConfigStore } from "@/stores/config";
 import { ref } from "vue";
 const errorMessage = ref("");
@@ -86,7 +87,13 @@ const handleGenerate = async () => {
           }
 
           const keywordsString = keywordList.join(", ");
-          const geminiPrompt = `${prompt.value} ${keywordsString}`;
+          let geminiPrompt = `${prompt.value} ${keywordsString}`;
+          
+          const brandStore = useBrandStore();
+          if (brandStore.useGuidelinesInGeneration && brandStore.guidelines) {
+            geminiPrompt += `\n\nYou MUST follow these Brand Guidelines when generating the image prompt:\n${brandStore.guidelines}`;
+          }
+
           console.log("Generating prompt with Gemini. Input:", geminiPrompt);
           const imagePrompt = await generateTextFromPrompt(
             geminiPrompt,

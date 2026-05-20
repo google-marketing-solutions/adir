@@ -13,7 +13,7 @@ export const useConfigStore = defineStore("config", {
     developerToken: "",
     geminiModel: "gemini-3-flash-preview",
     nanoBananaModel: "gemini-3.1-flash-image-preview",
-    imageGenModel: "",
+    imageGenModel: "imagen-3.0-generate-002",
     googleClientId: "",
     useSecretManager: false,
     enableEvaluation: false,

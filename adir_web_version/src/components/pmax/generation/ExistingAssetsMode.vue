@@ -5,6 +5,7 @@ import {
   fetchDemandGenAssets,
 } from "@/services/googleAdsService";
 import { editImageWithNanoBanana } from "@/services/nanoBananaService";
+import { useBrandStore } from "@/stores/brandStore";
 import { useConfigStore } from "@/stores/config";
 import { ref, computed } from "vue";
 
@@ -221,9 +222,15 @@ const handleGenerate = async () => {
           const groupIdentifier = `${groupName.replace(/\s+/g, "_")}~${groupId}`;
           const gcsPath = `${configStore.customerID}/${campaignIdentifier}/${groupIdentifier}/GENERATED/`;
 
+          const brandStore = useBrandStore();
+          let finalPrompt = prompt.value;
+          if (brandStore.useGuidelinesInGeneration && brandStore.guidelines) {
+            finalPrompt += `\n\nYou MUST follow these Brand Guidelines:\n${brandStore.guidelines}`;
+          }
+
           jobObjects.push({
             imageUrls: imageInfos.map((img) => img.url),
-            prompt: prompt.value,
+            prompt: finalPrompt,
             aspectRatio: ar.ratio,
             gcsPath: `${gcsPath}${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}.png`,
           });
