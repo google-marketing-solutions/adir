@@ -23,7 +23,10 @@ const props = defineProps({
 });
 
 const prompt = ref(
-  "Create an image suited for a pMax or Demand Gen campaign for the same campaign as the referenced images, that will be part of a black friday themed campaign."
+  `Crop or outpaint the provided image to the requested aspect ratio.
+RESTRICTION: DO NOT modify, rotate, reposition, or alter any existing objects, people, or text in the original image. The original content must remain exactly as it is.
+ACTION: Extend the image PURELY with environmental background (e.g., sky, walls, floors, empty space) to fill the new aspect ratio. Maintain the same style, lighting, and tone.
+CRITICAL: NO NEW ADDITIONS. Do not add any new icons, symbols, writing, or objects. The new areas must be completely empty.`
 );
 const numTopImages = ref(5);
 const selectedMetric = ref("ctr");
