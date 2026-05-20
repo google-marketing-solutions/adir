@@ -26,6 +26,10 @@ export const useConfigStore = defineStore("config", {
     ],
     promptTemplates: [
       {
+        label: "More of the same",
+        prompt: "Create a high-fidelity image that precisely replicates the artistic style, lighting, and color palette of the reference material, ensuring seamless aesthetic continuity and tonal alignment with the existing assets.",
+      },
+      {
         label: "Outpaint & Keep Content Intact",
         prompt: `Crop or outpaint the provided image to the requested aspect ratio.
 RESTRICTION: DO NOT modify, rotate, reposition, or alter any existing objects, people, or text in the original image. The original content must remain exactly as it is.
@@ -40,6 +44,10 @@ CRITICAL: NO NEW ADDITIONS. Do not add any new icons, symbols, writing, or objec
         label: "Black Friday Theme",
         prompt: "Add subtle Black Friday elements to the background, like dark aesthetic, red accents, and a mood of high-end retail sale, without altering the main subject.",
       },
+      {
+        label: "Saved by the Bell",
+        prompt: "Seamless flat-lay pattern, 1990s Memphis design aesthetic, abstract geometric shapes featuring bold neon zig-zags, floating squiggles, and vibrant teal triangles on a soft lavender background. Minimalist but high-energy, clean vector art style, balanced composition, soft even lighting.",
+      }
     ],
   }),
   getters: {

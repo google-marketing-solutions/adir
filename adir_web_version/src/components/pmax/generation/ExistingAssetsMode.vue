@@ -23,20 +23,15 @@ const props = defineProps({
   },
 });
 
-const prompt = ref(
-  `Crop or outpaint the provided image to the requested aspect ratio.
-RESTRICTION: DO NOT modify, rotate, reposition, or alter any existing objects, people, or text in the original image. The original content must remain exactly as it is.
-ACTION: Extend the image PURELY with environmental background (e.g., sky, walls, floors, empty space) to fill the new aspect ratio. Maintain the same style, lighting, and tone.
-CRITICAL: NO NEW ADDITIONS. Do not add any new icons, symbols, writing, or objects. The new areas must be completely empty.`
-);
-const selectedTemplate = ref("");
+const configStore = useConfigStore();
+const selectedTemplate = ref(configStore.promptTemplates[0]);
+const prompt = ref(selectedTemplate.value?.prompt || "");
 const newTemplateLabel = ref("");
 const isRefining = ref(false);
 
 const applyTemplate = () => {
-  const template = configStore.promptTemplates.find((t) => t.label === selectedTemplate.value);
-  if (template) {
-    prompt.value = template.prompt;
+  if (selectedTemplate.value) {
+    prompt.value = selectedTemplate.value.prompt;
   }
 };
 
@@ -109,7 +104,6 @@ const performanceLabelMap = {
 };
 
 const isLoading = ref(false);
-const configStore = useConfigStore();
 const errorMessage = ref("");
 const warnings = ref([]);
 const debugInfo = ref("");
@@ -388,8 +382,8 @@ const handleGenerate = async () => {
         <div class="flex gap-2 items-center text-sm">
           <!-- Select Template -->
           <select v-model="selectedTemplate" @change="applyTemplate" class="bg-gray-700 rounded-md p-1 text-xs max-w-48">
-            <option value="" disabled>Select template...</option>
-            <option v-for="t in configStore.promptTemplates" :key="t.label" :value="t.label">
+            <option :value="null" disabled>Select template...</option>
+            <option v-for="t in configStore.promptTemplates" :key="t.label" :value="t">
               {{ t.label }}
             </option>
           </select>
