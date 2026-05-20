@@ -126,7 +126,9 @@ Guidelines for feedback:
  */
 export async function generateEvaluationRules(
   prompt: string,
-  brandGuidelines: string
+  brandGuidelines: string,
+  referenceImages?: string[],
+  imageContextInstructions?: string
 ): Promise<string> {
   const configStore = useConfigStore();
   const modelId = configStore.geminiModel || "gemini-3-flash-preview";
@@ -140,26 +142,46 @@ export async function generateEvaluationRules(
   const endpoint = `/publishers/google/models/${modelIdLowerCase}:generateContent`;
 
   const systemInstruction = `You are an expert QA engineer and brand compliance officer.
-Your task is to analyze the provided image generation prompt and brand guidelines, and distill them into a set of concrete, actionable, and text-only evaluation rules.
+Your task is to analyze the provided image generation prompt, brand guidelines, and optional reference images (along with instructions on how to use them), and distill them into a set of concrete, actionable, and text-only evaluation rules.
 These rules will be used by a visual auditor to check if generated images are correct.
 
 Guidelines for generating rules:
 - Rules must be objective and verifiable (e.g., "The main subject must be a running shoe", NOT "The image should look good").
 - Extract key elements from the prompt: subject, setting, key colors, mood, and specific instructions.
 - Incorporate critical brand guidelines (e.g., color constraints, logo rules).
+- If reference images are provided, analyze their visual style, composition, or subject based on the provided instructions, and generate rules that ensure consistency (e.g., "The image must match the minimalist style and white background of the reference images", or "The product design must strictly match the shoe shown in reference image 1").
 - List the rules clearly as bullet points.
 - Keep the rules concise and easy to understand.
 - Do NOT include any introductory or concluding text. Return ONLY the list of bulleted rules.
 `;
 
+  const parts: any[] = [
+    { text: `Base Prompt/Creative Vision:\n${prompt}` },
+    { text: `Brand Guidelines:\n${brandGuidelines || "None provided."}` },
+  ];
+
+  if (imageContextInstructions) {
+    parts.push({ text: `Reference Images Instructions:\n${imageContextInstructions}` });
+  }
+
+  if (referenceImages && referenceImages.length > 0) {
+    parts.push({ text: "Here are the reference images for visual context:" });
+    referenceImages.forEach((img) => {
+      parts.push({
+        inlineData: {
+          mimeType: "image/png",
+          data: img.replace(/^data:image\/\w+;base64,/, ""),
+        },
+      });
+    });
+  }
+
+  parts.push({ text: "Please generate the evaluation rules based on the above information." });
+
   const userContent = [
     {
       role: "user",
-      parts: [
-        { text: `Base Prompt/Creative Vision:\n${prompt}` },
-        { text: `Brand Guidelines:\n${brandGuidelines || "None provided."}` },
-        { text: "Please generate the evaluation rules based on the above information." }
-      ],
+      parts: parts,
     },
   ];
 

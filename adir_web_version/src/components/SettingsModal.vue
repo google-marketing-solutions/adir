@@ -251,20 +251,7 @@
                 <option :value="5">5</option>
               </select>
             </div>
-            <div v-if="configStore.enableEvaluation">
-              <label
-                for="brand-guidelines"
-                class="block text-sm font-medium text-gray-300 mb-1"
-                >Brand Guidelines</label
-              >
-              <textarea
-                v-model="configStore.brandGuidelines"
-                id="brand-guidelines"
-                rows="3"
-                class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
-                placeholder="Enter brand guidelines (e.g., colors, logo placement, style...)"
-              ></textarea>
-            </div>
+
 
           </div>
         </fieldset>

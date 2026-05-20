@@ -18,7 +18,6 @@ export const useConfigStore = defineStore("config", {
     useSecretManager: false,
     enableEvaluation: false,
     maxEvaluationRetries: 3,
-    brandGuidelines: "",
     evaluationRules: "",
   }),
   persist: true,

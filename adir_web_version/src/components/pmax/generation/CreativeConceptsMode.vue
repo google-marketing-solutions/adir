@@ -199,7 +199,9 @@ const generateRules = async () => {
     
     const generated = await generateEvaluationRules(
       fullPromptContext,
-      configStore.brandGuidelines
+      brandStore.guidelines,
+      referenceImages.value,
+      imageContextInstructions.value
     );
     configStore.evaluationRules = generated;
   } catch (error) {
@@ -297,7 +299,7 @@ const handleGenerate = async () => {
                   const evalResult = await evaluateImage(
                     generatedBase64,
                     currentPrompt,
-                    configStore.brandGuidelines,
+                    brandStore.guidelines,
                     configStore.evaluationRules
                   );
 
