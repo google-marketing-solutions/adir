@@ -5,6 +5,7 @@ import {
   fetchDemandGenAssets,
 } from "@/services/googleAdsService";
 import { editImageWithNanoBanana } from "@/services/nanoBananaService";
+import { generateTextFromPrompt } from "@/services/vertexAiService";
 import { useBrandStore } from "@/stores/brandStore";
 import { useConfigStore } from "@/stores/config";
 import { ref, computed } from "vue";
@@ -28,6 +29,38 @@ RESTRICTION: DO NOT modify, rotate, reposition, or alter any existing objects, p
 ACTION: Extend the image PURELY with environmental background (e.g., sky, walls, floors, empty space) to fill the new aspect ratio. Maintain the same style, lighting, and tone.
 CRITICAL: NO NEW ADDITIONS. Do not add any new icons, symbols, writing, or objects. The new areas must be completely empty.`
 );
+const selectedTemplate = ref("");
+const newTemplateLabel = ref("");
+const isRefining = ref(false);
+
+const applyTemplate = () => {
+  const template = configStore.promptTemplates.find((t) => t.label === selectedTemplate.value);
+  if (template) {
+    prompt.value = template.prompt;
+  }
+};
+
+const saveAsTemplate = () => {
+  if (newTemplateLabel.value && prompt.value) {
+    configStore.addPromptTemplate(newTemplateLabel.value, prompt.value);
+    newTemplateLabel.value = "";
+  }
+};
+
+const refinePrompt = async () => {
+  if (!prompt.value) return;
+  isRefining.value = true;
+  try {
+    const metaPrompt = `You are an expert prompt engineer. Refine the following prompt to be more effective for image generation, keeping the core intent. Return ONLY the refined prompt text: "${prompt.value}"`;
+    const refined = await generateTextFromPrompt(metaPrompt, configStore.geminiModel);
+    prompt.value = refined;
+  } catch (error) {
+    console.error("Failed to refine prompt:", error);
+  } finally {
+    isRefining.value = false;
+  }
+};
+
 const numTopImages = ref(5);
 const selectedMetric = ref("ctr");
 const aspectRatios = computed(() => configStore.aspectRatios);
@@ -348,15 +381,41 @@ const handleGenerate = async () => {
     </div>
 
     <div class="relative">
-      <label class="label">
+      <label class="label flex justify-between items-center">
         <span class="label-text text-lg font-bold text-[var(--color-text-primary)]">Prompt for Nano Banana</span>
+        
+        <!-- Prompt Management Toolbar -->
+        <div class="flex gap-2 items-center text-sm">
+          <!-- Select Template -->
+          <select v-model="selectedTemplate" @change="applyTemplate" class="bg-gray-700 rounded-md p-1 text-xs max-w-48">
+            <option value="" disabled>Select template...</option>
+            <option v-for="t in configStore.promptTemplates" :key="t.label" :value="t.label">
+              {{ t.label }}
+            </option>
+          </select>
+          
+          <!-- Refine Button -->
+          <button @click.prevent="refinePrompt" :disabled="isRefining" class="bg-yellow-600 text-white px-2 py-1 rounded-md hover:bg-yellow-700 text-xs flex items-center gap-1">
+            <span v-if="isRefining" class="loading loading-spinner loading-xs"></span>
+            <span>✨ Refine</span>
+          </button>
+        </div>
       </label>
+      
       <textarea
         v-model="prompt"
         placeholder="Enter your prompt for image generation..."
         class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-3 w-full custom-placeholder border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none"
-        rows="3"
+        rows="5"
       ></textarea>
+      
+      <!-- Save as Template -->
+      <div class="flex gap-2 mt-2 items-center text-sm justify-end">
+        <input v-model="newTemplateLabel" type="text" placeholder="Template name..." class="bg-gray-700 rounded-md p-1 text-xs w-32" />
+        <button @click.prevent="saveAsTemplate" class="bg-green-600 text-white px-2 py-1 rounded-md hover:bg-green-700 text-xs">
+          Save as Template
+        </button>
+      </div>
     </div>
 
     <div>
