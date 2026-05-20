@@ -450,51 +450,7 @@ const handleEditSubmit = async () => {
     <div v-else>
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 bg-[var(--color-bg-secondary)] p-6 rounded-xl gap-4 border border-[var(--color-bg-tertiary)]">
         <!-- Left Side: Actions & Toggles -->
-        <div class="flex flex-wrap gap-4 items-center">
-          <!-- Button Group -->
-          <div class="flex rounded-lg bg-[var(--color-bg-tertiary)] p-1">
-            <button
-              @click="setAllCheckboxes(true)"
-              class="btn font-medium py-2 px-4 rounded-md text-sm transition-all duration-200"
-              :class="allSelected
-                ? 'bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] shadow-md scale-[1.02]'
-                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'"
-            >
-              Select All
-            </button>
-            <button
-              @click="setAllCheckboxes(false)"
-              class="btn font-medium py-2 px-4 rounded-md text-sm transition-all duration-200 ml-1"
-              :class="noneSelected
-                ? 'bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] shadow-md scale-[1.02]'
-                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'"
-            >
-              Deselect All
-            </button>
-          </div>
 
-          <!-- Toggle 1 -->
-          <label class="flex items-center cursor-pointer group">
-            <div class="relative">
-              <input type="checkbox" v-model="showUploaded" class="sr-only peer" />
-              <div class="w-11 h-6 bg-[var(--color-bg-tertiary)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--color-interactive-focus)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-interactive-primary)]"></div>
-            </div>
-            <span class="ml-3 text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" :class="{'text-[var(--color-text-primary)]': showUploaded}">Show Uploaded</span>
-          </label>
-
-          <!-- Slider -->
-          <label class="flex items-center cursor-pointer group gap-2">
-            <span class="text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]">Grid Size</span>
-            <input
-              type="range"
-              min="1"
-              max="8"
-              v-model.number="columnCount"
-              class="range range-xs range-primary w-24"
-            />
-            <span class="text-xs text-[var(--color-text-muted)]">{{ columnCount }}</span>
-          </label>
-        </div>
 
         <!-- Right Side: Filters -->
         <div class="flex flex-wrap gap-4 items-center w-full md:w-auto">
@@ -560,6 +516,43 @@ const handleEditSubmit = async () => {
             {{ isUploading ? "Uploading..." : "Upload Selected to Asset Library" }}
           </button>
         </div>
+      </div>
+
+      <!-- Controls Toolbar above List -->
+      <div class="flex flex-wrap gap-6 items-center mb-6 bg-[var(--color-bg-secondary)] p-4 rounded-xl border border-[var(--color-bg-tertiary)]">
+        <!-- Master Checkbox -->
+        <div class="flex items-center gap-2 bg-[var(--color-bg-tertiary)] p-2 rounded-lg cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors duration-200 w-fit" @click="setAllCheckboxes(!allSelected)">
+          <input
+            type="checkbox"
+            :checked="allSelected"
+            class="checkbox checkbox-primary"
+            @click.stop
+            @change="setAllCheckboxes($event.target.checked)"
+          />
+          <span class="text-sm font-medium text-[var(--color-text-primary)]">Select All</span>
+        </div>
+
+        <!-- Show Uploaded Toggle -->
+        <label class="flex items-center cursor-pointer group">
+          <div class="relative">
+            <input type="checkbox" v-model="showUploaded" class="sr-only peer" />
+            <div class="w-11 h-6 bg-[var(--color-bg-tertiary)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--color-interactive-focus)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-interactive-primary)]"></div>
+          </div>
+          <span class="ml-3 text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" :class="{'text-[var(--color-text-primary)]': showUploaded}">Show Uploaded</span>
+        </label>
+
+        <!-- Slider -->
+        <label class="flex items-center cursor-pointer group gap-2">
+          <span class="text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]">Grid Size</span>
+          <input
+            type="range"
+            min="1"
+            max="8"
+            v-model.number="columnCount"
+            class="range range-xs range-primary w-24"
+          />
+          <span class="text-xs text-[var(--color-text-muted)]">{{ columnCount }}</span>
+        </label>
       </div>
 
       <div class="space-y-8">
