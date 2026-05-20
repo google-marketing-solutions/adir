@@ -32,7 +32,7 @@
 
     <div class="flex gap-4">
       <router-link
-        to="/brand-guidelines"
+        to="/asset-generation"
         class="bg-[var(--color-interactive-primary)] hover:bg-[var(--color-interactive-hover)] text-[var(--color-text-primary)] font-bold py-3 px-8 rounded-lg transition-colors text-lg"
       >
         Get Started
