@@ -136,7 +136,7 @@ const handleGenerationComplete = (imageUrls) => {
         </div>
       </div>
 
-      <div v-if="isLoading" class="mt-6 p-4 bg-[var(--color-bg-tertiary)] rounded-lg">
+      <div v-if="isLoading && activeMode !== 'Free form'" class="mt-6 p-4 bg-[var(--color-bg-tertiary)] rounded-lg">
         <LoadingSpinner
           :message="loadingMessage"
         />

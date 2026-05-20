@@ -40,17 +40,6 @@ const route = useRoute();
       >
         Asset Preview & Edit
       </router-link>
-      <router-link
-        to="/brand-guidelines"
-        class="block py-2 px-3 rounded-md font-medium transition-colors duration-300 text-sm"
-        :class="{
-          'bg-[var(--color-bg-tertiary)] text-[var(--color-interactive-primary)]': route.name === 'BrandGuidelines',
-          'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]':
-            route.name !== 'BrandGuidelines',
-        }"
-      >
-        Brand Guidelines
-      </router-link>
     </nav>
   </aside>
 </template>
