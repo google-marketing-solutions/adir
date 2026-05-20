@@ -10,7 +10,7 @@ import {
 } from "@/services/vertexAiService";
 import { evaluateImage, generateEvaluationRules } from "@/services/evaluationService";
 import { useConfigStore } from "@/stores/config";
-import { onMounted, ref, watch, computed } from "vue";
+import { onMounted, ref, watch, computed, nextTick } from "vue";
 import LoadingSpinner from "@/components/LoadingSpinner.vue";
 const showPrompt = ref(false);
 
@@ -65,9 +65,23 @@ watch(
 );
 
 const useGemini = ref(true);
-const creativeConcepts = ref([{ name: "", description: "" }]);
+const uniqueId = () => Math.random().toString(36).substring(2, 9);
+const creativeConcepts = ref([{ id: uniqueId(), name: "", description: "" }]);
 const customerId = useConfigStore().customerID;
 const storageKey = `creativeConcepts_${customerId}`;
+const namingTimers = {};
+
+const adjustAllTextareas = () => {
+  nextTick(() => {
+    const textareas = document.querySelectorAll(".concept-textarea");
+    textareas.forEach((textarea) => {
+      if (textarea) {
+        textarea.style.height = "auto";
+        textarea.style.height = textarea.scrollHeight + "px";
+      }
+    });
+  });
+};
 
 const handleFileSelect = (event) => {
   const files = event.target.files;
@@ -103,8 +117,29 @@ const removeImage = (index) => {
 onMounted(() => {
   const savedConcepts = localStorage.getItem(storageKey);
   if (savedConcepts) {
-    creativeConcepts.value = JSON.parse(savedConcepts);
+    try {
+      const parsed = JSON.parse(savedConcepts);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        creativeConcepts.value = parsed.map((c) => ({
+          id: c.id || uniqueId(),
+          name: c.name || "",
+          description: c.description || "",
+        }));
+        
+        // Ensure there is at least one concept, and the last one is empty
+        const lastConcept = creativeConcepts.value[creativeConcepts.value.length - 1];
+        if (lastConcept.description.trim() !== "") {
+          creativeConcepts.value.push({ id: uniqueId(), name: "", description: "" });
+        }
+        adjustAllTextareas();
+        return;
+      }
+    } catch (e) {
+      console.error("Failed to parse saved creative concepts:", e);
+    }
   }
+  creativeConcepts.value = [{ id: uniqueId(), name: "", description: "" }];
+  adjustAllTextareas();
 });
 
 watch(
@@ -170,11 +205,83 @@ const getStatusColorClass = (status) => {
   }
 };
 
-const addCreativeConcept = () => {
-  creativeConcepts.value.push({ name: "", description: "" });
+const generateConceptName = async (concept) => {
+  const modelId = configStore.geminiModel || "gemini-1.5-flash";
+  const promptText = `Based on the following description of a creative concept, generate a very concise, descriptive, and catchy name.
+The name must be at most 3 words.
+Do not use any punctuation, quotation marks, or extra text.
+Return ONLY the name itself, nothing else.
+
+Description: "${concept.description}"`;
+
+  try {
+    const generatedName = await generateTextFromPrompt(promptText, modelId);
+    if (concept.description.trim() !== "") {
+      if (generatedName) {
+        concept.name = generatedName.trim().replace(/["']/g, "");
+      } else {
+        concept.name = "Concept";
+      }
+    }
+  } catch (error) {
+    console.error("Error generating concept name:", error);
+    if (concept.description.trim() !== "") {
+      concept.name = "Concept";
+    }
+  }
+};
+
+const triggerAutoNaming = (concept) => {
+  if (namingTimers[concept.id]) {
+    clearTimeout(namingTimers[concept.id]);
+    delete namingTimers[concept.id];
+  }
+
+  if (!concept.description.trim()) {
+    concept.name = "";
+    return;
+  }
+
+  namingTimers[concept.id] = setTimeout(async () => {
+    await generateConceptName(concept);
+  }, 5000);
+};
+
+const onDescriptionInput = (event, index) => {
+  const concept = creativeConcepts.value[index];
+
+  // Auto-expand the target textarea height
+  if (event?.target) {
+    event.target.style.height = "auto";
+    event.target.style.height = event.target.scrollHeight + "px";
+  }
+
+  // 1. If we are typing in the last concept, auto-append a new empty one
+  if (index === creativeConcepts.value.length - 1 && concept.description.trim() !== "") {
+    creativeConcepts.value.push({
+      id: uniqueId(),
+      name: "",
+      description: "",
+    });
+  }
+
+  // Immediately update concept name if description is not empty
+  if (concept.description.trim() !== "") {
+    concept.name = "[generating a name for you...]";
+  } else {
+    concept.name = "";
+  }
+
+  // 2. Handle debounced AI concept naming
+  triggerAutoNaming(concept);
 };
 
 const removeCreativeConcept = (index) => {
+  const concept = creativeConcepts.value[index];
+  if (namingTimers[concept.id]) {
+    clearTimeout(namingTimers[concept.id]);
+    delete namingTimers[concept.id];
+  }
   creativeConcepts.value.splice(index, 1);
 };
 
@@ -188,13 +295,13 @@ const handlePaste = (event, index) => {
 
     const pastedConcepts = lines.map((line) => {
       const tabIndex = line.indexOf("\t");
+      let name = "";
+      let description = line;
       if (tabIndex !== -1) {
-        return {
-          name: line.substring(0, tabIndex),
-          description: line.substring(tabIndex + 1),
-        };
+        name = line.substring(0, tabIndex);
+        description = line.substring(tabIndex + 1);
       }
-      return { name: "", description: line };
+      return { id: uniqueId(), name, description };
     });
 
     // Replace the current empty concept if it's the only one
@@ -203,7 +310,7 @@ const handlePaste = (event, index) => {
       !creativeConcepts.value[0].name &&
       !creativeConcepts.value[0].description
     ) {
-      creativeConcepts.value = pastedConcepts;
+      creativeConcepts.value = [...pastedConcepts, { id: uniqueId(), name: "", description: "" }];
     } else {
       // Update the current row with the first line of pasted data
       const firstPasted = pastedConcepts.shift();
@@ -214,9 +321,24 @@ const handlePaste = (event, index) => {
       if (pastedConcepts.length > 0) {
         creativeConcepts.value.splice(index + 1, 0, ...pastedConcepts);
       }
+
+      // If the last one is now non-empty, ensure we have a trailing empty concept
+      const lastConcept = creativeConcepts.value[creativeConcepts.value.length - 1];
+      if (lastConcept.description.trim() !== "") {
+        creativeConcepts.value.push({ id: uniqueId(), name: "", description: "" });
+      }
     }
+
+    // Trigger auto-naming for newly pasted empty-name concepts
+    creativeConcepts.value.forEach((c) => {
+      if (!c.name && c.description.trim()) {
+        c.name = "[generating a name for you...]";
+        triggerAutoNaming(c);
+      }
+    });
+
+    adjustAllTextareas();
   }
-  // If only one line is pasted, do nothing and let the default paste behavior occur.
 };
 
 const handleBrandFileChange = (event) => {
@@ -288,10 +410,10 @@ const generateRules = async () => {
   isGeneratingRules.value = true;
   rulesErrorMessage.value = "";
   try {
-    // Combine base prompt and all concept descriptions to give full context for rule generation
-    const conceptsText = creativeConcepts.value
+    // Filter for non-empty concepts
+    const activeConcepts = creativeConcepts.value.filter((c) => c.description.trim() !== "");
+    const conceptsText = activeConcepts
       .map((c) => `${c.name ? c.name + ': ' : ''}${c.description}`)
-      .filter(Boolean)
       .join("\n");
     
     const fullPromptContext = `${prompt.value}\n\nCreative Concepts:\n${conceptsText}`;
@@ -313,6 +435,12 @@ const generateRules = async () => {
 };
 
 const handleGenerate = async () => {
+  const activeConcepts = creativeConcepts.value.filter((c) => c.description.trim() !== "");
+  if (activeConcepts.length === 0) {
+    errorMessage.value = "Please describe at least one concept before generating.";
+    return;
+  }
+
   isLoading.value = true;
   loadingStatus.value = "Starting generation...";
   generationLogs.value = []; // Clear previous logs
@@ -323,7 +451,7 @@ const handleGenerate = async () => {
   try {
     errorMessage.value = "";
 
-    const conceptPromises = creativeConcepts.value.map(async (concept) => {
+    const conceptPromises = activeConcepts.map(async (concept) => {
       let imagePrompt = prompt.value;
 
       if (useGemini.value) {
@@ -360,13 +488,14 @@ const handleGenerate = async () => {
               let generatedBase64 = "";
               let evaluationFeedback = "";
 
-              const addLog = (status, message, feedback) => {
+              const addLog = (status, message, feedback, imageBase64 = "") => {
                 generationLogs.value.push({
                   id: imageId,
                   attempt: attempts,
                   status,
                   message,
-                  feedback
+                  feedback,
+                  imageBase64
                 });
               };
 
@@ -406,26 +535,35 @@ const handleGenerate = async () => {
                   evaluationFeedback = evalResult.feedback;
 
                   if (approved) {
-                    addLog('approved', `Image approved!`, evaluationFeedback || "Meets all guidelines.");
+                    addLog('approved', `Image approved!`, evaluationFeedback || "Meets all guidelines.", generatedBase64);
                   } else {
-                    addLog('rejected', `Image rejected (Attempt ${attempts}/${maxRetries})`, evaluationFeedback);
+                    addLog('rejected', `Image rejected (Attempt ${attempts}/${maxRetries})`, evaluationFeedback, generatedBase64);
                   }
                 } else {
                   approved = true; // If evaluation is disabled, we just approve it immediately
-                  addLog('approved', `Image generated successfully.`);
+                  addLog('approved', `Image generated successfully.`, "", generatedBase64);
                 }
               }
 
               if (configStore.enableEvaluation && !approved) {
-                addLog('failed', `Failed to generate approved image after ${maxRetries} attempts. Using last generation.`, evaluationFeedback);
+                addLog('failed', `Failed to generate approved image after ${maxRetries} attempts. Using last generation.`, evaluationFeedback, generatedBase64);
               }
 
-              const dataUrl = "data:image/png;base64," + generatedBase64;
-              const gcsPath = concept.name
-                ? `${configStore.customerID}/Creative Concepts/${concept.name}/GENERATED/`
-                : `${configStore.customerID}/Creative Concepts/GENERATED/`;
               const gcsFileName = `${gcsPath}${Date.now()}_${i}_${ar.ratio.replace(":", "-")}_${Math.random().toString(36).slice(2, 7)}.png`;
-              return await uploadBase64Image(gcsFileName, dataUrl);
+              const gcsUri = await uploadBase64Image(gcsFileName, dataUrl);
+
+              return {
+                id: `${concept.id}_${ar.ratio}_${i}_${Date.now()}`,
+                gcsUri,
+                conceptId: concept.id,
+                conceptName: concept.name || "Concept",
+                conceptDescription: concept.description,
+                prompt: currentPrompt,
+                aspectRatio: ar.ratio,
+                status: "pending",
+                feedback: "",
+                attempt: attempts,
+              };
             } catch (e) {
               console.error("Error in image generation/evaluation loop:", e);
               throw e;
@@ -456,6 +594,85 @@ const handleGenerate = async () => {
     emit("update:loading", false);
   }
 };
+
+const regenerateImages = async (rejectedImages) => {
+  isLoading.value = true;
+  loadingStatus.value = "Regenerating rejected images...";
+  generationLogs.value = []; // Clear previous logs
+  showDetailedLogs.value = false;
+  emit("update:loading", true);
+  emit("update:loading-message", "Regenerating rejected images...");
+
+  try {
+    errorMessage.value = "";
+
+    const regenerationPromises = rejectedImages.map(async (img) => {
+      const concept = creativeConcepts.value.find((c) => c.id === img.conceptId) || {
+        id: img.conceptId,
+        name: img.conceptName,
+        description: img.conceptDescription
+      };
+
+      const refinedPrompt = img.feedback?.trim()
+        ? `${img.prompt}\n\nUser Rejection Feedback: ${img.feedback}`
+        : img.prompt;
+      const imageId = `${img.conceptName || "Default"}: AR ${img.aspectRatio} (Regen #${img.attempt + 1})`;
+
+      const addLog = (status, message, feedback, imageBase64 = "") => {
+        generationLogs.value.push({
+          id: imageId,
+          attempt: img.attempt + 1,
+          status,
+          message,
+          feedback,
+          imageBase64
+        });
+      };
+
+      addLog('generating', `Regenerating image with feedback: ${img.feedback}`);
+
+      const generatedBase64 = await editImageWithNanoBanana(
+        referenceImages.value,
+        refinedPrompt,
+        img.aspectRatio
+      );
+
+      addLog('approved', `Image regenerated successfully.`, "", generatedBase64);
+
+      const dataUrl = "data:image/png;base64," + generatedBase64;
+      const gcsPath = concept.name
+        ? `${configStore.customerID}/Creative Concepts/${concept.name}/GENERATED/`
+        : `${configStore.customerID}/Creative Concepts/GENERATED/`;
+      const gcsFileName = `${gcsPath}${Date.now()}_regen_${Math.random().toString(36).slice(2, 7)}.png`;
+      const gcsUri = await uploadBase64Image(gcsFileName, dataUrl);
+
+      return {
+        ...img,
+        gcsUri,
+        prompt: refinedPrompt,
+        status: "pending",
+        feedback: "",
+        attempt: img.attempt + 1,
+      };
+    });
+
+    const regeneratedImages = await Promise.all(regenerationPromises);
+    return regeneratedImages;
+  } catch (error) {
+    errorMessage.value =
+      error.message ||
+      "An error occurred during image regeneration. Please try again.";
+    console.error("Error regenerating images:", error);
+    throw error;
+  } finally {
+    isLoading.value = false;
+    loadingStatus.value = "";
+    emit("update:loading", false);
+  }
+};
+
+defineExpose({ regenerateImages });
+
 </script>
 
 <template>
@@ -483,49 +700,41 @@ const handleGenerate = async () => {
       </label>
     </div>
 
-    <!-- Header Labels for Creative Concepts -->
-    <div class="flex gap-4 px-4 mb-1 text-xs font-semibold tracking-wider uppercase text-[var(--color-text-muted)]">
-      <div class="w-6"></div> <!-- Spacer for delete button -->
-      <div class="w-1/3">Concept Name / Theme</div>
-      <div class="w-2/3">Concept Prompt / Description</div>
-    </div>
-
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-6">
       <div
         v-for="(concept, index) in creativeConcepts"
-        :key="index"
-        class="flex gap-4 items-start bg-[var(--color-bg-secondary)] p-4 rounded-lg border border-[var(--color-bg-tertiary)]"
+        :key="concept.id"
+        class="group relative flex items-start bg-[var(--color-bg-secondary)] p-4 rounded-lg border border-[var(--color-bg-tertiary)] transition-all focus-within:border-[var(--color-interactive-focus)] focus-within:shadow-md"
       >
+        <textarea
+          v-model="concept.description"
+          @input="onDescriptionInput($event, index)"
+          @paste="handlePaste($event, index)"
+          :placeholder="index === 0 ? 'Describe what you want to see...' : 'Describe another concept...'"
+          class="concept-textarea text-[var(--color-text-primary)] w-full resize-none overflow-hidden pr-8"
+          rows="1"
+        ></textarea>
+
+        <!-- Outline-merged label -->
+        <label
+          class="absolute -top-2.5 left-4 bg-[var(--color-bg-secondary)] px-2 text-xs font-bold text-[var(--color-text-muted)] group-focus-within:text-[var(--color-interactive-focus)] transition-colors pointer-events-none"
+        >
+          {{ concept.name || 'New concept' }}
+        </label>
+
+        <!-- Delete Button -->
         <button
+          v-if="index < creativeConcepts.length - 1"
           @click="removeCreativeConcept(index)"
-          class="text-[var(--color-status-error)] hover:text-red-700 font-bold w-6 disabled:opacity-50 mt-2"
-          :disabled="index === 0"
-          :class="{ 'opacity-0 cursor-default': index === 0 }"
+          class="absolute top-2 right-2 text-[var(--color-text-muted)] hover:text-[var(--color-status-error)] transition-colors font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-[var(--color-bg-tertiary)]"
+          title="Remove concept"
         >
           ✕
         </button>
-        <input
-          v-model="concept.name"
-          placeholder="Creative Concept Name"
-          class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-2 w-1/3 border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none"
-        />
-        <textarea
-          v-model="concept.description"
-          @paste="handlePaste($event, index)"
-          placeholder="Creative Concept Description"
-          class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-2 w-2/3 border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none"
-          rows="3"
-        ></textarea>
       </div>
     </div>
 
     <div class="flex gap-4">
-      <button
-        @click="addCreativeConcept"
-        class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-[var(--color-interactive-hover)] self-start transition-colors"
-      >
-        + Add Creative Concept
-      </button>
       <button
         @click="showImageModal = true"
         class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-gray-600 border border-[var(--color-text-dim)] self-start flex items-center gap-2 transition-colors"
@@ -653,6 +862,16 @@ const handleGenerate = async () => {
               </div>
               <div v-if="log.feedback" class="mt-1 ml-6 p-2 bg-gray-800 rounded text-gray-400 font-mono whitespace-pre-wrap text-[10px] border border-gray-700/50 leading-relaxed">
                 <strong>Feedback:</strong> {{ log.feedback }}
+              </div>
+              <div v-if="log.imageBase64" class="mt-2 ml-6 flex flex-col gap-1">
+                <span class="text-gray-500 text-[9px] uppercase font-semibold tracking-wider">Image Preview:</span>
+                <div class="relative inline-block border border-gray-800 rounded overflow-hidden shadow-lg bg-gray-950/50 max-w-[200px]">
+                  <img
+                    :src="'data:image/png;base64,' + log.imageBase64"
+                    class="max-h-36 max-w-full object-contain"
+                    alt="Generated Preview"
+                  />
+                </div>
               </div>
             </div>
           </div>

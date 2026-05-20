@@ -83,3 +83,21 @@ select:focus {
     transform: translateY(0) scale(1);
   }
 }
+
+/* Snug borderless styling for concept textareas */
+.concept-textarea {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  padding: 0 !important;
+  transition: none !important;
+}
+
+.concept-textarea:focus {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transition: none !important;
+}
