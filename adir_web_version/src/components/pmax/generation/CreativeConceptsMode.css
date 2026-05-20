@@ -1,0 +1,85 @@
+/* Advanced Glassmorphism and Aesthetic Polish */
+textarea, input {
+  background: rgba(31, 41, 55, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  color: #f3f4f6 !important;
+}
+
+textarea:focus, input:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 14px rgba(59, 130, 246, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  outline: none !important;
+  background: rgba(31, 41, 55, 0.65) !important;
+}
+
+/* Show/Edit Accordion Button Styling */
+button.text-cyan-400 {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: linear-gradient(90deg, rgba(6, 182, 212, 0.08) 0%, rgba(37, 99, 235, 0.03) 100%) !important;
+  border: 1px solid rgba(6, 182, 212, 0.25) !important;
+  border-left: 4px solid #06b6d4 !important;
+  color: #22d3ee !important;
+  padding: 14px 20px !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  font-size: 1rem !important;
+  letter-spacing: 0.025em;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 4px 20px rgba(6, 182, 212, 0.05) !important;
+}
+
+button.text-cyan-400:hover {
+  background: linear-gradient(90deg, rgba(6, 182, 212, 0.12) 0%, rgba(37, 99, 235, 0.06) 100%) !important;
+  border-color: rgba(6, 182, 212, 0.4) !important;
+  box-shadow: 0 4px 24px rgba(6, 182, 212, 0.15) !important;
+  transform: translateY(-1px);
+}
+
+/* Dropdowns & Select Lists */
+select {
+  background: rgba(31, 41, 55, 0.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  transition: all 0.3s ease !important;
+  color: #f3f4f6 !important;
+}
+
+select:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3) !important;
+}
+
+/* Modals & Backdrops */
+.fixed.inset-0 {
+  backdrop-filter: blur(12px) !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+  transition: all 0.3s ease;
+}
+
+.bg-gray-900.rounded-lg {
+  background: rgba(17, 24, 39, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.7), 0 0 50px rgba(34, 211, 238, 0.1) !important;
+  backdrop-filter: blur(20px);
+}
+
+/* Dynamic Concept Row Insertion Effect */
+.flex.gap-4.items-center {
+  animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

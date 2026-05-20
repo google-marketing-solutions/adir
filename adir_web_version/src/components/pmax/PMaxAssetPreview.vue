@@ -23,6 +23,7 @@ const allImagesCache = ref([]);
 const previewData = ref([]);
 const isLoading = ref(true);
 const columnCount = ref(4);
+const skeletonHeights = [200, 300, 250, 350, 400, 220, 280, 320, 260, 340, 380, 240];
 const isRemoving = ref(false);
 const isUploading = ref(false);
 const uploadMessage = ref("");
@@ -398,8 +399,10 @@ const handleEditSubmit = async () => {
     />
     <h1 class="mb-6">Generated Asset Preview</h1>
 
-    <div v-if="isLoading" class="flex justify-center items-center h-64">
-      <span class="loading loading-spinner loading-lg"></span>
+    <div v-if="isLoading" :style="{ columns: columnCount }" class="gap-4">
+      <div v-for="i in 12" :key="i" class="bg-[var(--color-bg-secondary)] rounded-xl mb-4 break-inside-avoid animate-pulse" :style="{ height: skeletonHeights[(i - 1) % skeletonHeights.length] + 'px' }">
+        <div class="w-full h-full bg-[var(--color-bg-tertiary)]/50 rounded-xl"></div>
+      </div>
     </div>
 
     <div v-else>

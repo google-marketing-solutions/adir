@@ -20,6 +20,21 @@ const logout = () => {
       <img src="@/assets/adir_logo.png" alt="Adir Logo" class="h-12 w-auto object-contain" />
     </div>
     <div class="flex items-center gap-3">
+      <!-- Theme Toggle Switch -->
+      <label class="theme-toggle-label">
+        <input type="checkbox" id="theme-checkbox" class="theme-checkbox" />
+        <div class="theme-toggle-slider">
+          <!-- Moon Icon (Dark Mode) -->
+          <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+          </svg>
+          <!-- Sun Icon (Light Mode) -->
+          <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 2.293a1 1 0 011.414 0l.707.707a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 010-1.414zm2.707 4.707a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-2.293 4.707a1 1 0 010-1.414l.707-.707a1 1 0 111.414 1.414l-.707.707a1 1 0 01-1.414 0zM11 17a1 1 0 11-2 0v-1a1 1 0 11-2 0v1zm-4-2.293a1 1 0 01-1.414 0l-.707-.707a1 1 0 011.414-1.414l.707.707a1 1 0 010 1.414zM4 9a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm2.293-4.707a1 1 0 010 1.414l-.707.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM10 5a5 5 0 100 10 5 5 0 000-10z" clip-rule="evenodd" />
+          </svg>
+        </div>
+      </label>
+
       <router-link
         to="/help"
         class="group flex items-center gap-2 px-4 py-2 bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-tertiary)] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] border border-[var(--color-bg-tertiary)] hover:border-[var(--color-interactive-primary)] rounded-xl transition-all duration-300 no-underline"
