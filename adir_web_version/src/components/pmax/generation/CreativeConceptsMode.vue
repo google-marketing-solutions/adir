@@ -549,11 +549,7 @@ const handleGenerate = async () => {
                 addLog('failed', `Failed to generate approved image after ${maxRetries} attempts. Using last generation.`, evaluationFeedback, generatedBase64);
               }
 
-              const dataUrl = "data:image/png;base64," + generatedBase64;
-              const gcsPath = concept.name
-                ? `${configStore.customerID}/Creative Concepts/${concept.name}/GENERATED/`
-                : `${configStore.customerID}/Creative Concepts/GENERATED/`;
-              const gcsFileName = `${gcsPath}${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}.png`;
+              const gcsFileName = `${gcsPath}${Date.now()}_${i}_${ar.ratio.replace(":", "-")}_${Math.random().toString(36).slice(2, 7)}.png`;
               const gcsUri = await uploadBase64Image(gcsFileName, dataUrl);
 
               return {

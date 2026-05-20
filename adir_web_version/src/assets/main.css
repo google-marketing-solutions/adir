@@ -186,9 +186,8 @@ button.bg-indigo-600:active:not(:disabled) {
   color: #475569 !important;
 }
 
-/* Input, Textarea & Select tags in light theme */
 :root:has(#theme-checkbox:checked) textarea,
-:root:has(#theme-checkbox:checked) input,
+:root:has(#theme-checkbox:checked) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 :root:has(#theme-checkbox:checked) select {
   background: rgba(248, 250, 252, 0.8) !important;
   border: 1px solid #cbd5e1 !important;
@@ -197,7 +196,7 @@ button.bg-indigo-600:active:not(:disabled) {
 }
 
 :root:has(#theme-checkbox:checked) textarea:focus,
-:root:has(#theme-checkbox:checked) input:focus,
+:root:has(#theme-checkbox:checked) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
 :root:has(#theme-checkbox:checked) select:focus {
   border-color: #2563eb !important;
   box-shadow: 0 0 12px rgba(37, 99, 235, 0.2), inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;

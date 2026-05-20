@@ -1,57 +1,52 @@
 <template>
-  <div class="welcome-container">
-    <img src="@/assets/adir_logo.png" alt="Adir Logo" class="welcome-logo" />
-    <h1>Welcome to Adir</h1>
-    <p>Ads Dynamic Image Renderer</p>
-    <router-link to="/help" class="help-link">Go to Help Center</router-link>
+  <div class="flex flex-col items-center justify-center min-h-[80vh] text-center p-6">
+    <img src="@/assets/adir_logo.png" alt="Adir Logo" class="h-24 w-auto object-contain mb-6" />
+    <h1 class="text-5xl font-bold mb-2 text-[var(--color-text-highlight)]">Welcome to Adir</h1>
+    <p class="text-xl text-[var(--color-text-muted)] mb-12 max-w-2xl">
+      Ads Dynamic Image Renderer. Distill your brand, generate creative assets, and optimize campaigns with AI.
+    </p>
+
+    <!-- Onboarding Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full mb-12">
+      <!-- Step 1 -->
+      <div class="bg-[var(--color-bg-secondary)] p-6 rounded-xl border border-[var(--color-bg-tertiary)] flex flex-col items-center text-center group hover:border-[var(--color-interactive-primary)] transition-colors">
+        <div class="w-12 h-12 rounded-full bg-[var(--color-interactive-primary)]/10 text-[var(--color-interactive-primary)] flex items-center justify-center text-xl font-bold mb-4">1</div>
+        <h3 class="text-lg font-bold mb-2 text-[var(--color-text-primary)]">Define Brand</h3>
+        <p class="text-sm text-[var(--color-text-muted)]">Upload documents or link your website to extract brand guidelines that Gemini will follow.</p>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="bg-[var(--color-bg-secondary)] p-6 rounded-xl border border-[var(--color-bg-tertiary)] flex flex-col items-center text-center group hover:border-[var(--color-interactive-primary)] transition-colors">
+        <div class="w-12 h-12 rounded-full bg-[var(--color-interactive-primary)]/10 text-[var(--color-interactive-primary)] flex items-center justify-center text-xl font-bold mb-4">2</div>
+        <h3 class="text-lg font-bold mb-2 text-[var(--color-text-primary)]">Generate Assets</h3>
+        <p class="text-sm text-[var(--color-text-muted)]">Use 4 different generation modes to create tailored images with Imagen based on concepts or keywords.</p>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="bg-[var(--color-bg-secondary)] p-6 rounded-xl border border-[var(--color-bg-tertiary)] flex flex-col items-center text-center group hover:border-[var(--color-interactive-primary)] transition-colors">
+        <div class="w-12 h-12 rounded-full bg-[var(--color-interactive-primary)]/10 text-[var(--color-interactive-primary)] flex items-center justify-center text-xl font-bold mb-4">3</div>
+        <h3 class="text-lg font-bold mb-2 text-[var(--color-text-primary)]">Review & Optimize</h3>
+        <p class="text-sm text-[var(--color-text-muted)]">Audit performance, batch edit images with Nano Banana, and remove low-performing assets.</p>
+      </div>
+    </div>
+
+    <div class="flex gap-4">
+      <router-link
+        to="/asset-generation"
+        class="bg-[var(--color-interactive-primary)] hover:bg-[var(--color-interactive-hover)] text-[var(--color-text-primary)] font-bold py-3 px-8 rounded-lg transition-colors text-lg"
+      >
+        Get Started
+      </router-link>
+      <router-link
+        to="/help"
+        class="bg-[var(--color-bg-tertiary)] hover:bg-[var(--color-bg-secondary)] text-[var(--color-text-primary)] font-bold py-3 px-8 rounded-lg border border-[var(--color-bg-tertiary)] hover:border-[var(--color-interactive-primary)] transition-colors text-lg"
+      >
+        Help Center
+      </router-link>
+    </div>
   </div>
 </template>
 
-<style scoped>
-.welcome-container {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  text-align: center;
-  gap: 20px;
-}
-
-.welcome-logo {
-  max-width: 250px;
-  height: auto;
-  margin-bottom: 10px;
-}
-
-.welcome-container h1 {
-  font-size: 3.5rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #42b983 0%, #35495e 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin: 0;
-  letter-spacing: -1px;
-}
-
-.welcome-container p {
-  font-size: 1.5rem;
-  color: #666;
-  margin-top: 0;
-  font-weight: 300;
-}
-
-.help-link {
-  margin-top: 20px;
-  padding: 10px 20px;
-  background-color: #42b983;
-  color: white;
-  text-decoration: none;
-  border-radius: 4px;
-  transition: background-color 0.3s;
-}
-
-.help-link:hover {
-  background-color: #35495e;
-}
-</style>
+<script setup>
+// No special logic needed for this static onboarding view
+</script>

@@ -219,7 +219,7 @@ export async function extractBrandGuidelines(
   prompt: string,
   modelId: string,
   useGrounding: boolean = false,
-  fileData?: { mimeType: string; data: string }
+  fileData?: { mimeType: string; data: string } | { mimeType: string; data: string }[]
 ): Promise<string> {
   const apiClient = createVertexAiApiClient({
     apiVersion: "v1beta1",
@@ -229,9 +229,13 @@ export async function extractBrandGuidelines(
   const modelIdLowerCase = modelId.toLowerCase();
   const endpoint = `/publishers/google/models/${modelIdLowerCase}:generateContent`;
 
-  const parts = [{ text: prompt }];
+  const parts: any[] = [{ text: prompt }];
   if (fileData) {
-    parts.unshift({ inlineData: fileData });
+    if (Array.isArray(fileData)) {
+      fileData.forEach(file => parts.unshift({ inlineData: file }));
+    } else {
+      parts.unshift({ inlineData: fileData });
+    }
   }
 
   const body = {

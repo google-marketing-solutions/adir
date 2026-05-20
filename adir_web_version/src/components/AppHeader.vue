@@ -17,7 +17,9 @@ const logout = () => {
     class="flex justify-between items-center px-6 py-4 bg-[var(--color-bg-primary)] border-b border-[var(--color-bg-tertiary)] sticky top-0 z-50"
   >
     <div class="flex items-center gap-4">
-      <img src="@/assets/adir_logo.png" alt="Adir Logo" class="h-12 w-auto object-contain" />
+      <router-link to="/">
+        <img src="@/assets/adir_logo.png" alt="Adir Logo" class="h-12 w-auto object-contain cursor-pointer" />
+      </router-link>
     </div>
     <div class="flex items-center gap-3">
       <!-- Theme Toggle Switch -->

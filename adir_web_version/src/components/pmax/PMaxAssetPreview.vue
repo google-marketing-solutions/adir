@@ -41,6 +41,12 @@ const showConfirmationModal = ref(false);
 const confirmationMessage = ref("");
 const confirmationTitle = ref("");
 
+const toggleSelection = (asset) => {
+  if (!asset.uploaded) {
+    asset.selected = !asset.selected;
+  }
+};
+
 const fetchImages = async (force = false) => {
   if (!configStore.customerID) {
     console.error("Customer ID not available in config store.");
@@ -100,12 +106,20 @@ const processImages = async () => {
         };
       }
 
+    const filename = parts[parts.length - 1];
+    const filenameParts = filename.split("_");
+    let aspectRatio = "";
+    if (filenameParts.length >= 4) {
+      aspectRatio = filenameParts[2].replace("-", ":");
+    }
+
     campaigns[campaignName].assetGroups[assetGroupName].assets.push({
       id: `gen-${index}`,
       src: image.gcsUri,
       name: image.name,
       selected: statusFolder !== "UPLOADED",
       uploaded: statusFolder === "UPLOADED",
+      aspectRatio: aspectRatio,
     });
   });
 
@@ -186,8 +200,16 @@ function toggleSelectAll(assets, value) {
 }
 
 const allSelected = computed(() => {
+  if (previewData.value.length === 0) return false;
   return previewData.value.every((c) =>
     c.assetGroups.every((ag) => ag.assets.every((a) => a.selected)),
+  );
+});
+
+const noneSelected = computed(() => {
+  if (previewData.value.length === 0) return true;
+  return previewData.value.every((c) =>
+    c.assetGroups.every((ag) => ag.assets.every((a) => !a.selected)),
   );
 });
 
@@ -197,6 +219,7 @@ function setAllCheckboxes(value) {
       ag.assets.forEach((a) => (a.selected = value)),
     ),
   );
+  previewData.value = [...previewData.value];
 }
 
 const areAllInCampaignSelected = (campaign) => {
@@ -211,10 +234,12 @@ function toggleCampaignSelection(campaign, shouldSelect) {
   campaign.assetGroups.forEach((ag) => {
     ag.assets.forEach((a) => (a.selected = shouldSelect));
   });
+  previewData.value = [...previewData.value];
 }
 
 function toggleGroupSelection(group, shouldSelect) {
   group.assets.forEach((a) => (a.selected = shouldSelect));
+  previewData.value = [...previewData.value];
 }
 
 const handleRemoveSelected = async () => {
@@ -399,6 +424,29 @@ const handleEditSubmit = async () => {
     />
     <h1 class="mb-6">Generated Asset Preview</h1>
 
+    <!-- Workflow Stepper -->
+    <div class="flex items-center justify-between mb-8 max-w-2xl mx-auto">
+      <!-- Step 1 -->
+      <div class="flex flex-col items-center gap-2">
+        <div class="w-10 h-10 rounded-full bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] flex items-center justify-center font-bold">1</div>
+        <span class="text-sm font-medium text-[var(--color-text-primary)]">Configure</span>
+      </div>
+      <!-- Line (Active) -->
+      <div class="flex-1 h-1 bg-[var(--color-interactive-primary)] mx-4"></div>
+      <!-- Step 2 -->
+      <div class="flex flex-col items-center gap-2">
+        <div class="w-10 h-10 rounded-full bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] flex items-center justify-center font-bold">2</div>
+        <span class="text-sm font-medium text-[var(--color-text-primary)]">Generate</span>
+      </div>
+      <!-- Line (Active) -->
+      <div class="flex-1 h-1 bg-[var(--color-interactive-primary)] mx-4"></div>
+      <!-- Step 3 -->
+      <div class="flex flex-col items-center gap-2">
+        <div class="w-10 h-10 rounded-full bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] flex items-center justify-center font-bold">3</div>
+        <span class="text-sm font-medium text-[var(--color-text-primary)]">Review</span>
+      </div>
+    </div>
+
     <div v-if="isLoading" :style="{ columns: columnCount }" class="gap-4">
       <div v-for="i in 12" :key="i" class="bg-[var(--color-bg-secondary)] rounded-xl mb-4 break-inside-avoid animate-pulse" :style="{ height: skeletonHeights[(i - 1) % skeletonHeights.length] + 'px' }">
         <div class="w-full h-full bg-[var(--color-bg-tertiary)]/50 rounded-xl"></div>
@@ -408,45 +456,7 @@ const handleEditSubmit = async () => {
     <div v-else>
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 bg-[var(--color-bg-secondary)] p-6 rounded-xl gap-4 border border-[var(--color-bg-tertiary)]">
         <!-- Left Side: Actions & Toggles -->
-        <div class="flex flex-wrap gap-4 items-center">
-          <!-- Button Group -->
-          <div class="flex rounded-lg bg-[var(--color-bg-tertiary)] p-1">
-            <button
-              @click="setAllCheckboxes(true)"
-              class="btn font-medium py-2 px-4 rounded-md text-sm transition-colors text-[var(--color-text-primary)] hover:bg-[var(--color-interactive-hover)] bg-[var(--color-interactive-primary)]"
-            >
-              Select All
-            </button>
-            <button
-              @click="setAllCheckboxes(false)"
-              class="btn font-medium py-2 px-4 rounded-md text-sm transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)] ml-1"
-            >
-              Deselect All
-            </button>
-          </div>
 
-          <!-- Toggle 1 -->
-          <label class="flex items-center cursor-pointer group">
-            <div class="relative">
-              <input type="checkbox" v-model="showUploaded" class="sr-only peer" />
-              <div class="w-11 h-6 bg-[var(--color-bg-tertiary)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--color-interactive-focus)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-interactive-primary)]"></div>
-            </div>
-            <span class="ml-3 text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" :class="{'text-[var(--color-text-primary)]': showUploaded}">Show Uploaded</span>
-          </label>
-
-          <!-- Slider -->
-          <label class="flex items-center cursor-pointer group gap-2">
-            <span class="text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]">Grid Size</span>
-            <input
-              type="range"
-              min="1"
-              max="8"
-              v-model.number="columnCount"
-              class="range range-xs range-primary w-24"
-            />
-            <span class="text-xs text-[var(--color-text-muted)]">{{ columnCount }}</span>
-          </label>
-        </div>
 
         <!-- Right Side: Filters -->
         <div class="flex flex-wrap gap-4 items-center w-full md:w-auto">
@@ -514,6 +524,43 @@ const handleEditSubmit = async () => {
         </div>
       </div>
 
+      <!-- Controls Toolbar above List -->
+      <div class="flex flex-wrap gap-6 items-center mb-6 bg-[var(--color-bg-secondary)] p-4 rounded-xl border border-[var(--color-bg-tertiary)]">
+        <!-- Master Checkbox -->
+        <div class="flex items-center gap-2 bg-[var(--color-bg-tertiary)] p-2 rounded-lg cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors duration-200 w-fit" @click="setAllCheckboxes(!allSelected)">
+          <input
+            type="checkbox"
+            :checked="allSelected"
+            class="checkbox checkbox-primary"
+            @click.stop
+            @change="setAllCheckboxes($event.target.checked)"
+          />
+          <span class="text-sm font-medium text-[var(--color-text-primary)]">Select All</span>
+        </div>
+
+        <!-- Show Uploaded Toggle -->
+        <label class="flex items-center cursor-pointer group">
+          <div class="relative">
+            <input type="checkbox" v-model="showUploaded" class="sr-only peer" />
+            <div class="w-11 h-6 bg-[var(--color-bg-tertiary)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--color-interactive-focus)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-interactive-primary)]"></div>
+          </div>
+          <span class="ml-3 text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" :class="{'text-[var(--color-text-primary)]': showUploaded}">Show Uploaded</span>
+        </label>
+
+        <!-- Slider -->
+        <label class="flex items-center cursor-pointer group gap-2">
+          <span class="text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]">Grid Size</span>
+          <input
+            type="range"
+            min="1"
+            max="8"
+            v-model.number="columnCount"
+            class="range range-xs range-primary w-24"
+          />
+          <span class="text-xs text-[var(--color-text-muted)]">{{ columnCount }}</span>
+        </label>
+      </div>
+
       <div class="space-y-8">
         <div
           v-for="campaign in filteredCampaigns"
@@ -548,18 +595,24 @@ const handleEditSubmit = async () => {
                 <div
                   v-for="asset in group.assets"
                   :key="asset.id"
-                  class="relative break-inside-avoid mb-4"
+                  class="relative break-inside-avoid mb-4 group cursor-pointer"
+                  @click="toggleSelection(asset)"
                 >
                   <GcsImage
                     :gcs-uri="asset.src"
                     alt="Asset"
                     class="rounded-lg"
                   />
+                  <!-- Aspect Ratio Overlay -->
+                  <div v-if="asset.aspectRatio" class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-md z-10">
+                    {{ asset.aspectRatio }}
+                  </div>
                   <input
                     type="checkbox"
                     v-model="asset.selected"
                     class="absolute top-2 left-2 h-5 w-5 rounded"
                     :disabled="asset.uploaded"
+                    @click.stop
                   />
                   <div
                     v-if="asset.uploaded"
@@ -568,8 +621,8 @@ const handleEditSubmit = async () => {
                     ✓
                   </div>
                   <button
-                    @click.prevent="openEditModal(asset)"
-                    class="absolute bottom-2 right-2 bg-amber-500 text-gray-900 rounded-md px-2 py-1 text-xs hover:bg-amber-600 flex items-center gap-1 font-medium"
+                    @click.prevent.stop="openEditModal(asset)"
+                    class="absolute bottom-2 right-2 bg-amber-500 text-gray-900 rounded-md px-2 py-1 text-xs hover:bg-amber-600 flex items-center gap-1 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                     title="Edit with Nano Banana"
                   >
                     <span style="filter: drop-shadow(0 0 1px rgba(0,0,0,0.8))">🍌</span>
