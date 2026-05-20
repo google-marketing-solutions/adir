@@ -483,15 +483,22 @@ const handleGenerate = async () => {
       </label>
     </div>
 
+    <!-- Header Labels for Creative Concepts -->
+    <div class="flex gap-4 px-4 mb-1 text-xs font-semibold tracking-wider uppercase text-[var(--color-text-muted)]">
+      <div class="w-6"></div> <!-- Spacer for delete button -->
+      <div class="w-1/3">Concept Name / Theme</div>
+      <div class="w-2/3">Concept Prompt / Description</div>
+    </div>
+
     <div class="flex flex-col gap-4">
       <div
         v-for="(concept, index) in creativeConcepts"
         :key="index"
-        class="flex gap-4 items-center bg-[var(--color-bg-secondary)] p-4 rounded-lg border border-[var(--color-bg-tertiary)]"
+        class="flex gap-4 items-start bg-[var(--color-bg-secondary)] p-4 rounded-lg border border-[var(--color-bg-tertiary)]"
       >
         <button
           @click="removeCreativeConcept(index)"
-          class="text-[var(--color-status-error)] hover:text-red-700 font-bold w-6 disabled:opacity-50"
+          class="text-[var(--color-status-error)] hover:text-red-700 font-bold w-6 disabled:opacity-50 mt-2"
           :disabled="index === 0"
           :class="{ 'opacity-0 cursor-default': index === 0 }"
         >
@@ -507,7 +514,7 @@ const handleGenerate = async () => {
           @paste="handlePaste($event, index)"
           placeholder="Creative Concept Description"
           class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-2 w-2/3 border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none"
-          rows="1"
+          rows="3"
         ></textarea>
       </div>
     </div>
