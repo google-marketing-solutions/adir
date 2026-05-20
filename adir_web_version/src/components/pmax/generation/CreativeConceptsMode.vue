@@ -1,9 +1,7 @@
 <script setup>
 import { uploadBase64Image } from "@/services/gcsService";
-import {
-  generateImagesFromPrompt,
-  generateTextFromPrompt,
-} from "@/services/vertexAiService";
+import { editImageWithNanoBanana } from "@/services/nanoBananaService";
+import { generateTextFromPrompt } from "@/services/vertexAiService";
 import { useConfigStore } from "@/stores/config";
 import { onMounted, ref, watch } from "vue";
 const showPrompt = ref(false);
@@ -29,6 +27,42 @@ const useGemini = ref(true);
 const creativeConcepts = ref([{ name: "", description: "" }]);
 const customerId = useConfigStore().customerID;
 const storageKey = `creativeConcepts_${customerId}`;
+
+// Reference Images State
+const referenceImages = ref([]); // Array of base64 Data URLs
+const imageContextInstructions = ref("");
+const showImageModal = ref(false);
+
+const handleFileSelect = (event) => {
+  const files = event.target.files;
+  if (!files) return;
+  loadFiles(files);
+};
+
+const handleDrop = (event) => {
+  const files = event.dataTransfer.files;
+  if (!files) return;
+  loadFiles(files);
+};
+
+const loadFiles = (files) => {
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (!file.type.startsWith("image/")) continue;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        referenceImages.value.push(e.target.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
+const removeImage = (index) => {
+  referenceImages.value.splice(index, 1);
+};
 
 onMounted(() => {
   const savedConcepts = localStorage.getItem(storageKey);
@@ -118,28 +152,46 @@ const handleGenerate = async () => {
           geminiPrompt,
           configStore.geminiModel,
         );
+      } else if (concept.description) {
+        // If not using Gemini, at least append the concept description to the base prompt
+        imagePrompt = `${prompt.value}\n\nCreative Concept: ${concept.description}`;
+      }
+
+      // Append context instructions if reference images are used
+      if (referenceImages.value.length > 0 && imageContextInstructions.value) {
+        imagePrompt += `\n\nInstructions for using the attached reference images:\n${imageContextInstructions.value}`;
       }
 
       const arPromises = aspectRatios.value.map(async (ar) => {
         if (ar.count <= 0) return [];
 
-        const base64Images = await generateImagesFromPrompt(
-          imagePrompt,
-          ar.ratio,
-          ar.count,
-          configStore.imageGenModel,
-        );
+        const generationPromises = [];
+        for (let i = 0; i < ar.count; i++) {
+          // Append aspect ratio to prompt to guide Nano Banana
+          const promptWithAr = `${imagePrompt}\n\nGenerate the image with an aspect ratio of ${ar.ratio}.`;
 
-        const uploadPromises = base64Images.map((base64String, index) => {
-          const dataUrl = "data:image/png;base64," + base64String;
-          const gcsPath = concept.name
-            ? `${configStore.customerID}/Creative Concepts/${concept.name}/GENERATED/`
-            : `${configStore.customerID}/Creative Concepts/GENERATED/`;
-          const gcsFileName = `${gcsPath}${Date.now()}_${index}_${Math.random().toString(36).slice(2, 7)}.png`;
-          return uploadBase64Image(gcsFileName, dataUrl);
-        });
+          const genPromise = (async () => {
+            try {
+              const generatedBase64 = await editImageWithNanoBanana(
+                referenceImages.value,
+                promptWithAr
+              );
 
-        return await Promise.all(uploadPromises);
+              const dataUrl = "data:image/png;base64," + generatedBase64;
+              const gcsPath = concept.name
+                ? `${configStore.customerID}/Creative Concepts/${concept.name}/GENERATED/`
+                : `${configStore.customerID}/Creative Concepts/GENERATED/`;
+              const gcsFileName = `${gcsPath}${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}.png`;
+              return await uploadBase64Image(gcsFileName, dataUrl);
+            } catch (e) {
+              console.error("Error generating image with Nano Banana:", e);
+              throw e;
+            }
+          })();
+          generationPromises.push(genPromise);
+        }
+
+        return await Promise.all(generationPromises);
       });
 
       const imagesFromConcept = await Promise.all(arPromises);
@@ -214,12 +266,24 @@ const handleGenerate = async () => {
       ></textarea>
     </div>
 
-    <button
-      @click="addCreativeConcept"
-      class="bg-cyan-600 text-white font-bold py-2 px-6 rounded-md hover:bg-cyan-700 self-start"
-    >
-      + Add Creative Concept
-    </button>
+    <div class="flex gap-4">
+      <button
+        @click="addCreativeConcept"
+        class="bg-cyan-600 text-white font-bold py-2 px-6 rounded-md hover:bg-cyan-700 self-start"
+      >
+        + Add Creative Concept
+      </button>
+      <button
+        @click="showImageModal = true"
+        class="bg-gray-700 text-white font-bold py-2 px-6 rounded-md hover:bg-gray-600 border border-gray-600 self-start flex items-center gap-2"
+      >
+        <span class="material-symbols-outlined text-sm">image</span>
+        Configure Reference Images
+        <span v-if="referenceImages.length > 0" class="bg-cyan-600 text-white text-xs rounded-full px-2 py-0.5">
+          {{ referenceImages.length }}
+        </span>
+      </button>
+    </div>
 
     <div class="form-control">
       <label class="label cursor-pointer">
@@ -253,6 +317,64 @@ const handleGenerate = async () => {
     </button>
     <div v-if="errorMessage" class="text-yellow-500 mt-4">
       {{ errorMessage }}
+    </div>
+
+    <!-- Reference Images Modal -->
+    <div v-if="showImageModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
+      <div class="bg-gray-900 rounded-lg p-6 max-w-2xl w-full flex flex-col gap-4 max-h-[90vh] overflow-y-auto border border-gray-700 text-white">
+        <h2 class="text-xl font-bold">Configure Reference Images</h2>
+        
+        <!-- Upload Zone -->
+        <div 
+          @dragover.prevent 
+          @drop.prevent="handleDrop"
+          @click="$refs.fileInput.click()"
+          class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:border-cyan-400 transition-colors bg-gray-800/50"
+        >
+          <p class="text-gray-400">Drag & drop images here or click to browse</p>
+          <input 
+            type="file" 
+            ref="fileInput" 
+            multiple 
+            accept="image/*" 
+            class="hidden" 
+            @change="handleFileSelect"
+          />
+        </div>
+
+        <!-- Thumbnail Preview Grid -->
+        <div v-if="referenceImages.length > 0" class="grid grid-cols-4 gap-4 mt-2">
+          <div v-for="(img, idx) in referenceImages" :key="idx" class="relative group aspect-square bg-gray-900 rounded-md overflow-hidden border border-gray-700">
+            <img :src="img" class="w-full h-full object-cover" />
+            <button 
+              @click="removeImage(idx)" 
+              class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              X
+            </button>
+          </div>
+        </div>
+
+        <!-- Context Instructions Text Area -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text text-lg font-bold text-gray-200">How should these images be used for context?</span>
+          </label>
+          <textarea
+            v-model="imageContextInstructions"
+            placeholder="e.g., Use the style and color palette of Image 1, but use the composition and layout of Image 2."
+            class="bg-gray-700 rounded-md p-2 w-full text-white border border-gray-600 focus:border-cyan-400 focus:outline-none"
+            rows="4"
+          ></textarea>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex justify-end gap-4 mt-4">
+          <button @click="showImageModal = false" class="bg-cyan-600 text-white px-6 py-2 rounded-md hover:bg-cyan-700 font-bold">
+            Save & Close
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
