@@ -274,7 +274,8 @@ const handleGenerate = async () => {
 
         const generatedBase64 = await editImageWithNanoBanana(
           base64Images,
-          job.prompt
+          job.prompt,
+          job.aspectRatio
         );
         const dataUrl = "data:image/png;base64," + generatedBase64;
         return uploadBase64Image(job.gcsPath, dataUrl);

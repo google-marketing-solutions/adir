@@ -202,14 +202,12 @@ const handleGenerate = async () => {
 
         const generationPromises = [];
         for (let i = 0; i < ar.count; i++) {
-          // Append aspect ratio to prompt to guide Nano Banana
-          const promptWithAr = `${imagePrompt}\n\nGenerate the image with an aspect ratio of ${ar.ratio}.`;
-
           const genPromise = (async () => {
             try {
               const generatedBase64 = await editImageWithNanoBanana(
                 referenceImages.value,
-                promptWithAr
+                imagePrompt,
+                ar.ratio
               );
 
               const dataUrl = "data:image/png;base64," + generatedBase64;

@@ -21,7 +21,9 @@ export const useConfigStore = defineStore("config", {
       { label: "Portrait (9:16)", ratio: "9:16", count: 0 },
       { label: "Landscape (16:9)", ratio: "16:9", count: 0 },
     ],
-    allAllowedAspectRatios: [
+  }),
+  getters: {
+    allAllowedAspectRatios: () => [
       { label: "Square (1:1)", ratio: "1:1" },
       { label: "Portrait (9:16)", ratio: "9:16" },
       { label: "Landscape (16:9)", ratio: "16:9" },
@@ -37,7 +39,7 @@ export const useConfigStore = defineStore("config", {
       { label: "8:1", ratio: "8:1" },
       { label: "21:9", ratio: "21:9" },
     ],
-  }),
+  },
   actions: {
     addAspectRatio(label: string, ratio: string) {
       const exists = this.aspectRatios.some((ar) => ar.ratio === ratio);
