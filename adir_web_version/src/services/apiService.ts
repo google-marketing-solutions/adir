@@ -97,7 +97,13 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => response.text());
+      const responseText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(responseText);
+      } catch (e) {
+        errorData = responseText;
+      }
       this.handleApiError(response, errorData);
     }
 

@@ -14,7 +14,8 @@ export async function generateImagesFromPrompt(
   modelId: string
 ): Promise<string[]> {
   const apiClient = createVertexAiApiClient();
-  const modelIdLowerCase = modelId.toLowerCase();
+  const effectiveModelId = modelId || "imagen-3.0-generate-002";
+  const modelIdLowerCase = effectiveModelId.toLowerCase();
   const action = "predict";
   let path;
 
@@ -127,5 +128,57 @@ export async function generateTextFromPrompt(
     return generatedText;
   }
 
+  return "";
+}
+
+/**
+ * Extracts brand guidelines from a prompt, optionally using Search Grounding or file data.
+ * @param {string} prompt - The prompt for Gemini.
+ * @param {string} modelId - The model ID to use.
+ * @param {boolean} useGrounding - Whether to enable Search Grounding.
+ * @param {object} [fileData] - Optional file data { mimeType, data }.
+ * @return {Promise<string>} The extracted guidelines.
+ */
+export async function extractBrandGuidelines(
+  prompt: string,
+  modelId: string,
+  useGrounding: boolean = false,
+  fileData?: { mimeType: string; data: string }
+): Promise<string> {
+  const apiClient = createVertexAiApiClient({
+    apiVersion: "v1beta1",
+    useGlobalEndpoint: true,
+  });
+  
+  const modelIdLowerCase = modelId.toLowerCase();
+  const endpoint = `/publishers/google/models/${modelIdLowerCase}:generateContent`;
+  
+  const parts = [{ text: prompt }];
+  if (fileData) {
+    parts.unshift({ inlineData: fileData });
+  }
+  
+  const body = {
+    contents: [{ role: "user", parts }],
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 4096,
+    },
+    tools: useGrounding ? [{ googleSearch: {} }] : undefined,
+  };
+
+  try {
+    const response = await apiClient.post(endpoint, body);
+    if (
+      response.candidates &&
+      response.candidates[0].content &&
+      response.candidates[0].content.parts[0]
+    ) {
+      return response.candidates[0].content.parts[0].text;
+    }
+  } catch (error) {
+    console.error("Error extracting brand guidelines:", error);
+    throw error;
+  }
   return "";
 }

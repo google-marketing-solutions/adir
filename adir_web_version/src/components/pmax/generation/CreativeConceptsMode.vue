@@ -2,6 +2,7 @@
 import { uploadBase64Image } from "@/services/gcsService";
 import { editImageWithNanoBanana } from "@/services/nanoBananaService";
 import { generateTextFromPrompt } from "@/services/vertexAiService";
+import { useBrandStore } from "@/stores/brandStore";
 import { useConfigStore } from "@/stores/config";
 import { onMounted, ref, watch } from "vue";
 const showPrompt = ref(false);
@@ -147,7 +148,13 @@ const handleGenerate = async () => {
       let imagePrompt = prompt.value;
 
       if (useGemini.value) {
-        const geminiPrompt = `You are a prompt engineer and your job is to provide the best short prompt to generate an image for a digital campaign. Given the following text, provide the optimal Generative AI prompt to generate a realistic style image to be used in an ad of a digital campaign that will best illustrate the concepts defined by the text. Please return only the prompt and start the prompt with "a photo of". Here is the text: ${prompt.value} ${concept.description ? "and the creative concept: " + concept.description : ""}`;
+        let geminiPrompt = `You are a prompt engineer and your job is to provide the best short prompt to generate an image for a digital campaign. Given the following text, provide the optimal Generative AI prompt to generate a realistic style image to be used in an ad of a digital campaign that will best illustrate the concepts defined by the text. Please return only the prompt and start the prompt with "a photo of". Here is the text: ${prompt.value} ${concept.description ? "and the creative concept: " + concept.description : ""}`;
+        
+        const brandStore = useBrandStore();
+        if (brandStore.useGuidelinesInGeneration && brandStore.guidelines) {
+          geminiPrompt += `\n\nYou MUST follow these Brand Guidelines when generating the image prompt:\n${brandStore.guidelines}`;
+        }
+
         imagePrompt = await generateTextFromPrompt(
           geminiPrompt,
           configStore.geminiModel,
