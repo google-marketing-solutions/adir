@@ -242,6 +242,15 @@ function toggleGroupSelection(group, shouldSelect) {
   previewData.value = [...previewData.value];
 }
 
+const urisToDelete = ref([]);
+
+const handleSingleDelete = (asset) => {
+  urisToDelete.value = [asset.src];
+  confirmationTitle.value = "Confirm Delete";
+  confirmationMessage.value = "Are you sure you want to delete this image? This action cannot be undone.";
+  showConfirmationModal.value = true;
+};
+
 const handleRemoveSelected = async () => {
   const selectedImageUris = [];
   previewData.value.forEach((campaign) => {
@@ -262,28 +271,18 @@ const handleRemoveSelected = async () => {
     return;
   }
 
+  urisToDelete.value = selectedImageUris;
   confirmationTitle.value = "Confirm Delete";
   confirmationMessage.value = `Are you sure you want to delete ${selectedImageUris.length} images? This action cannot be undone.`;
   showConfirmationModal.value = true;
 };
 
 const confirmRemoval = async () => {
-  const selectedImageUris = [];
-  previewData.value.forEach((campaign) => {
-    campaign.assetGroups.forEach((group) => {
-      group.assets.forEach((asset) => {
-        if (asset.selected) {
-          selectedImageUris.push(asset.src);
-        }
-      });
-    });
-  });
-
   isRemoving.value = true;
   removalMessage.value = "Removing the requested images...";
 
   try {
-    await removeImages(selectedImageUris);
+    await removeImages(urisToDelete.value);
     await fetchImages(true); // Force refetch
     removalMessage.value = "Images removed successfully.";
   } catch (error) {
@@ -295,6 +294,43 @@ const confirmRemoval = async () => {
     setTimeout(() => {
       removalMessage.value = "";
     }, 3000);
+  }
+};
+
+const uploadImages = async (images) => {
+  if (images.length === 0) return;
+  isUploading.value = true;
+  uploadMessage.value = `Uploading ${images.length} images...`;
+
+  try {
+    const imagesWithContent = await Promise.all(
+      images.map(async (image) => {
+        const base64Content = await downloadFileAsBase64(image.gcsUri);
+        const parts = image.name.split("/");
+        const filteredParts = parts.filter((part, index) => {
+          if (index === 0) return false; // Skip customer ID
+          if (part === "GENERATED" || part === "UPLOADED") return false; // Skip status folders
+          return true;
+        });
+        const shortName = `adir_${filteredParts.join("_")}`;
+        return {
+          name: shortName,
+          content: base64Content,
+        };
+      })
+    );
+
+    await uploadImageAssets(imagesWithContent);
+    const imageNamesToMove = images.map((img) => img.name);
+    await moveImages(imageNamesToMove);
+    await fetchImages(true); // Force refetch
+    uploadMessage.value = "Images uploaded and moved successfully.";
+  } catch (error) {
+    console.error("Error uploading images:", error);
+    uploadMessage.value = "Error during upload process.";
+  } finally {
+    isUploading.value = false;
+    setTimeout(() => (uploadMessage.value = ""), 3000);
   }
 };
 
@@ -319,38 +355,20 @@ const handleUploadSelected = async () => {
     return;
   }
 
-  isUploading.value = true;
-  uploadMessage.value = `Uploading ${selectedImages.length} images...`;
+  await uploadImages(selectedImages);
+};
 
-  try {
-    const imagesWithContent = await Promise.all(
-      selectedImages.map(async (image) => {
-        const base64Content = await downloadFileAsBase64(image.gcsUri);
-        const parts = image.name.split("/");
-        const filteredParts = parts.filter((part, index) => {
-          if (index === 0) return false; // Skip customer ID
-          if (part === "GENERATED" || part === "UPLOADED") return false; // Skip status folders
-          return true;
-        });
-        const shortName = `adir_${filteredParts.join("_")}`;
-        return {
-          name: shortName,
-          content: base64Content,
-        };
-      })
-    );
+const handleSingleUpload = async (asset) => {
+  await uploadImages([{ name: asset.name, gcsUri: asset.src }]);
+};
 
-    await uploadImageAssets(imagesWithContent);
-    const imageNamesToMove = selectedImages.map((img) => img.name);
-    await moveImages(imageNamesToMove);
-    await fetchImages(true); // Force refetch
-    uploadMessage.value = "Images uploaded and moved successfully.";
-  } catch (error) {
-    console.error("Error uploading images:", error);
-    uploadMessage.value = "Error during upload process.";
-  } finally {
-    isUploading.value = false;
-    setTimeout(() => (uploadMessage.value = ""), 3000);
+const openDropdownAssetId = ref(null);
+
+const toggleDropdown = (assetId) => {
+  if (openDropdownAssetId.value === assetId) {
+    openDropdownAssetId.value = null;
+  } else {
+    openDropdownAssetId.value = assetId;
   }
 };
 
@@ -600,6 +618,7 @@ const handleEditSubmit = async () => {
                 >
                   <GcsImage
                     :gcs-uri="asset.src"
+                    :aspect-ratio="asset.aspectRatio"
                     alt="Asset"
                     class="rounded-lg"
                   />
@@ -620,14 +639,35 @@ const handleEditSubmit = async () => {
                   >
                     ✓
                   </div>
-                  <button
-                    @click.prevent.stop="openEditModal(asset)"
-                    class="absolute bottom-2 right-2 bg-amber-500 text-gray-900 rounded-md px-2 py-1 text-xs hover:bg-amber-600 flex items-center gap-1 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                    title="Edit with Nano Banana"
-                  >
-                    <span style="filter: drop-shadow(0 0 1px rgba(0,0,0,0.8))">🍌</span>
-                    <span>Edit</span>
-                  </button>
+                  <!-- Actions Menu (Vue controlled) -->
+                  <div class="absolute bottom-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <button 
+                      @click.prevent.stop="toggleDropdown(asset.id)" 
+                      class="btn btn-xs bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] hover:brightness-110 font-medium flex items-center gap-1 rounded-md px-2 py-1"
+                    >
+                      <span>Actions</span>
+                      <span class="text-xs">▼</span>
+                    </button>
+                    <ul 
+                      v-show="openDropdownAssetId === asset.id" 
+                      class="absolute right-0 bottom-full mb-1 menu p-2 shadow bg-gray-800 rounded-box w-40 border border-gray-700 text-white text-sm"
+                    >
+                      <li><a @click.prevent="openEditModal(asset); openDropdownAssetId = null" class="hover:bg-gray-700 py-1 flex items-center gap-2"><span>🍌</span> Edit</a></li>
+                      <li>
+                        <a @click.prevent="handleSingleUpload(asset); openDropdownAssetId = null" class="hover:bg-gray-700 py-1 flex items-center gap-2">
+                          <svg class="w-4 h-4 flex-shrink-0" viewBox="0 -13 256 256" version="1.1" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid">
+                            <g>
+                              <path d="M5.888,166.405103 L90.88,20.9 C101.676138,27.2558621 156.115862,57.3844138,164.908138,63.1135172 L79.9161379,208.627448 C70.6206897,220.906621 -5.888,185.040138 5.888,166.396276 L5.888,166.405103 Z" fill="#FBBC04"></path>
+                              <path d="M250.084224,166.401789 L165.092224,20.9055131 C153.210293,1.13172 127.619121,-6.05393517 106.600638,5.62496138 C85.582155,17.3038579 79.182155,42.4624786 91.0640861,63.1190303 L176.056086,208.632961 C187.938017,228.397927 213.52919,235.583582 234.547672,223.904686 C254.648086,212.225789 261.966155,186.175582 250.084224,166.419444 L250.084224,166.401789 Z" fill="#4285F4"></path>
+                              <ellipse fill="#34A853" cx="42.6637241" cy="187.924414" rx="42.6637241" ry="41.6044138"></ellipse>
+                            </g>
+                          </svg>
+                          Upload
+                        </a>
+                      </li>
+                      <li><a @click.prevent="handleSingleDelete(asset); openDropdownAssetId = null" class="hover:bg-gray-700 py-1 text-red-400 hover:text-red-300 flex items-center gap-2"><span>🗑️</span> Delete</a></li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>
