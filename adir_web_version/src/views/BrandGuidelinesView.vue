@@ -4,6 +4,7 @@ import { extractBrandGuidelines } from "@/services/vertexAiService";
 import { useConfigStore } from "@/stores/config";
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
+import LoadingSpinner from "@/components/LoadingSpinner.vue";
 
 const brandStore = useBrandStore();
 const configStore = useConfigStore();
@@ -133,8 +134,8 @@ const processGuidelines = async () => {
 </script>
 
 <template>
-  <div class="p-6 bg-gray-900 text-white min-h-screen">
-    <h1 class="text-3xl font-bold mb-6">Brand Guidelines</h1>
+  <div>
+    <h1 class="mb-6">Brand Guidelines</h1>
 
     <div class="bg-gray-800 p-6 rounded-lg mb-6">
       <!-- Option Cards -->
@@ -281,28 +282,11 @@ const processGuidelines = async () => {
     </div>
 
     <!-- Loading Overlay -->
-    <div v-if="isProcessing" class="fixed inset-0 bg-black/80 flex flex-col justify-center items-center z-50">
-      <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl border border-gray-700 flex flex-col items-center max-w-sm mx-4">
-        <!-- Premium Spinner -->
-        <div class="relative w-24 h-24 mb-6">
-          <!-- Outer ring -->
-          <div class="absolute inset-0 border-4 border-blue-500/30 rounded-full"></div>
-          <!-- Spinning ring -->
-          <div class="absolute inset-0 border-4 border-t-blue-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
-          <!-- Inner glow or pulse -->
-          <div class="absolute inset-4 bg-blue-600/20 rounded-full animate-pulse flex items-center justify-center">
-            <span class="text-blue-300 font-bold text-sm">AI</span>
-          </div>
-        </div>
-        <h3 class="text-xl font-bold mb-2 text-white text-center">Extracting Brand Essence</h3>
-        <p class="text-gray-400 text-center text-sm">Gemini is analyzing the data and distilling guidelines. This takes a moment to ensure quality...</p>
-        <!-- Pulsing dots -->
-        <div class="flex gap-2 mt-4">
-          <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-          <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style="animation-delay: 0.2s"></div>
-          <div class="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style="animation-delay: 0.4s"></div>
-        </div>
-      </div>
-    </div>
+    <LoadingSpinner
+      v-if="isProcessing"
+      fullscreen
+      title="Extracting Brand Essence"
+      message="Gemini is analyzing the data and distilling guidelines. This takes a moment to ensure quality..."
+    />
   </div>
 </template>

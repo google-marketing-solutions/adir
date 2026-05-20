@@ -72,7 +72,7 @@ const closeSettings = () => {
 
 .main-content {
   flex: 1;
-  padding: 1rem;
+  padding: 1.5rem;
   overflow-y: auto; /* Allow scrolling within the main content */
 }
 </style>

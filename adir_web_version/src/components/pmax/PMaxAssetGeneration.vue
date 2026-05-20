@@ -4,6 +4,7 @@ import { useBrandStore } from "@/stores/brandStore";
 import { useCampaignStore } from "@/stores/campaignStore";
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import LoadingSpinner from "@/components/LoadingSpinner.vue";
 import AssetGroupNameMode from "./generation/AssetGroupNameMode.vue";
 import CreativeConceptsMode from "./generation/CreativeConceptsMode.vue";
 import ExistingAssetsMode from "./generation/ExistingAssetsMode.vue";
@@ -41,8 +42,8 @@ const handleGenerationComplete = (imageUrls) => {
 
 <template>
   <div>
-    <h2 class="mb-4">Image Generation</h2>
-    <div class="bg-[var(--color-bg-secondary)] p-8 rounded-xl">
+    <h1 class="mb-6">Image Generation</h1>
+    <div class="bg-[var(--color-bg-secondary)] p-6 rounded-xl mb-6 border border-[var(--color-bg-tertiary)]">
       <div class="mb-6 flex justify-between items-end">
         <div>
           <label class="label mb-2">
@@ -52,7 +53,7 @@ const handleGenerationComplete = (imageUrls) => {
             <button
               v-for="(name, index) in Object.keys(modes)"
               :key="name"
-              class="btn flex-1 font-bold py-2 px-4 rounded-md transition-colors duration-200"
+              class="btn flex-1 font-medium py-2 px-4 rounded-md transition-colors duration-200 text-sm"
               :class="[
                 {
                   'bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)]': activeMode === name,
@@ -101,9 +102,10 @@ const handleGenerationComplete = (imageUrls) => {
         </div>
       </div>
 
-      <div v-if="isLoading" class="flex justify-center items-center mt-6 p-4 bg-[var(--color-bg-tertiary)] rounded-lg">
-        <span class="loading loading-spinner loading-lg text-[var(--color-interactive-primary)]"></span>
-        <p class="ml-4 text-[var(--color-text-primary)] font-bold">Generating images with Gemini...</p>
+      <div v-if="isLoading" class="mt-6 p-4 bg-[var(--color-bg-tertiary)] rounded-lg">
+        <LoadingSpinner
+          message="Generating images with Gemini..."
+        />
       </div>
     </div>
   </div>

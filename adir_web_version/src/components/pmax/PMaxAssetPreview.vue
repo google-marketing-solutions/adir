@@ -22,6 +22,7 @@ const showSuccessMessage = ref(false);
 const allImagesCache = ref([]);
 const previewData = ref([]);
 const isLoading = ref(true);
+const columnCount = ref(4);
 const isRemoving = ref(false);
 const isUploading = ref(false);
 const uploadMessage = ref("");
@@ -395,54 +396,72 @@ const handleEditSubmit = async () => {
       @close="showConfirmationModal = false"
       @confirm="confirmRemoval"
     />
-    <h2 class="text-2xl font-bold mb-4">Generated Asset Preview</h2>
+    <h1 class="mb-6">Generated Asset Preview</h1>
 
     <div v-if="isLoading" class="flex justify-center items-center h-64">
       <span class="loading loading-spinner loading-lg"></span>
     </div>
 
     <div v-else>
-      <div
-        class="flex justify-between items-center mb-6 bg-gray-800 p-4 rounded-lg"
-      >
-        <div class="flex gap-4 items-center">
-          <button
-            @click="setAllCheckboxes(true)"
-            class="bg-gray-600 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-700"
-          >
-            Select All
-          </button>
-          <button
-            @click="setAllCheckboxes(false)"
-            class="bg-gray-600 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-700"
-          >
-            Deselect All
-          </button>
-          <div class="form-control">
-            <label class="label cursor-pointer">
-              <span class="label-text mr-2">Show Uploaded</span>
-              <input
-                type="checkbox"
-                v-model="showUploaded"
-                class="toggle toggle-primary"
-              />
-            </label>
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 bg-[var(--color-bg-secondary)] p-6 rounded-xl gap-4 border border-[var(--color-bg-tertiary)]">
+        <!-- Left Side: Actions & Toggles -->
+        <div class="flex flex-wrap gap-4 items-center">
+          <!-- Button Group -->
+          <div class="flex rounded-lg bg-[var(--color-bg-tertiary)] p-1">
+            <button
+              @click="setAllCheckboxes(true)"
+              class="btn font-medium py-2 px-4 rounded-md text-sm transition-colors text-[var(--color-text-primary)] hover:bg-[var(--color-interactive-hover)] bg-[var(--color-interactive-primary)]"
+            >
+              Select All
+            </button>
+            <button
+              @click="setAllCheckboxes(false)"
+              class="btn font-medium py-2 px-4 rounded-md text-sm transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)] ml-1"
+            >
+              Deselect All
+            </button>
           </div>
+
+          <!-- Toggle 1 -->
+          <label class="flex items-center cursor-pointer group">
+            <div class="relative">
+              <input type="checkbox" v-model="showUploaded" class="sr-only peer" />
+              <div class="w-11 h-6 bg-[var(--color-bg-tertiary)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--color-interactive-focus)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-interactive-primary)]"></div>
+            </div>
+            <span class="ml-3 text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" :class="{'text-[var(--color-text-primary)]': showUploaded}">Show Uploaded</span>
+          </label>
+
+          <!-- Slider -->
+          <label class="flex items-center cursor-pointer group gap-2">
+            <span class="text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]">Grid Size</span>
+            <input
+              type="range"
+              min="1"
+              max="8"
+              v-model.number="columnCount"
+              class="range range-xs range-primary w-24"
+            />
+            <span class="text-xs text-[var(--color-text-muted)]">{{ columnCount }}</span>
+          </label>
         </div>
-        <div class="flex-grow flex justify-end gap-4 items-center">
-          <div class="flex-1 max-w-md">
-            <label for="campaign-filter" class="mr-2">Campaign:</label>
+
+        <!-- Right Side: Filters -->
+        <div class="flex flex-wrap gap-4 items-center w-full md:w-auto">
+          <div class="flex flex-col min-w-[200px]">
+            <label class="text-caption mb-1">Campaign</label>
             <MultiSelectDropdown
               :options="campaignOptions"
               v-model="selectedCampaigns"
+              class="w-full"
             />
           </div>
-          <div class="flex-1 max-w-md">
-            <label for="asset-group-filter" class="mr-2">Asset Group:</label>
+          <div class="flex flex-col min-w-[200px]">
+            <label class="text-caption mb-1">Asset Group</label>
             <MultiSelectDropdown
               :options="availableAssetGroups"
               v-model="selectedAssetGroups"
               placeholder="Select asset groups..."
+              class="w-full"
             />
           </div>
         </div>
@@ -463,10 +482,10 @@ const handleEditSubmit = async () => {
           <button
             @click.prevent="openEditModal(null)"
             :disabled="isEditing"
-            class="bg-yellow-500 text-gray-900 font-bold py-2 px-6 rounded-md hover:bg-yellow-400 disabled:bg-gray-400 flex items-center gap-2"
+            class="bg-amber-500 text-gray-900 font-medium py-2 px-6 rounded-md hover:bg-amber-600 disabled:bg-gray-400 flex items-center gap-2 transition-colors"
           >
             <span v-if="isEditing" class="loading loading-spinner loading-sm"></span>
-            <span v-else>🍌</span>
+            <span v-else style="filter: drop-shadow(0 0 1px rgba(0,0,0,0.8))">🍌</span>
             <span>{{ isEditing ? "Editing..." : "Batch Edit" }}</span>
           </button>
           <button
@@ -522,11 +541,11 @@ const handleEditSubmit = async () => {
                 />
                 {{ group.groupName }}
               </h4>
-              <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <div :style="{ columns: columnCount }" class="gap-4">
                 <div
                   v-for="asset in group.assets"
                   :key="asset.id"
-                  class="relative"
+                  class="relative break-inside-avoid mb-4"
                 >
                   <GcsImage
                     :gcs-uri="asset.src"
@@ -547,10 +566,10 @@ const handleEditSubmit = async () => {
                   </div>
                   <button
                     @click.prevent="openEditModal(asset)"
-                    class="absolute bottom-2 right-2 bg-yellow-500 text-gray-900 rounded-md px-2 py-1 text-xs hover:bg-yellow-400 flex items-center gap-1 font-bold"
+                    class="absolute bottom-2 right-2 bg-amber-500 text-gray-900 rounded-md px-2 py-1 text-xs hover:bg-amber-600 flex items-center gap-1 font-medium"
                     title="Edit with Nano Banana"
                   >
-                    <span>🍌</span>
+                    <span style="filter: drop-shadow(0 0 1px rgba(0,0,0,0.8))">🍌</span>
                     <span>Edit</span>
                   </button>
                 </div>
@@ -590,8 +609,8 @@ const handleEditSubmit = async () => {
         ></textarea>
         <div class="flex justify-end gap-4">
           <button @click="showEditModal = false" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">Cancel</button>
-          <button @click="handleEditSubmit" class="bg-yellow-500 text-gray-900 px-4 py-2 rounded-md hover:bg-yellow-400 flex items-center gap-2 font-bold" :disabled="!editPrompt">
-            <span>🍌</span>
+          <button @click="handleEditSubmit" class="bg-amber-500 text-gray-900 px-4 py-2 rounded-md hover:bg-amber-600 flex items-center gap-2 font-medium disabled:opacity-50" :disabled="!editPrompt">
+            <span style="filter: drop-shadow(0 0 1px rgba(0,0,0,0.8))">🍌</span>
             <span>Edit</span>
           </button>
         </div>
