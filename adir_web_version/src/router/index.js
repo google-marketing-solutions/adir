@@ -3,7 +3,7 @@ import { useAuthStore } from "../stores/auth";
 import AssetGenerationView from "../views/AssetGenerationView.vue";
 import AssetPreviewView from "../views/AssetPreviewView.vue";
 import AssetRemovalView from "../views/AssetRemovalView.vue";
-import BrandGuidelinesView from "../views/BrandGuidelinesView.vue";
+
 import LoginView from "../views/LoginView.vue";
 import WelcomeView from "../views/WelcomeView.vue";
 
@@ -40,12 +40,6 @@ const routes = [
     path: "/asset-preview",
     name: "AssetPreview",
     component: AssetPreviewView,
-    meta: { requiresAuth: true },
-  },
-  {
-    path: "/brand-guidelines",
-    name: "BrandGuidelines",
-    component: BrandGuidelinesView,
     meta: { requiresAuth: true },
   },
 ];

@@ -16,6 +16,9 @@ export const useConfigStore = defineStore("config", {
     imageGenModel: "imagen-3.0-generate-002",
     googleClientId: "",
     useSecretManager: false,
+    enableEvaluation: false,
+    maxEvaluationRetries: 3,
+    evaluationRules: "",
     aspectRatios: [
       { label: "Square (1:1)", ratio: "1:1", count: 0 },
       { label: "Portrait (9:16)", ratio: "9:16", count: 0 },

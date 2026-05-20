@@ -194,8 +194,16 @@ function toggleSelectAll(assets, value) {
 }
 
 const allSelected = computed(() => {
+  if (previewData.value.length === 0) return false;
   return previewData.value.every((c) =>
     c.assetGroups.every((ag) => ag.assets.every((a) => a.selected)),
+  );
+});
+
+const noneSelected = computed(() => {
+  if (previewData.value.length === 0) return true;
+  return previewData.value.every((c) =>
+    c.assetGroups.every((ag) => ag.assets.every((a) => !a.selected)),
   );
 });
 
@@ -205,6 +213,7 @@ function setAllCheckboxes(value) {
       ag.assets.forEach((a) => (a.selected = value)),
     ),
   );
+  previewData.value = [...previewData.value];
 }
 
 const areAllInCampaignSelected = (campaign) => {
@@ -219,10 +228,12 @@ function toggleCampaignSelection(campaign, shouldSelect) {
   campaign.assetGroups.forEach((ag) => {
     ag.assets.forEach((a) => (a.selected = shouldSelect));
   });
+  previewData.value = [...previewData.value];
 }
 
 function toggleGroupSelection(group, shouldSelect) {
   group.assets.forEach((a) => (a.selected = shouldSelect));
+  previewData.value = [...previewData.value];
 }
 
 const handleRemoveSelected = async () => {
@@ -421,13 +432,19 @@ const handleEditSubmit = async () => {
           <div class="flex rounded-lg bg-[var(--color-bg-tertiary)] p-1">
             <button
               @click="setAllCheckboxes(true)"
-              class="btn font-medium py-2 px-4 rounded-md text-sm transition-colors text-[var(--color-text-primary)] hover:bg-[var(--color-interactive-hover)] bg-[var(--color-interactive-primary)]"
+              class="btn font-medium py-2 px-4 rounded-md text-sm transition-all duration-200"
+              :class="allSelected
+                ? 'bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] shadow-md scale-[1.02]'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'"
             >
               Select All
             </button>
             <button
               @click="setAllCheckboxes(false)"
-              class="btn font-medium py-2 px-4 rounded-md text-sm transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)] ml-1"
+              class="btn font-medium py-2 px-4 rounded-md text-sm transition-all duration-200 ml-1"
+              :class="noneSelected
+                ? 'bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] shadow-md scale-[1.02]'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-secondary)]'"
             >
               Deselect All
             </button>

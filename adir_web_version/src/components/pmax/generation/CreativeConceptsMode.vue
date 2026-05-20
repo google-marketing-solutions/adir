@@ -6,9 +6,12 @@ import {
   generateTextFromPrompt,
   createCreativeConceptPrompt,
   getCreativeConceptsInstruction,
+  extractBrandGuidelines,
 } from "@/services/vertexAiService";
+import { evaluateImage, generateEvaluationRules } from "@/services/evaluationService";
 import { useConfigStore } from "@/stores/config";
-import { computed, onMounted, ref, watch } from "vue";
+import { onMounted, ref, watch, computed } from "vue";
+import LoadingSpinner from "@/components/LoadingSpinner.vue";
 const showPrompt = ref(false);
 
 const emit = defineEmits(["generation-complete", "update:loading"]);
@@ -19,6 +22,22 @@ const brandStore = useBrandStore();
 const referenceImages = ref([]); // Array of base64 Data URLs
 const imageContextInstructions = ref("");
 const showImageModal = ref(false);
+
+// Brand Guidelines Modal State
+const showBrandGuidelinesModal = ref(false);
+const guidelinesActiveTab = ref("upload");
+const guidelinesText = ref(brandStore.guidelines);
+const selectedBrandFiles = ref([]);
+const websiteUrl = ref("");
+const isProcessingGuidelines = ref(false);
+const brandNotification = ref({ show: false, message: "", type: "info" });
+
+// Sync guidelines textarea when modal opens
+watch(showBrandGuidelinesModal, (isOpen) => {
+  if (isOpen) {
+    guidelinesText.value = brandStore.guidelines;
+  }
+});
 
 const prompt = ref(
   getCreativeConceptsInstruction(
@@ -117,8 +136,39 @@ const addNewRatio = () => {
   }
 };
 const isLoading = ref(false);
+const loadingStatus = ref("");
+const isGeneratingRules = ref(false);
+const rulesErrorMessage = ref("");
 const configStore = useConfigStore();
 const errorMessage = ref("");
+
+const generationLogs = ref([]);
+const showDetailedLogs = ref(false);
+
+const uniqueLogIds = computed(() => {
+  return [...new Set(generationLogs.value.map((log) => log.id))];
+});
+
+const getLogsForId = (id) => {
+  return generationLogs.value.filter((log) => log.id === id);
+};
+
+const getStatusColorClass = (status) => {
+  switch (status) {
+    case "generating":
+      return "bg-blue-900/50 text-blue-300 border border-blue-800/50";
+    case "evaluating":
+      return "bg-yellow-900/50 text-yellow-300 border border-yellow-800/50";
+    case "approved":
+      return "bg-green-900/50 text-green-300 border border-green-800/50";
+    case "rejected":
+      return "bg-orange-900/50 text-orange-300 border border-orange-800/50";
+    case "failed":
+      return "bg-red-900/50 text-red-300 border border-red-800/50";
+    default:
+      return "bg-gray-800 text-gray-300";
+  }
+};
 
 const addCreativeConcept = () => {
   creativeConcepts.value.push({ name: "", description: "" });
@@ -169,8 +219,104 @@ const handlePaste = (event, index) => {
   // If only one line is pasted, do nothing and let the default paste behavior occur.
 };
 
+const handleBrandFileChange = (event) => {
+  selectedBrandFiles.value = Array.from(event.target.files);
+};
+
+const brandFileToBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+const showBrandNotification = (message, type = "info") => {
+  brandNotification.value = { show: true, message, type };
+  setTimeout(() => {
+    brandNotification.value.show = false;
+  }, 3000);
+};
+
+const processGuidelines = async () => {
+  isProcessingGuidelines.value = true;
+  try {
+    const modelId = configStore.geminiModel || "gemini-1.5-flash";
+    let result = "";
+
+    if (guidelinesActiveTab.value === "upload") {
+      if (selectedBrandFiles.value.length === 0) {
+        showBrandNotification("Please select at least one file.", "warning");
+        return;
+      }
+      const file = selectedBrandFiles.value[0];
+      const base64Data = await brandFileToBase64(file);
+      const fileData = { mimeType: file.type, data: base64Data };
+      const prompt = "Extract brand guidelines from this file. Focus on color palette, typography, and visual style. Do NOT include any introductory or concluding text. Start directly with the guidelines.";
+      result = await extractBrandGuidelines(prompt, modelId, false, fileData);
+    } else if (guidelinesActiveTab.value === "inference") {
+      if (!websiteUrl.value) {
+        showBrandNotification("Please enter a website URL.", "warning");
+        return;
+      }
+      const prompt = `Analyze the website ${websiteUrl.value} and infer its brand guidelines. Focus on color palette, typography, tone of voice, and visual style based on the site content. Do NOT include any introductory or concluding text. Start directly with the guidelines.`;
+      result = await extractBrandGuidelines(prompt, modelId, true);
+    }
+
+    if (result) {
+      guidelinesText.value = result;
+      brandStore.setGuidelines(result);
+      showBrandNotification("Guidelines inferred and saved!", "success");
+    } else {
+      showBrandNotification("No guidelines could be extracted.", "warning");
+    }
+  } catch (error) {
+    console.error("Error processing guidelines:", error);
+    showBrandNotification("Failed to process guidelines.", "error");
+  } finally {
+    isProcessingGuidelines.value = false;
+  }
+};
+
+const handleSaveGuidelines = () => {
+  brandStore.setGuidelines(guidelinesText.value);
+  showBrandNotification("Guidelines saved!", "success");
+};
+
+const generateRules = async () => {
+  isGeneratingRules.value = true;
+  rulesErrorMessage.value = "";
+  try {
+    // Combine base prompt and all concept descriptions to give full context for rule generation
+    const conceptsText = creativeConcepts.value
+      .map((c) => `${c.name ? c.name + ': ' : ''}${c.description}`)
+      .filter(Boolean)
+      .join("\n");
+    
+    const fullPromptContext = `${prompt.value}\n\nCreative Concepts:\n${conceptsText}`;
+    
+    const generated = await generateEvaluationRules(
+      fullPromptContext,
+      brandStore.guidelines,
+      referenceImages.value,
+      imageContextInstructions.value
+    );
+    configStore.evaluationRules = generated;
+  } catch (error) {
+    rulesErrorMessage.value =
+      error.message || "Failed to generate evaluation rules. Please try again.";
+    console.error("Error generating rules:", error);
+  } finally {
+    isGeneratingRules.value = false;
+  }
+};
+
 const handleGenerate = async () => {
   isLoading.value = true;
+  loadingStatus.value = "Starting generation...";
+  generationLogs.value = []; // Clear previous logs
+  showDetailedLogs.value = false; // Reset collapse state
   emit("update:loading", true);
   emit("update:loading-message", "Analyzing concepts with Gemini...");
 
@@ -203,13 +349,76 @@ const handleGenerate = async () => {
 
         const generationPromises = [];
         for (let i = 0; i < ar.count; i++) {
+          const imageId = `${concept.name || "Default"}: AR ${ar.ratio} (#${i + 1})`;
+
           const genPromise = (async () => {
             try {
-              const generatedBase64 = await editImageWithNanoBanana(
-                referenceImages.value,
-                imagePrompt,
-                ar.ratio
-              );
+              let currentPrompt = imagePrompt;
+              let approved = false;
+              let attempts = 0;
+              const maxRetries = configStore.enableEvaluation ? configStore.maxEvaluationRetries : 1;
+              let generatedBase64 = "";
+              let evaluationFeedback = "";
+
+              const addLog = (status, message, feedback) => {
+                generationLogs.value.push({
+                  id: imageId,
+                  attempt: attempts,
+                  status,
+                  message,
+                  feedback
+                });
+              };
+
+              while (attempts < maxRetries && !approved) {
+                attempts++;
+                if (configStore.enableEvaluation) {
+                  loadingStatus.value = `Generating images (Attempt ${attempts}/${maxRetries})...`;
+                  addLog('generating', `Generating image...`);
+                } else {
+                  loadingStatus.value = "Generating images...";
+                  addLog('generating', "Generating image...");
+                }
+
+                // Refine prompt if we have feedback
+                if (evaluationFeedback) {
+                  currentPrompt = `${imagePrompt}\n\nRefinement Feedback from previous attempt: ${evaluationFeedback}`;
+                  console.log(`[Evaluation] Refining prompt for attempt ${attempts} with feedback: ${evaluationFeedback}`);
+                }
+
+                generatedBase64 = await editImageWithNanoBanana(
+                  referenceImages.value,
+                  currentPrompt,
+                  ar.ratio
+                );
+
+                if (configStore.enableEvaluation) {
+                  addLog('evaluating', `Evaluating image...`);
+                  
+                  const evalResult = await evaluateImage(
+                    generatedBase64,
+                    currentPrompt,
+                    brandStore.guidelines,
+                    configStore.evaluationRules
+                  );
+
+                  approved = evalResult.approved;
+                  evaluationFeedback = evalResult.feedback;
+
+                  if (approved) {
+                    addLog('approved', `Image approved!`, evaluationFeedback || "Meets all guidelines.");
+                  } else {
+                    addLog('rejected', `Image rejected (Attempt ${attempts}/${maxRetries})`, evaluationFeedback);
+                  }
+                } else {
+                  approved = true; // If evaluation is disabled, we just approve it immediately
+                  addLog('approved', `Image generated successfully.`);
+                }
+              }
+
+              if (configStore.enableEvaluation && !approved) {
+                addLog('failed', `Failed to generate approved image after ${maxRetries} attempts. Using last generation.`, evaluationFeedback);
+              }
 
               const dataUrl = "data:image/png;base64," + generatedBase64;
               const gcsPath = concept.name
@@ -218,7 +427,7 @@ const handleGenerate = async () => {
               const gcsFileName = `${gcsPath}${Date.now()}_${i}_${ar.ratio.replace(":", "-")}_${Math.random().toString(36).slice(2, 7)}.png`;
               return await uploadBase64Image(gcsFileName, dataUrl);
             } catch (e) {
-              console.error("Error generating image with Nano Banana:", e);
+              console.error("Error in image generation/evaluation loop:", e);
               throw e;
             }
           })();
@@ -243,6 +452,7 @@ const handleGenerate = async () => {
     console.error("Error generating images:", error);
   } finally {
     isLoading.value = false;
+    loadingStatus.value = "";
     emit("update:loading", false);
   }
 };
@@ -319,6 +529,16 @@ const handleGenerate = async () => {
           {{ referenceImages.length }}
         </span>
       </button>
+      <button
+        @click="showBrandGuidelinesModal = true"
+        class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-gray-600 border border-[var(--color-text-dim)] self-start flex items-center gap-2 transition-colors"
+      >
+        <span class="material-symbols-outlined text-sm">menu_book</span>
+        Configure Brand Guidelines
+        <span v-if="brandStore.guidelines" class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] text-xs rounded-full px-2 py-0.5">
+          Configured
+        </span>
+      </button>
     </div>
 
     <div class="form-control max-w-xs">
@@ -330,6 +550,35 @@ const handleGenerate = async () => {
         <span class="ml-3 text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" :class="{'text-[var(--color-text-primary)]': useGemini}">Use Gemini to improve prompt</span>
       </label>
     </div>
+
+    <!-- Evaluation Rules Section -->
+    <div v-if="configStore.enableEvaluation" class="border border-gray-700 rounded-md p-4 flex flex-col gap-4 bg-gray-800/30">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-lg text-gray-200">Evaluation Rules</h3>
+        <button
+          @click="generateRules"
+          type="button"
+          class="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-1 px-3 rounded text-sm flex items-center gap-1"
+          :disabled="isGeneratingRules"
+        >
+          <span v-if="isGeneratingRules" class="loading loading-spinner loading-xs"></span>
+          {{ isGeneratingRules ? "Generating..." : "Auto-generate Rules 🪄" }}
+        </button>
+      </div>
+      <p class="text-xs text-gray-400">
+        These rules will be used by the AI Auditor to evaluate generated images. You can edit them below.
+      </p>
+      <textarea
+        v-model="configStore.evaluationRules"
+        placeholder="Click 'Auto-generate Rules' or write your own rules here..."
+        class="bg-gray-700 rounded-md p-2 w-full text-white border border-gray-600 focus:border-cyan-400 focus:outline-none"
+        rows="4"
+      ></textarea>
+      <div v-if="rulesErrorMessage" class="text-yellow-500 text-xs">
+        {{ rulesErrorMessage }}
+      </div>
+    </div>
+
     <div>
       <h3 class="font-bold text-[var(--color-text-primary)]">Number of images for each aspect ratio:</h3>
       <div class="flex gap-4 mt-2 flex-wrap">
@@ -365,13 +614,51 @@ const handleGenerate = async () => {
       </div>
     </div>
 
+    <!-- Consolidated Loading Status Box (Above the button) -->
+    <div v-if="isLoading" class="bg-gray-800/50 border border-gray-700 rounded-md p-4 flex flex-col gap-3">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-3 text-cyan-400 font-semibold">
+          <span class="loading loading-spinner loading-sm"></span>
+          <span>{{ loadingStatus || "Generating images..." }}</span>
+        </div>
+        <button
+          v-if="generationLogs.length > 0"
+          @click="showDetailedLogs = !showDetailedLogs"
+          type="button"
+          class="text-xs text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1 bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded border border-gray-600 transition-colors"
+        >
+          {{ showDetailedLogs ? "Hide Details ▴" : "Show Details ▾" }}
+        </button>
+      </div>
+
+      <!-- Detailed Logs Timeline -->
+      <div v-if="showDetailedLogs" class="mt-2 border-t border-gray-700 pt-3 max-h-60 overflow-y-auto flex flex-col gap-4 text-xs text-gray-300">
+        <div v-for="id in uniqueLogIds" :key="id" class="border border-gray-800 rounded p-2 bg-gray-900/50">
+          <h4 class="font-bold text-cyan-300 mb-2">{{ id }}</h4>
+          <div class="flex flex-col gap-2 pl-2 border-l-2 border-gray-700">
+            <div v-for="(log, idx) in getLogsForId(id)" :key="idx" class="flex flex-col gap-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span :class="getStatusColorClass(log.status)" class="font-semibold uppercase text-[9px] px-1.5 py-0.5 rounded">
+                  {{ log.status }}
+                </span>
+                <span class="text-gray-400 font-medium">Attempt {{ log.attempt }}:</span>
+                <span>{{ log.message }}</span>
+              </div>
+              <div v-if="log.feedback" class="mt-1 ml-6 p-2 bg-gray-800 rounded text-gray-400 font-mono whitespace-pre-wrap text-[10px] border border-gray-700/50 leading-relaxed">
+                <strong>Feedback:</strong> {{ log.feedback }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <button
       @click="handleGenerate"
-      class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-[var(--color-interactive-hover)] self-start transition-colors disabled:opacity-50"
+      class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-[var(--color-interactive-hover)] self-start transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       :disabled="isLoading"
     >
-      <span v-if="isLoading" class="loading loading-spinner mr-2"></span>
-      {{ isLoading ? "Generating..." : "Generate Images" }}
+      Generate Images
     </button>
     <div v-if="errorMessage" class="text-yellow-500 mt-4">
       {{ errorMessage }}
@@ -434,6 +721,152 @@ const handleGenerate = async () => {
         </div>
       </div>
     </div>
+
+    <!-- Brand Guidelines Modal -->
+    <div v-if="showBrandGuidelinesModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
+      <div class="bg-[var(--color-bg-secondary)] rounded-2xl p-6 max-w-3xl w-full flex flex-col gap-6 max-h-[90vh] overflow-y-auto border border-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] shadow-2xl">
+        
+        <div class="flex justify-between items-center border-b border-[var(--color-bg-tertiary)] pb-3">
+          <h2 class="text-xl font-bold text-[var(--color-text-primary)]">Configure Brand Guidelines</h2>
+          <button @click="showBrandGuidelinesModal = false" class="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] font-bold">✕</button>
+        </div>
+
+        <!-- Tabs selector -->
+        <div class="flex rounded-lg bg-[var(--color-bg-tertiary)] p-1">
+          <button
+            v-for="(label, key) in { upload: 'File Upload', inference: 'Website Inference' }"
+            :key="key"
+            class="flex-1 font-medium py-2 px-4 rounded-md transition-colors duration-200 text-sm"
+            :class="[
+              {
+                'bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)]': guidelinesActiveTab === key,
+                'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]': guidelinesActiveTab !== key,
+              }
+            ]"
+            @click="guidelinesActiveTab = key"
+          >
+            {{ label }}
+          </button>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="flex flex-col gap-4">
+          <!-- File Upload -->
+          <div v-if="guidelinesActiveTab === 'upload'" class="flex flex-col gap-2">
+            <label class="block text-sm font-medium text-[var(--color-text-muted)]">
+              Upload Brand Documents (PDF, DOC, Images, etc.)
+            </label>
+            <input
+              type="file"
+              @change="handleBrandFileChange"
+              class="block w-full text-sm text-[var(--color-text-muted)] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-interactive-primary)] file:text-[var(--color-text-primary)] hover:file:bg-[var(--color-interactive-hover)] cursor-pointer"
+            />
+            <div v-if="selectedBrandFiles.length > 0" class="mt-2 bg-[var(--color-bg-tertiary)] p-3 rounded-lg">
+              <p class="text-sm font-medium text-[var(--color-text-primary)]">Selected file:</p>
+              <ul class="list-disc list-inside text-sm text-[var(--color-text-muted)] mt-1">
+                <li v-for="file in selectedBrandFiles" :key="file.name">
+                  {{ file.name }} ({{ (file.size / 1024 / 1024).toFixed(2) }} MB)
+                </li>
+              </ul>
+            </div>
+            <p class="text-xs text-[var(--color-text-dim)]">
+              Select a PDF, DOC, or Image document for Gemini to analyze.
+            </p>
+          </div>
+
+          <!-- Website Inference -->
+          <div v-if="guidelinesActiveTab === 'inference'" class="flex flex-col gap-2">
+            <label class="block text-sm font-medium text-[var(--color-text-muted)]">
+              Customer Website URL
+            </label>
+            <input
+              v-model="websiteUrl"
+              type="url"
+              placeholder="https://example.com"
+              class="w-full p-2.5 rounded-md bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none text-sm"
+            />
+            <p class="text-xs text-[var(--color-text-dim)]">
+              Provide a URL and let Gemini infer the brand identity from the public website content.
+            </p>
+          </div>
+
+          <!-- Extract Button -->
+          <div class="flex justify-end">
+            <button
+              @click="processGuidelines"
+              :disabled="isProcessingGuidelines"
+              class="bg-[var(--color-interactive-primary)] hover:bg-[var(--color-interactive-hover)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md transition-colors duration-200 disabled:opacity-50 text-sm flex items-center gap-2"
+            >
+              <span v-if="isProcessingGuidelines" class="loading loading-spinner loading-xs"></span>
+              {{ isProcessingGuidelines ? "Processing with Gemini..." : "Process with Gemini" }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Resulting guidelines text block -->
+        <div class="flex flex-col gap-3 border-t border-[var(--color-bg-tertiary)] pt-4">
+          <div class="flex justify-between items-center">
+            <h3 class="text-base font-bold text-[var(--color-text-primary)]">Resulting Brand Guidelines</h3>
+            <button
+              @click="handleSaveGuidelines"
+              class="bg-[var(--color-interactive-primary)] hover:bg-[var(--color-interactive-hover)] text-[var(--color-text-primary)] font-bold py-1.5 px-4 rounded-md text-xs transition-colors"
+            >
+              Save Guidelines
+            </button>
+          </div>
+
+          <!-- Empty state -->
+          <div v-if="!guidelinesText" class="flex flex-col items-center justify-center p-10 bg-[var(--color-bg-tertiary)]/30 rounded-lg border border-dashed border-[var(--color-text-dim)] text-center">
+            <span class="material-symbols-outlined text-3xl text-[var(--color-text-muted)] mb-2">menu_book</span>
+            <h4 class="text-sm font-bold text-[var(--color-text-primary)] mb-1">No Brand Guidelines Yet</h4>
+            <p class="text-[var(--color-text-muted)] text-xs max-w-sm">
+              Upload brand documents or provide a website URL, then click "Process with Gemini" to generate.
+            </p>
+          </div>
+
+          <!-- Text area editor -->
+          <textarea
+            v-else
+            v-model="guidelinesText"
+            rows="8"
+            class="w-full p-3 rounded-md bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none text-xs leading-relaxed"
+            placeholder="The inferred brand guidelines will appear here..."
+          ></textarea>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="flex justify-end gap-3 border-t border-[var(--color-bg-tertiary)] pt-4 mt-auto">
+          <button
+            @click="showBrandGuidelinesModal = false"
+            class="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-md font-bold text-sm transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guidelines Notification Toast -->
+    <div v-if="brandNotification.show" class="fixed top-4 right-4 z-50 max-w-sm w-full">
+      <div :class="[
+        'p-4 rounded-lg shadow-lg text-white font-medium flex items-center justify-between',
+        brandNotification.type === 'success' ? 'bg-green-600' : '',
+        brandNotification.type === 'error' ? 'bg-red-600' : '',
+        brandNotification.type === 'info' ? 'bg-blue-600' : '',
+        brandNotification.type === 'warning' ? 'bg-yellow-600' : '',
+      ]">
+        <span>{{ brandNotification.message }}</span>
+        <button @click="brandNotification.show = false" class="ml-4 text-white/80 hover:text-white">&times;</button>
+      </div>
+    </div>
+
+    <!-- Fullscreen extraction spinner overlay -->
+    <LoadingSpinner
+      v-if="isProcessingGuidelines"
+      fullscreen
+      title="Extracting Brand Essence"
+      message="Gemini is analyzing the data and distilling guidelines. This takes a moment to ensure quality..."
+    />
   </div>
 </template>
 

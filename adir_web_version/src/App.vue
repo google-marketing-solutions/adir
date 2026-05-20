@@ -26,6 +26,7 @@ const closeSettings = () => {
     <PMaxCampaignSelector
       v-if="authStore.isAuthenticated"
       class="campaign-selector"
+      :class="{ 'opacity-50 pointer-events-none': route.name === 'BrandGuidelines' }"
     />
     <div class="main-container">
       <AppSidebar v-if="authStore.isAuthenticated" />
