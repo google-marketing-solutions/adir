@@ -181,31 +181,30 @@ const handleGenerate = async () => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-6">
     <button
       @click="showPrompt = !showPrompt"
-      class="text-left text-cyan-400 hover:text-cyan-500 font-bold text-lg border border-cyan-400 rounded-md p-2"
+      class="text-left text-[var(--color-interactive-primary)] hover:text-[var(--color-interactive-hover)] font-bold text-lg border border-[var(--color-interactive-primary)] rounded-md p-2 transition-colors"
     >
-      {{ showPrompt ? "Hide" : "Click here to Show/Edit the" }} Search Signal
-      Keywords Prompt
+      {{ showPrompt ? "Hide" : "Click here to Show/Edit the" }} Search Signal Keywords Prompt
     </button>
     <div class="relative" v-if="showPrompt">
       <textarea
         v-model="prompt"
         placeholder="e.g., A futuristic car driving through a neon-lit city..."
-        class="bg-gray-700 rounded-md p-2 w-full custom-placeholder"
-        rows="3"
+        class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-3 w-full border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none"
+        rows="5"
       ></textarea>
     </div>
 
     <div>
-      <h3 class="font-bold">Number of images for each aspect ratio:</h3>
+      <h3 class="font-bold text-[var(--color-text-primary)]">Number of images for each aspect ratio:</h3>
       <div class="flex gap-4 mt-2 flex-wrap">
         <div v-for="ar in aspectRatios" :key="ar.ratio" class="form-control">
           <label class="label">
-            <span class="label-text">{{ ar.label }}</span>
+            <span class="label-text text-[var(--color-text-muted)]">{{ ar.label }}</span>
           </label>
-          <select v-model.number="ar.count" class="bg-gray-700 rounded-md p-2">
+          <select v-model.number="ar.count" class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-2 border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none">
             <option v-for="i in 5" :key="i - 1" :value="i - 1">
               {{ i - 1 }}
             </option>
@@ -235,15 +234,16 @@ const handleGenerate = async () => {
 
     <button
       @click="handleGenerate"
-      class="bg-cyan-600 text-white font-bold py-2 px-6 rounded-md hover:bg-cyan-700"
+      class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-[var(--color-interactive-hover)] self-start transition-colors disabled:opacity-50"
       :disabled="isLoading"
     >
-      <span v-if="isLoading" class="loading loading-spinner"></span>
-    <div v-if="errorMessage" class="text-yellow-500 mt-4">
-      {{ errorMessage }}
-    </div>
+      <span v-if="isLoading" class="loading loading-spinner mr-2"></span>
       {{ isLoading ? "Generating..." : "Generate Images" }}
     </button>
+    
+    <div v-if="errorMessage" class="text-[var(--color-status-error)] mt-4">
+      {{ errorMessage }}
+    </div>
   </div>
 </template>
 

@@ -248,90 +248,95 @@ const handleGenerate = async () => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-6">
     <button
       @click="showPrompt = !showPrompt"
-      class="text-left text-cyan-400 hover:text-cyan-500 font-bold text-lg border border-cyan-400 rounded-md p-2"
+      class="text-left text-[var(--color-interactive-primary)] hover:text-[var(--color-interactive-hover)] font-bold text-lg border border-[var(--color-interactive-primary)] rounded-md p-2 transition-colors"
     >
-      {{ showPrompt ? "Hide" : "Click here to Show/Edit the" }} Creative Concepts
-      Prompt
+      {{ showPrompt ? "Hide" : "Click here to Show/Edit the" }} Creative Concepts Prompt
     </button>
     <textarea
       v-if="showPrompt"
       v-model="prompt"
       placeholder="The default prompt is set. Add your creative vision description here."
-      class="bg-gray-700 rounded-md p-2 w-full"
-      rows="3"
+      class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-3 w-full border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none"
+      rows="5"
     ></textarea>
 
     <div class="form-control">
       <label class="label">
-        <span class="label-text font-bold"
+        <span class="label-text font-bold text-[var(--color-text-primary)]"
           >Add your creative concepts here. Creative concepts will be added at
           the end of the prompt</span
         >
       </label>
     </div>
-    <div
-      v-for="(concept, index) in creativeConcepts"
-      :key="index"
-      class="flex gap-4 items-center"
-    >
-      <button
-        @click="removeCreativeConcept(index)"
-        class="text-red-500 hover:text-red-700 font-bold w-6"
-        :disabled="index === 0"
-        :class="{ 'opacity-0 cursor-default': index === 0 }"
+    
+    <div class="flex flex-col gap-4">
+      <div
+        v-for="(concept, index) in creativeConcepts"
+        :key="index"
+        class="flex gap-4 items-center bg-[var(--color-bg-secondary)] p-4 rounded-lg border border-[var(--color-bg-tertiary)]"
       >
-        X
-      </button>
-      <input
-        v-model="concept.name"
-        placeholder="Creative Concept Name"
-        class="bg-gray-700 rounded-md p-2 w-1/2"
-      />
-      <textarea
-        v-model="concept.description"
-        @paste="handlePaste($event, index)"
-        placeholder="Creative Concept Description"
-        class="bg-gray-700 rounded-md p-2 w-1/2"
-        rows="1"
-      ></textarea>
+        <button
+          @click="removeCreativeConcept(index)"
+          class="text-[var(--color-status-error)] hover:text-red-700 font-bold w-6 disabled:opacity-50"
+          :disabled="index === 0"
+          :class="{ 'opacity-0 cursor-default': index === 0 }"
+        >
+          ✕
+        </button>
+        <input
+          v-model="concept.name"
+          placeholder="Creative Concept Name"
+          class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-2 w-1/3 border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none"
+        />
+        <textarea
+          v-model="concept.description"
+          @paste="handlePaste($event, index)"
+          placeholder="Creative Concept Description"
+          class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-2 w-2/3 border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none"
+          rows="1"
+        ></textarea>
+      </div>
     </div>
 
     <div class="flex gap-4">
       <button
         @click="addCreativeConcept"
-        class="bg-cyan-600 text-white font-bold py-2 px-6 rounded-md hover:bg-cyan-700 self-start"
+        class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-[var(--color-interactive-hover)] self-start transition-colors"
       >
         + Add Creative Concept
       </button>
       <button
         @click="showImageModal = true"
-        class="bg-gray-700 text-white font-bold py-2 px-6 rounded-md hover:bg-gray-600 border border-gray-600 self-start flex items-center gap-2"
+        class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-gray-600 border border-[var(--color-text-dim)] self-start flex items-center gap-2 transition-colors"
       >
         <span class="material-symbols-outlined text-sm">image</span>
         Configure Reference Images
-        <span v-if="referenceImages.length > 0" class="bg-cyan-600 text-white text-xs rounded-full px-2 py-0.5">
+        <span v-if="referenceImages.length > 0" class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] text-xs rounded-full px-2 py-0.5">
           {{ referenceImages.length }}
         </span>
       </button>
     </div>
 
-    <div class="form-control">
-      <label class="label cursor-pointer">
-        <span class="label-text">Use Gemini to improve prompt</span>
-        <input type="checkbox" v-model="useGemini" class="checkbox" />
+    <div class="form-control max-w-xs">
+      <label class="flex items-center cursor-pointer group">
+        <div class="relative">
+          <input type="checkbox" v-model="useGemini" class="sr-only peer" />
+          <div class="w-11 h-6 bg-[var(--color-bg-tertiary)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--color-interactive-focus)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-interactive-primary)]"></div>
+        </div>
+        <span class="ml-3 text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" :class="{'text-[var(--color-text-primary)]': useGemini}">Use Gemini to improve prompt</span>
       </label>
     </div>
     <div>
-      <h3 class="font-bold">Number of images for each aspect ratio:</h3>
+      <h3 class="font-bold text-[var(--color-text-primary)]">Number of images for each aspect ratio:</h3>
       <div class="flex gap-4 mt-2 flex-wrap">
         <div v-for="ar in aspectRatios" :key="ar.ratio" class="form-control">
           <label class="label">
-            <span class="label-text">{{ ar.label }}</span>
+            <span class="label-text text-[var(--color-text-muted)]">{{ ar.label }}</span>
           </label>
-          <select v-model.number="ar.count" class="bg-gray-700 rounded-md p-2">
+          <select v-model.number="ar.count" class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-2 border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none">
             <option v-for="i in 5" :key="i - 1" :value="i - 1">
               {{ i - 1 }}
             </option>
@@ -361,10 +366,10 @@ const handleGenerate = async () => {
 
     <button
       @click="handleGenerate"
-      class="bg-cyan-600 text-white font-bold py-2 px-6 rounded-md hover:bg-cyan-700"
+      class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-[var(--color-interactive-hover)] self-start transition-colors disabled:opacity-50"
       :disabled="isLoading"
     >
-      <span v-if="isLoading" class="loading loading-spinner"></span>
+      <span v-if="isLoading" class="loading loading-spinner mr-2"></span>
       {{ isLoading ? "Generating..." : "Generate Images" }}
     </button>
     <div v-if="errorMessage" class="text-yellow-500 mt-4">
@@ -373,22 +378,22 @@ const handleGenerate = async () => {
 
     <!-- Reference Images Modal -->
     <div v-if="showImageModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
-      <div class="bg-gray-900 rounded-lg p-6 max-w-2xl w-full flex flex-col gap-4 max-h-[90vh] overflow-y-auto border border-gray-700 text-white">
-        <h2 class="text-xl font-bold">Configure Reference Images</h2>
-
+      <div class="bg-[var(--color-bg-secondary)] rounded-2xl p-6 max-w-2xl w-full flex flex-col gap-4 max-h-[90vh] overflow-y-auto border border-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] shadow-2xl">
+        <h2 class="text-xl font-bold text-[var(--color-text-primary)]">Configure Reference Images</h2>
+        
         <!-- Upload Zone -->
         <div
           @dragover.prevent
           @drop.prevent="handleDrop"
           @click="$refs.fileInput.click()"
-          class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:border-cyan-400 transition-colors bg-gray-800/50"
+          class="border-2 border-dashed border-[var(--color-text-dim)] rounded-lg p-8 text-center cursor-pointer hover:border-[var(--color-interactive-primary)] transition-colors bg-[var(--color-bg-tertiary)]/50"
         >
-          <p class="text-gray-400">Drag & drop images here or click to browse</p>
-          <input
-            type="file"
-            ref="fileInput"
-            multiple
-            accept="image/*"
+          <p class="text-[var(--color-text-muted)]">Drag & drop images here or click to browse</p>
+          <input 
+            type="file" 
+            ref="fileInput" 
+            multiple 
+            accept="image/*" 
             class="hidden"
             @change="handleFileSelect"
           />

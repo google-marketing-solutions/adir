@@ -311,16 +311,14 @@ const handleGenerate = async () => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-6">
     <div class="form-control">
       <label class="label">
-        <span class="label-text text-lg font-bold"
-          >Number of top performing images to use</span
-        >
+        <span class="label-text text-lg font-bold text-[var(--color-text-primary)]">Number of top performing images to use</span>
       </label>
       <select
         v-model.number="numTopImages"
-        class="bg-gray-700 rounded-md p-2 w-full max-w-xs"
+        class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-2 w-full max-w-xs border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none"
       >
         <option v-for="i in 14" :key="i" :value="i">
           {{ i }}
@@ -330,11 +328,11 @@ const handleGenerate = async () => {
 
     <div class="form-control">
       <label class="label">
-        <span class="label-text text-lg font-bold">Prioritize images by</span>
+        <span class="label-text text-lg font-bold text-[var(--color-text-primary)]">Prioritize images by</span>
       </label>
       <select
         v-model="selectedMetric"
-        class="bg-gray-700 rounded-md p-2 w-full max-w-xs"
+        class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-2 w-full max-w-xs border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none"
       >
         <option
           v-for="metric in metricsOptions"
@@ -345,33 +343,30 @@ const handleGenerate = async () => {
         </option>
       </select>
       <label class="label">
-        <span class="label-text-alt text-gray-400"
-          >If the chosen metric is unavailable for an ad group, images will be
-          selected randomly.</span
-        >
+        <span class="label-text-alt text-[var(--color-text-muted)]">If the chosen metric is unavailable for an ad group, images will be selected randomly.</span>
       </label>
     </div>
 
     <div class="relative">
       <label class="label">
-        <span class="label-text text-lg font-bold">Prompt for Nano Banana</span>
+        <span class="label-text text-lg font-bold text-[var(--color-text-primary)]">Prompt for Nano Banana</span>
       </label>
       <textarea
         v-model="prompt"
         placeholder="Enter your prompt for image generation..."
-        class="bg-gray-700 rounded-md p-2 w-full custom-placeholder"
+        class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-3 w-full custom-placeholder border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none"
         rows="3"
       ></textarea>
     </div>
 
     <div>
-      <h3 class="font-bold">Number of images for each aspect ratio:</h3>
+      <h3 class="font-bold text-[var(--color-text-primary)]">Number of images for each aspect ratio:</h3>
       <div class="flex gap-4 mt-2 flex-wrap">
         <div v-for="ar in aspectRatios" :key="ar.ratio" class="form-control">
           <label class="label">
-            <span class="label-text">{{ ar.label }}</span>
+            <span class="label-text text-[var(--color-text-muted)]">{{ ar.label }}</span>
           </label>
-          <select v-model.number="ar.count" class="bg-gray-700 rounded-md p-2">
+          <select v-model.number="ar.count" class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-2 border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none">
             <option v-for="i in 5" :key="i - 1" :value="i - 1">
               {{ i - 1 }}
             </option>
@@ -401,16 +396,16 @@ const handleGenerate = async () => {
 
     <button
       @click="handleGenerate"
-      class="bg-cyan-600 text-white font-bold py-2 px-6 rounded-md hover:bg-cyan-700"
+      class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-[var(--color-interactive-hover)] self-start transition-colors disabled:opacity-50"
       :disabled="isLoading"
     >
-      <span v-if="isLoading" class="loading loading-spinner"></span>
+      <span v-if="isLoading" class="loading loading-spinner mr-2"></span>
       {{ isLoading ? "Generating..." : "Generate Images" }}
     </button>
 
     <div
       v-if="warnings.length > 0"
-      class="bg-yellow-900/50 border border-yellow-600 text-yellow-200 p-3 rounded-md mt-2"
+      class="bg-[var(--color-status-warning)]/10 border border-[var(--color-status-warning)] text-[var(--color-status-warning)] p-4 rounded-lg mt-2"
     >
       <p class="font-bold mb-1">Warnings:</p>
       <ul class="list-disc list-inside text-sm">
@@ -418,15 +413,15 @@ const handleGenerate = async () => {
       </ul>
     </div>
 
-    <div v-if="errorMessage" class="text-red-500 mt-4 font-bold">
+    <div v-if="errorMessage" class="text-[var(--color-status-error)] mt-4 font-bold">
       {{ errorMessage }}
     </div>
 
     <div
       v-if="debugInfo"
-      class="mt-4 p-2 bg-gray-800 text-xs text-gray-400 rounded"
+      class="mt-4 p-3 bg-[var(--color-bg-secondary)] text-xs text-[var(--color-text-muted)] rounded-lg border border-[var(--color-bg-tertiary)]"
     >
-      Debug Info: {{ debugInfo }}
+      <span class="font-bold text-[var(--color-text-primary)]">Debug Info:</span> {{ debugInfo }}
     </div>
   </div>
 </template>
