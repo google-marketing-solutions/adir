@@ -23,15 +23,34 @@ const props = defineProps({
 });
 
 const prompt = ref(
-  "Create an image suited for a pMax or Demand Gen campaign for the same campaign as the referenced images, that will be part of a black friday themed campaign."
+  `Crop or outpaint the provided image to the requested aspect ratio.
+RESTRICTION: DO NOT modify, rotate, reposition, or alter any existing objects, people, or text in the original image. The original content must remain exactly as it is.
+ACTION: Extend the image PURELY with environmental background (e.g., sky, walls, floors, empty space) to fill the new aspect ratio. Maintain the same style, lighting, and tone.
+CRITICAL: NO NEW ADDITIONS. Do not add any new icons, symbols, writing, or objects. The new areas must be completely empty.`
 );
 const numTopImages = ref(5);
 const selectedMetric = ref("ctr");
-const aspectRatios = ref([
-  { label: "Square (1:1)", ratio: "1:1", count: 1 },
-  { label: "Portrait (9:16)", ratio: "9:16", count: 0 },
-  { label: "Landscape (16:9)", ratio: "16:9", count: 0 },
-]);
+const aspectRatios = computed(() => configStore.aspectRatios);
+
+const availableToSelectRatios = computed(() => {
+  return configStore.allAllowedAspectRatios.filter(
+    (allowed) => !aspectRatios.value.some((selected) => selected.ratio === allowed.ratio)
+  );
+});
+
+const selectedAllowedRatio = ref("");
+
+const addNewRatio = () => {
+  if (selectedAllowedRatio.value) {
+    const ratioObj = configStore.allAllowedAspectRatios.find(
+      (r) => r.ratio === selectedAllowedRatio.value
+    );
+    if (ratioObj) {
+      configStore.addAspectRatio(ratioObj.label, ratioObj.ratio);
+      selectedAllowedRatio.value = "";
+    }
+  }
+};
 
 const metricsOptions = [
   { label: "CTR", value: "ctr" },
@@ -258,7 +277,8 @@ const handleGenerate = async () => {
 
         const generatedBase64 = await editImageWithNanoBanana(
           base64Images,
-          job.prompt
+          job.prompt,
+          job.aspectRatio
         );
         const dataUrl = "data:image/png;base64," + generatedBase64;
         return uploadBase64Image(job.gcsPath, dataUrl);
@@ -291,16 +311,14 @@ const handleGenerate = async () => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-6">
     <div class="form-control">
       <label class="label">
-        <span class="label-text text-lg font-bold"
-          >Number of top performing images to use</span
-        >
+        <span class="label-text text-lg font-bold text-[var(--color-text-primary)]">Number of top performing images to use</span>
       </label>
       <select
         v-model.number="numTopImages"
-        class="bg-gray-700 rounded-md p-2 w-full max-w-xs"
+        class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-2 w-full max-w-xs border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none"
       >
         <option v-for="i in 14" :key="i" :value="i">
           {{ i }}
@@ -310,11 +328,11 @@ const handleGenerate = async () => {
 
     <div class="form-control">
       <label class="label">
-        <span class="label-text text-lg font-bold">Prioritize images by</span>
+        <span class="label-text text-lg font-bold text-[var(--color-text-primary)]">Prioritize images by</span>
       </label>
       <select
         v-model="selectedMetric"
-        class="bg-gray-700 rounded-md p-2 w-full max-w-xs"
+        class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-2 w-full max-w-xs border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none"
       >
         <option
           v-for="metric in metricsOptions"
@@ -325,53 +343,69 @@ const handleGenerate = async () => {
         </option>
       </select>
       <label class="label">
-        <span class="label-text-alt text-gray-400"
-          >If the chosen metric is unavailable for an ad group, images will be
-          selected randomly.</span
-        >
+        <span class="label-text-alt text-[var(--color-text-muted)]">If the chosen metric is unavailable for an ad group, images will be selected randomly.</span>
       </label>
     </div>
 
     <div class="relative">
       <label class="label">
-        <span class="label-text text-lg font-bold">Prompt for Nano Banana</span>
+        <span class="label-text text-lg font-bold text-[var(--color-text-primary)]">Prompt for Nano Banana</span>
       </label>
       <textarea
         v-model="prompt"
         placeholder="Enter your prompt for image generation..."
-        class="bg-gray-700 rounded-md p-2 w-full custom-placeholder"
+        class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-3 w-full custom-placeholder border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none"
         rows="3"
       ></textarea>
     </div>
 
     <div>
-      <h3 class="font-bold">Number of images for each aspect ratio:</h3>
-      <div class="flex gap-4 mt-2">
+      <h3 class="font-bold text-[var(--color-text-primary)]">Number of images for each aspect ratio:</h3>
+      <div class="flex gap-4 mt-2 flex-wrap">
         <div v-for="ar in aspectRatios" :key="ar.ratio" class="form-control">
           <label class="label">
-            <span class="label-text">{{ ar.label }}</span>
+            <span class="label-text text-[var(--color-text-muted)]">{{ ar.label }}</span>
           </label>
-          <select v-model.number="ar.count" class="bg-gray-700 rounded-md p-2">
+          <select v-model.number="ar.count" class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-2 border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none">
             <option v-for="i in 5" :key="i - 1" :value="i - 1">
               {{ i - 1 }}
             </option>
           </select>
         </div>
       </div>
+      
+      <!-- Add Custom Ratio Form -->
+      <div class="flex gap-2 mt-4 items-end border-t border-gray-700 pt-4">
+        <div class="form-control">
+          <label class="label"><span class="label-text text-xs">Add Aspect Ratio</span></label>
+          <select v-model="selectedAllowedRatio" class="bg-gray-700 rounded-md p-2 text-sm w-48">
+            <option value="" disabled>Select ratio...</option>
+            <option v-for="r in availableToSelectRatios" :key="r.ratio" :value="r.ratio">
+              {{ r.label }}
+            </option>
+          </select>
+        </div>
+        <button @click="addNewRatio" class="bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700 text-sm h-10">
+          Add
+        </button>
+        <button @click="configStore.resetAspectRatios" class="bg-red-600 text-white font-bold py-2 px-4 rounded-md hover:bg-red-700 text-sm h-10">
+          Reset
+        </button>
+      </div>
     </div>
 
     <button
       @click="handleGenerate"
-      class="bg-cyan-600 text-white font-bold py-2 px-6 rounded-md hover:bg-cyan-700"
+      class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-[var(--color-interactive-hover)] self-start transition-colors disabled:opacity-50"
       :disabled="isLoading"
     >
-      <span v-if="isLoading" class="loading loading-spinner"></span>
+      <span v-if="isLoading" class="loading loading-spinner mr-2"></span>
       {{ isLoading ? "Generating..." : "Generate Images" }}
     </button>
 
     <div
       v-if="warnings.length > 0"
-      class="bg-yellow-900/50 border border-yellow-600 text-yellow-200 p-3 rounded-md mt-2"
+      class="bg-[var(--color-status-warning)]/10 border border-[var(--color-status-warning)] text-[var(--color-status-warning)] p-4 rounded-lg mt-2"
     >
       <p class="font-bold mb-1">Warnings:</p>
       <ul class="list-disc list-inside text-sm">
@@ -379,15 +413,15 @@ const handleGenerate = async () => {
       </ul>
     </div>
 
-    <div v-if="errorMessage" class="text-red-500 mt-4 font-bold">
+    <div v-if="errorMessage" class="text-[var(--color-status-error)] mt-4 font-bold">
       {{ errorMessage }}
     </div>
 
     <div
       v-if="debugInfo"
-      class="mt-4 p-2 bg-gray-800 text-xs text-gray-400 rounded"
+      class="mt-4 p-3 bg-[var(--color-bg-secondary)] text-xs text-[var(--color-text-muted)] rounded-lg border border-[var(--color-bg-tertiary)]"
     >
-      Debug Info: {{ debugInfo }}
+      <span class="font-bold text-[var(--color-text-primary)]">Debug Info:</span> {{ debugInfo }}
     </div>
   </div>
 </template>

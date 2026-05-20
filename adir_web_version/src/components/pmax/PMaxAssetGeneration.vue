@@ -4,6 +4,7 @@ import { useBrandStore } from "@/stores/brandStore";
 import { useCampaignStore } from "@/stores/campaignStore";
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import LoadingSpinner from "@/components/LoadingSpinner.vue";
 import AssetGroupNameMode from "./generation/AssetGroupNameMode.vue";
 import CreativeConceptsMode from "./generation/CreativeConceptsMode.vue";
 import ExistingAssetsMode from "./generation/ExistingAssetsMode.vue";
@@ -41,28 +42,25 @@ const handleGenerationComplete = (imageUrls) => {
 
 <template>
   <div>
-    <h2 class="text-2xl font-bold mb-4">Image Generation</h2>
-    <div class="bg-gray-800 p-8 rounded-lg">
+    <h1 class="mb-6">Image Generation</h1>
+    <div class="bg-[var(--color-bg-secondary)] p-6 rounded-xl mb-6 border border-[var(--color-bg-tertiary)]">
       <div class="mb-6 flex justify-between items-end">
         <div>
           <label class="label mb-2">
-            <span class="label-text text-lg font-bold text-gray-200"
-              >Generation Mode</span
-            >
+            <span class="label-text text-lg font-bold text-[var(--color-text-primary)]">Generation Mode</span>
           </label>
-          <div class="flex rounded-lg bg-gray-700 p-1">
+          <div class="flex rounded-lg bg-[var(--color-bg-tertiary)] p-1">
             <button
               v-for="(name, index) in Object.keys(modes)"
               :key="name"
-              class="btn flex-1 font-bold"
+              class="btn flex-1 font-medium py-2 px-4 rounded-md transition-colors duration-200 text-sm"
               :class="[
                 {
-                  'bg-blue-600 text-white': activeMode === name,
-                  'bg-gray-700 text-gray-300 hover:bg-gray-600':
-                    activeMode !== name,
+                  'bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)]': activeMode === name,
+                  'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]': activeMode !== name,
                 },
                 index < Object.keys(modes).length - 1
-                  ? 'border-r border-gray-500'
+                  ? 'border-r border-[var(--color-text-dim)]'
                   : '',
               ]"
               @click="activeMode = name"
@@ -75,16 +73,16 @@ const handleGenerationComplete = (imageUrls) => {
           <label class="flex items-center cursor-pointer group">
             <div class="relative">
               <input type="checkbox" v-model="showPausedAssetGroups" class="sr-only peer" />
-              <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              <div class="w-11 h-6 bg-[var(--color-bg-tertiary)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--color-interactive-focus)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-interactive-primary)]"></div>
             </div>
-            <span class="ml-3 text-sm font-medium text-gray-300 group-hover:text-white transition-colors">Use Paused Asset Groups</span>
+            <span class="ml-3 text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" :class="{'text-[var(--color-text-primary)]': showPausedAssetGroups}">Use Paused Asset Groups</span>
           </label>
           <label class="flex items-center cursor-pointer group">
             <div class="relative">
               <input type="checkbox" v-model="brandStore.useGuidelinesInGeneration" class="sr-only peer" />
-              <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-indigo-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+              <div class="w-11 h-6 bg-[var(--color-bg-tertiary)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--color-interactive-focus)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-interactive-primary)]"></div>
             </div>
-            <span class="ml-3 text-sm font-medium text-gray-300 group-hover:text-white transition-colors">Use Brand Guidelines</span>
+            <span class="ml-3 text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" :class="{'text-[var(--color-text-primary)]': brandStore.useGuidelinesInGeneration}">Use Brand Guidelines</span>
           </label>
         </div>
       </div>
@@ -100,13 +98,14 @@ const handleGenerationComplete = (imageUrls) => {
           @update:loading="isLoading = $event"
         />
         <div v-else>
-          <p>This mode is not yet implemented.</p>
+          <p class="text-[var(--color-text-muted)]">This mode is not yet implemented.</p>
         </div>
       </div>
 
-      <div v-if="isLoading && activeMode !== 'Creative Concepts'" class="flex justify-center items-center mt-4">
-        <span class="loading loading-spinner loading-lg"></span>
-        <p class="ml-4">Generating images...</p>
+      <div v-if="isLoading && activeMode !== 'Creative Concepts'" class="mt-6 p-4 bg-[var(--color-bg-tertiary)] rounded-lg">
+        <LoadingSpinner
+          message="Generating images with Gemini..."
+        />
       </div>
     </div>
   </div>

@@ -438,20 +438,18 @@ async function confirmRemoval() {
       @confirm="confirmRemoval"
     />
     <div v-if="removalStep === 1">
-      <h2 class="text-2xl font-bold mb-4">
-        Pull Low-Performing PMax & Demand Gen Assets
-      </h2>
-      <div class="bg-gray-800 p-8 rounded-lg">
+      <h1 class="mb-6">Pull Low-Performing PMax \u0026 Demand Gen Assets</h1>
+      <div class="bg-[var(--color-bg-secondary)] p-6 rounded-xl mb-6 border border-[var(--color-bg-tertiary)]">
         <p class="text-gray-400 mb-6">
           Define the performance threshold to identify assets for removal. Add
           multiple conditions using "AND" or "OR".
         </p>
         <div
-          class="bg-yellow-900 border-l-4 border-yellow-500 text-yellow-100 p-4 mb-6"
+          class="bg-[var(--color-status-warning)]/10 border-l-4 border-[var(--color-status-warning)] p-4 mb-6 rounded-r-lg"
           role="alert"
         >
-          <p class="font-bold">API Limitation Notice</p>
-          <p>
+          <p class="font-bold text-[var(--color-status-warning)]">API Limitation Notice</p>
+          <p class="text-[var(--color-text-primary)]">
             Note: Demand Gen ad creatives cannot be modified or removed
             programmatically due to a Google Ads API limitation.
           </p>
@@ -461,7 +459,7 @@ async function confirmRemoval() {
             <div class="condition-row flex items-center gap-2 mb-2">
               <select
                 v-model="condition.metric"
-                class="bg-gray-700 rounded-md p-2"
+                class="bg-[var(--color-bg-tertiary)] rounded-md p-2"
               >
                 <option>CTR</option>
                 <option>Clicks</option>
@@ -475,7 +473,7 @@ async function confirmRemoval() {
               </select>
               <select
                 v-model="condition.operator"
-                class="bg-gray-700 rounded-md p-2"
+                class="bg-[var(--color-bg-tertiary)] rounded-md p-2"
               >
                 <option><</option>
                 <option>></option>
@@ -487,7 +485,7 @@ async function confirmRemoval() {
                 v-model.number="condition.value"
                 type="number"
                 placeholder="e.g., 0.5"
-                class="bg-gray-700 rounded-md p-2"
+                class="bg-[var(--color-bg-tertiary)] rounded-md p-2"
               />
               <button
                 @click="removeCondition(index)"
@@ -503,7 +501,7 @@ async function confirmRemoval() {
             >
               <select
                 v-model="condition.logicalOperator"
-                class="bg-gray-700 text-cyan-400 rounded-md p-1"
+                class="bg-[var(--color-bg-tertiary)] text-cyan-400 rounded-md p-1"
               >
                 <option>AND</option>
                 <option>OR</option>
@@ -527,7 +525,7 @@ async function confirmRemoval() {
           <select
             id="dateRange"
             v-model="dateRange"
-            class="bg-gray-700 rounded-md p-2"
+            class="bg-[var(--color-bg-tertiary)] rounded-md p-2"
           >
             <option value="LAST_7_DAYS">Last 7 Days</option>
             <option value="LAST_14_DAYS">Last 14 Days</option>
@@ -555,11 +553,11 @@ async function confirmRemoval() {
           removed from their respective campaigns.
         </p>
         <div
-          class="bg-yellow-900 border-l-4 border-yellow-500 text-yellow-100 p-4 mb-6"
+          class="bg-[var(--color-status-warning)]/10 border-l-4 border-[var(--color-status-warning)] p-4 mb-6 rounded-r-lg"
           role="alert"
         >
-          <p class="font-bold">API Limitation Notice</p>
-          <p>
+          <p class="font-bold text-[var(--color-status-warning)]">API Limitation Notice</p>
+          <p class="text-[var(--color-text-primary)]">
             Note: Demand Gen ad creatives cannot be modified or removed
             programmatically due to a Google Ads API limitation.
           </p>
@@ -575,7 +573,7 @@ async function confirmRemoval() {
           </div>
           <button
             @click.prevent="removalStep = 1"
-            class="bg-gray-600 text-white font-bold py-2 px-6 rounded-md hover:bg-gray-700"
+            class="bg-gray-600 text-white font-bold py-2 px-6 rounded-md hover:bg-[var(--color-bg-tertiary)]"
           >
             Back
           </button>
@@ -593,8 +591,8 @@ async function confirmRemoval() {
             Generate New Assets
           </button>
         </div>
-        <div class="filter-bar mb-6 p-4 bg-gray-800 rounded-lg">
-          <span class="mr-4 font-semibold">Filter by format:</span>
+        <div class="filter-bar mb-6 p-4 bg-[var(--color-bg-secondary)] rounded-lg border border-[var(--color-bg-tertiary)]">
+          <span class="text-caption mr-4">Filter by format:</span>
           <label
             v-for="format in assetFormats"
             :key="format"
@@ -615,7 +613,7 @@ async function confirmRemoval() {
           <div
             v-for="campaign in groupedAssets"
             :key="campaign.name"
-            class="bg-gray-700 rounded-lg p-6"
+            class="bg-[var(--color-bg-tertiary)] rounded-lg p-6"
           >
             <h3 class="text-xl font-semibold text-white mb-4">
               <input
@@ -873,7 +871,7 @@ async function confirmRemoval() {
         <ScrollToTopButton />
       </div>
       <div v-else>
-        <div class="bg-gray-800 p-8 rounded-lg text-center">
+        <div class="bg-[var(--color-bg-secondary)] p-8 rounded-lg text-center">
           <h2 class="text-2xl font-bold mb-4">No Assets Found</h2>
           <p class="text-gray-400">
             There are 0 images with the selected rules. Please go back and

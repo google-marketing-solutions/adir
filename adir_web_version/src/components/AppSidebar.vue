@@ -5,14 +5,14 @@ const route = useRoute();
 </script>
 
 <template>
-  <aside class="w-64 bg-gray-800 p-4 h-screen">
+  <aside class="w-64 bg-[var(--color-bg-secondary)] p-4 h-screen">
     <nav>
       <router-link
         to="/asset-removal"
-        class="block py-2 px-3 rounded-md font-bold transition-colors duration-300"
+        class="block py-2 px-3 rounded-md font-medium transition-colors duration-300 text-sm"
         :class="{
-          'bg-gray-700 text-blue-300': route.name === 'AssetRemoval',
-          'text-gray-400 hover:bg-gray-600 hover:text-white':
+          'bg-[var(--color-bg-tertiary)] text-[var(--color-interactive-primary)]': route.name === 'AssetRemoval',
+          'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]':
             route.name !== 'AssetRemoval',
         }"
       >
@@ -20,10 +20,10 @@ const route = useRoute();
       </router-link>
       <router-link
         to="/asset-generation"
-        class="block py-2 px-3 rounded-md font-bold transition-colors duration-300"
+        class="block py-2 px-3 rounded-md font-medium transition-colors duration-300 text-sm"
         :class="{
-          'bg-gray-700 text-blue-300': route.name === 'AssetGeneration',
-          'text-gray-400 hover:bg-gray-600 hover:text-white':
+          'bg-[var(--color-bg-tertiary)] text-[var(--color-interactive-primary)]': route.name === 'AssetGeneration',
+          'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]':
             route.name !== 'AssetGeneration',
         }"
       >
@@ -31,10 +31,10 @@ const route = useRoute();
       </router-link>
       <router-link
         to="/asset-preview"
-        class="block py-2 px-3 rounded-md font-bold transition-colors duration-300"
+        class="block py-2 px-3 rounded-md font-medium transition-colors duration-300 text-sm"
         :class="{
-          'bg-gray-700 text-blue-300': route.name === 'AssetPreview',
-          'text-gray-400 hover:bg-gray-600 hover:text-white':
+          'bg-[var(--color-bg-tertiary)] text-[var(--color-interactive-primary)]': route.name === 'AssetPreview',
+          'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]':
             route.name !== 'AssetPreview',
         }"
       >
@@ -42,10 +42,10 @@ const route = useRoute();
       </router-link>
       <router-link
         to="/brand-guidelines"
-        class="block py-2 px-3 rounded-md font-bold transition-colors duration-300"
+        class="block py-2 px-3 rounded-md font-medium transition-colors duration-300 text-sm"
         :class="{
-          'bg-gray-700 text-blue-300': route.name === 'BrandGuidelines',
-          'text-gray-400 hover:bg-gray-600 hover:text-white':
+          'bg-[var(--color-bg-tertiary)] text-[var(--color-interactive-primary)]': route.name === 'BrandGuidelines',
+          'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)]':
             route.name !== 'BrandGuidelines',
         }"
       >

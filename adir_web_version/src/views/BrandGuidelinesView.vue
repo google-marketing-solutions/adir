@@ -4,6 +4,7 @@ import { extractBrandGuidelines } from "@/services/vertexAiService";
 import { useConfigStore } from "@/stores/config";
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
+import LoadingSpinner from "@/components/LoadingSpinner.vue";
 
 const brandStore = useBrandStore();
 const configStore = useConfigStore();
@@ -133,8 +134,8 @@ const processGuidelines = async () => {
 </script>
 
 <template>
-  <div class="p-6 bg-gray-900 text-white min-h-screen">
-    <h1 class="text-3xl font-bold mb-6">Brand Guidelines</h1>
+  <div>
+    <h1 class="mb-6">Brand Guidelines</h1>
 
     <div class="bg-gray-800 p-6 rounded-lg mb-6">
       <!-- Option Cards -->
@@ -232,7 +233,21 @@ const processGuidelines = async () => {
           Save Guidelines
         </button>
       </div>
+      
+      <!-- Empty State -->
+      <div v-if="!guidelinesText" class="flex flex-col items-center justify-center p-12 bg-gray-700/20 rounded-lg border-2 border-dashed border-gray-600 text-center">
+        <div class="w-16 h-16 rounded-full bg-gray-700 flex items-center justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-white mb-2">No Brand Guidelines Yet</h3>
+        <p class="text-gray-400 text-sm max-w-sm">Upload brand documents or provide a website URL above, then click "Process with Gemini" to generate your brand guidelines.</p>
+      </div>
+      
+      <!-- Ideal State -->
       <textarea
+        v-else
         v-model="guidelinesText"
         rows="10"
         class="w-full p-3 rounded-md bg-gray-700 text-white border border-gray-600 focus:border-blue-500 focus:outline-none"
@@ -241,7 +256,7 @@ const processGuidelines = async () => {
     </div>
 
     <!-- Unsaved Changes Modal -->
-    <div v-if="showLeaveModal" class="fixed inset-0 bg-black/70 backdrop-blur-md flex flex-col justify-center items-center z-50">
+    <div v-if="showLeaveModal" class="fixed inset-0 bg-black/80 flex flex-col justify-center items-center z-50">
       <div class="bg-gray-800 p-6 rounded-xl shadow-2xl border border-gray-700 max-w-md w-full mx-4">
         <h3 class="text-xl font-bold mb-2 text-white">Unsaved Changes</h3>
         <p class="text-gray-400 mb-6">You have unsaved changes in your brand guidelines. Are you sure you want to leave? Any unsaved content will be lost.</p>
@@ -267,28 +282,11 @@ const processGuidelines = async () => {
     </div>
 
     <!-- Loading Overlay -->
-    <div v-if="isProcessing" class="fixed inset-0 bg-black/70 backdrop-blur-md flex flex-col justify-center items-center z-50">
-      <div class="bg-gray-800 p-8 rounded-2xl shadow-2xl border border-gray-700 flex flex-col items-center max-w-sm mx-4">
-        <!-- Premium Spinner -->
-        <div class="relative w-24 h-24 mb-6">
-          <!-- Outer ring -->
-          <div class="absolute inset-0 border-4 border-blue-500/30 rounded-full"></div>
-          <!-- Spinning ring -->
-          <div class="absolute inset-0 border-4 border-t-blue-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
-          <!-- Inner glow or pulse -->
-          <div class="absolute inset-4 bg-blue-600/20 rounded-full animate-pulse flex items-center justify-center">
-            <span class="text-blue-300 font-bold text-sm">AI</span>
-          </div>
-        </div>
-        <h3 class="text-xl font-bold mb-2 text-white text-center">Extracting Brand Essence</h3>
-        <p class="text-gray-400 text-center text-sm">Gemini is analyzing the data and distilling guidelines. This takes a moment to ensure quality...</p>
-        <!-- Bouncing dots -->
-        <div class="flex gap-2 mt-4">
-          <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
-          <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-          <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
-        </div>
-      </div>
-    </div>
+    <LoadingSpinner
+      v-if="isProcessing"
+      fullscreen
+      title="Extracting Brand Essence"
+      message="Gemini is analyzing the data and distilling guidelines. This takes a moment to ensure quality..."
+    />
   </div>
 </template>

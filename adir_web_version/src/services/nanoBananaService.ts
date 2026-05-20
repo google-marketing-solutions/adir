@@ -10,6 +10,7 @@ import { createVertexAiApiClient, DefaultSecuritySettings } from "./apiService";
 export async function editImageWithNanoBanana(
   base64Images: string | string[],
   prompt: string,
+  aspectRatio?: string,
 ): Promise<string> {
   // Ensure base64Images is an array
   const imagesArray = Array.isArray(base64Images)
@@ -23,11 +24,16 @@ export async function editImageWithNanoBanana(
     imagesArray.splice(14);
   }
 
+  let finalPrompt = prompt;
+  if (aspectRatio) {
+    finalPrompt += `\n\nGenerate the image with an aspect ratio of ${aspectRatio}.`;
+  }
+
   const contents = [
     {
       role: "user",
       parts: [
-        { text: prompt },
+        { text: finalPrompt },
         ...imagesArray.map((img) => ({
           inlineData: {
             mimeType: "image/png",

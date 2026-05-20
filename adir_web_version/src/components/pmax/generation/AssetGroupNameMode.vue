@@ -6,7 +6,7 @@ import {
 } from "@/services/googleAdsService";
 import { generateImagesFromPrompt } from "@/services/vertexAiService";
 import { useConfigStore } from "@/stores/config";
-import { ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 
 const emit = defineEmits(["generation-complete", "update:loading"]);
 
@@ -22,11 +22,27 @@ const props = defineProps({
 });
 
 const prompt = ref("");
-const aspectRatios = ref([
-  { label: "Square (1:1)", ratio: "1:1", count: 1 },
-  { label: "Portrait (9:16)", ratio: "9:16", count: 0 },
-  { label: "Landscape (16:9)", ratio: "16:9", count: 0 },
-]);
+const aspectRatios = computed(() => configStore.aspectRatios);
+
+const availableToSelectRatios = computed(() => {
+  return configStore.allAllowedAspectRatios.filter(
+    (allowed) => !aspectRatios.value.some((selected) => selected.ratio === allowed.ratio)
+  );
+});
+
+const selectedAllowedRatio = ref("");
+
+const addNewRatio = () => {
+  if (selectedAllowedRatio.value) {
+    const ratioObj = configStore.allAllowedAspectRatios.find(
+      (r) => r.ratio === selectedAllowedRatio.value
+    );
+    if (ratioObj) {
+      configStore.addAspectRatio(ratioObj.label, ratioObj.ratio);
+      selectedAllowedRatio.value = "";
+    }
+  }
+};
 const promptTextarea = ref(null);
 const isLoading = ref(false);
 const configStore = useConfigStore();
@@ -131,26 +147,26 @@ const handleGenerate = async () => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-6">
     <div class="relative">
       <textarea
         ref="promptTextarea"
         v-model="prompt"
         placeholder="e.g., A futuristic car driving through a neon-lit city with [Asset Group / Ad Group Name] in the background"
-        class="bg-gray-700 rounded-md p-2 w-full pr-36 custom-placeholder"
+        class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-3 w-full pr-36 custom-placeholder border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none"
         rows="3"
       ></textarea>
       <button
         @click="insertPlaceholder"
-        class="absolute top-2 right-2 bg-cyan-600 text-white font-bold py-1 px-3 rounded-md hover:bg-cyan-700 text-sm"
+        class="absolute top-2 right-2 bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] font-bold py-1 px-3 rounded-md hover:bg-[var(--color-interactive-hover)] text-sm transition-colors"
       >
         Insert Placeholder
       </button>
     </div>
     <label class="label -mt-2">
-      <span class="label-text-alt"
+      <span class="label-text-alt text-[var(--color-text-muted)]"
         >Use
-        <code v-pre class="bg-gray-800 p-1 rounded-md"
+        <code v-pre class="bg-[var(--color-bg-secondary)] p-1 rounded-md text-[var(--color-text-primary)]"
           >[Asset Group / Ad Group Name]</code
         >
         as a placeholder for the asset group or ad group name.</span
@@ -158,30 +174,50 @@ const handleGenerate = async () => {
     </label>
 
     <div>
-      <h3 class="font-bold">Number of images for each aspect ratio:</h3>
-      <div class="flex gap-4 mt-2">
+      <h3 class="font-bold text-[var(--color-text-primary)]">Number of images for each aspect ratio:</h3>
+      <div class="flex gap-4 mt-2 flex-wrap">
         <div v-for="ar in aspectRatios" :key="ar.ratio" class="form-control">
           <label class="label">
-            <span class="label-text">{{ ar.label }}</span>
+            <span class="label-text text-[var(--color-text-muted)]">{{ ar.label }}</span>
           </label>
-          <select v-model.number="ar.count" class="bg-gray-700 rounded-md p-2">
+          <select v-model.number="ar.count" class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-2 border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none">
             <option v-for="i in 5" :key="i - 1" :value="i - 1">
               {{ i - 1 }}
             </option>
           </select>
         </div>
       </div>
+      
+      <!-- Add Custom Ratio Form -->
+      <div class="flex gap-2 mt-4 items-end border-t border-gray-700 pt-4">
+        <div class="form-control">
+          <label class="label"><span class="label-text text-xs">Add Aspect Ratio</span></label>
+          <select v-model="selectedAllowedRatio" class="bg-gray-700 rounded-md p-2 text-sm w-48">
+            <option value="" disabled>Select ratio...</option>
+            <option v-for="r in availableToSelectRatios" :key="r.ratio" :value="r.ratio">
+              {{ r.label }}
+            </option>
+          </select>
+        </div>
+        <button @click="addNewRatio" class="bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700 text-sm h-10">
+          Add
+        </button>
+        <button @click="configStore.resetAspectRatios" class="bg-red-600 text-white font-bold py-2 px-4 rounded-md hover:bg-red-700 text-sm h-10">
+          Reset
+        </button>
+      </div>
     </div>
 
     <button
       @click="handleGenerate"
-      class="bg-cyan-600 text-white font-bold py-2 px-6 rounded-md hover:bg-cyan-700"
+      class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-[var(--color-interactive-hover)] self-start transition-colors disabled:opacity-50"
       :disabled="isLoading"
     >
-      <span v-if="isLoading" class="loading loading-spinner"></span>
+      <span v-if="isLoading" class="loading loading-spinner mr-2"></span>
       {{ isLoading ? "Generating..." : "Generate Images" }}
     </button>
-    <div v-if="errorMessage" class="text-yellow-500 mt-4">
+    
+    <div v-if="errorMessage" class="text-[var(--color-status-error)] mt-4">
       {{ errorMessage }}
     </div>
   </div>
