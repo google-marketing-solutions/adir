@@ -21,7 +21,7 @@ const modes = {
   "Existing Asset Based Generation 🍌": ExistingAssetsMode,
   "Asset Group / Ad Group Name": AssetGroupNameMode,
   "Search Signal Keywords": SearchSignalKeywordsMode,
-  "Creative Concepts": CreativeConceptsMode,
+  "Free form": CreativeConceptsMode,
 };
 
 const isLoading = ref(false);
@@ -51,7 +51,7 @@ const handleGenerationComplete = (imageUrls) => {
           </label>
           <div class="flex rounded-lg bg-[var(--color-bg-tertiary)] p-1">
             <button
-              v-for="(name, index) in Object.keys(modes)"
+              v-for="name in Object.keys(modes)"
               :key="name"
               class="btn flex-1 font-medium py-2 px-4 rounded-md transition-colors duration-200 text-sm"
               :class="[
@@ -69,13 +69,21 @@ const handleGenerationComplete = (imageUrls) => {
             </button>
           </div>
         </div>
-        <div class="flex flex-col items-end gap-2">
-          <label class="flex items-center cursor-pointer group">
+        <div class="flex flex-col items-start gap-2">
+          <label
+            class="flex items-center cursor-pointer group transition-opacity duration-200"
+            :class="{'opacity-40 pointer-events-none': activeMode === 'Free form'}"
+          >
             <div class="relative">
-              <input type="checkbox" v-model="showPausedAssetGroups" class="sr-only peer" />
+              <input
+                type="checkbox"
+                v-model="showPausedAssetGroups"
+                class="sr-only peer"
+                :disabled="activeMode === 'Free form'"
+              />
               <div class="w-11 h-6 bg-[var(--color-bg-tertiary)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--color-interactive-focus)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-interactive-primary)]"></div>
             </div>
-            <span class="ml-3 text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" :class="{'text-[var(--color-text-primary)]': showPausedAssetGroups}">Use Paused Asset Groups</span>
+            <span class="ml-3 text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" :class="{'text-[var(--color-text-primary)]': showPausedAssetGroups && activeMode !== 'Free form'}">Use Paused Asset Groups</span>
           </label>
           <label class="flex items-center cursor-pointer group">
             <div class="relative">
@@ -110,3 +118,5 @@ const handleGenerationComplete = (imageUrls) => {
     </div>
   </div>
 </template>
+
+
