@@ -20,6 +20,19 @@
     --color-status-error: oklch(0.60 0.20 30);
     --color-status-warning: oklch(0.80 0.15 70);
 
+    /* Theme active control variables */
+    --color-theme-active-icon: oklch(0.70 0.15 200); /* Cool cyan */
+    --color-theme-active-bg: rgba(34, 211, 238, 0.1);
+    --color-theme-active-border: rgba(34, 211, 238, 0.2);
+    --color-border-theme-group: rgba(255, 255, 255, 0.1);
+
+    /* Helper layout variables */
+    --color-bg-aside-start: rgba(17, 24, 39, 0.95);
+    --color-bg-aside-end: rgba(15, 23, 42, 0.98);
+    --color-border-aside: rgba(255, 255, 255, 0.06);
+    --color-bg-modal: rgba(17, 24, 39, 0.95);
+    --color-focus-ring: rgba(59, 130, 246, 0.3);
+
     /* Spacing - 4px/8px Grid */
     --spacing-xs: 0.25rem; /* 4px */
     --spacing-sm: 0.5rem; /* 8px */
@@ -121,7 +134,7 @@ button.bg-indigo-600:active:not(:disabled) {
 /* ==========================================
    Light Mode Global Theme Overrides (CSS-Only)
    ========================================== */
-:root:has(#theme-checkbox:checked) {
+:root[data-theme="light"] {
   --color-bg-primary: oklch(0.98 0.005 240);
   --color-bg-secondary: oklch(0.96 0.008 240);
   --color-bg-tertiary: oklch(0.91 0.01 240);
@@ -134,201 +147,255 @@ button.bg-indigo-600:active:not(:disabled) {
   --color-interactive-primary: oklch(0.55 0.22 240);
   --color-interactive-hover: oklch(0.45 0.22 240);
   --color-interactive-focus: oklch(0.65 0.18 240);
+
+  /* Theme active control variables */
+  --color-theme-active-icon: oklch(0.60 0.18 70); /* Warm amber/orange */
+  --color-theme-active-bg: rgba(217, 119, 6, 0.1);
+  --color-theme-active-border: rgba(217, 119, 6, 0.2);
+  --color-border-theme-group: rgba(15, 23, 42, 0.08);
+
+  /* Helper layout variables */
+  --color-bg-aside-start: #ffffff;
+  --color-bg-aside-end: #f8fafc;
+  --color-border-aside: rgba(15, 23, 42, 0.08);
+  --color-bg-modal: rgba(255, 255, 255, 0.95);
+  --color-focus-ring: rgba(37, 99, 235, 0.2);
+  --color-active-link-bg-start: rgba(37, 99, 235, 0.08);
+  --color-active-link-bg-end: rgba(37, 99, 235, 0.01);
+  --color-active-link-text: #1d4ed8;
 }
 
-:root:has(#theme-checkbox:checked) body,
-:root:has(#theme-checkbox:checked) #app-container,
-:root:has(#theme-checkbox:checked) .bg-gray-900,
-:root:has(#theme-checkbox:checked) .min-h-screen {
+:root[data-theme="mango"] {
+  --color-bg-primary: oklch(0.97 0.03 82); /* Softer creamy warm flesh background */
+  --color-bg-secondary: oklch(0.94 0.05 78); /* Creamy middle tint */
+  --color-bg-tertiary: oklch(0.90 0.08 73); /* Deeper creamy orange */
+
+  --color-text-primary: oklch(0.22 0.04 55); /* Rich espresso brown text */
+  --color-text-muted: oklch(0.38 0.06 60);
+  --color-text-dim: oklch(0.52 0.05 65);
+  --color-text-highlight: oklch(0.15 0.08 45); /* Deepest reddish-brown */
+
+  --color-interactive-primary: oklch(0.68 0.20 70); /* Warm mango gold accent */
+  --color-interactive-hover: oklch(0.62 0.22 58); /* Deeper mango orange hover */
+  --color-interactive-focus: oklch(0.72 0.18 75);
+
+  /* Richer Mango Gradients */
+  --color-mango-gradient-primary: linear-gradient(135deg, oklch(0.75 0.20 72) 0%, oklch(0.58 0.22 42) 100%); /* Beautiful Mango Orange to Reddish-Orange sunset */
+  --color-mango-gradient-hover: linear-gradient(135deg, oklch(0.78 0.20 75) 0%, oklch(0.61 0.22 45) 100%);
+  --color-mango-gradient-soft: linear-gradient(180deg, oklch(0.97 0.04 82) 0%, oklch(0.91 0.08 72) 100%); /* Soft sunset gradient for aside/sidebar */
+
+  /* Theme active control variables */
+  --color-theme-active-icon: oklch(0.62 0.22 58);
+  --color-theme-active-bg: oklch(0.90 0.08 73 / 70%);
+  --color-theme-active-border: oklch(0.68 0.20 70 / 35%);
+  --color-border-theme-group: oklch(0.22 0.04 55 / 12%);
+
+  /* Helper layout variables */
+  --color-bg-aside-start: oklch(0.98 0.03 82); /* Very light soft gold cream */
+  --color-bg-aside-end: oklch(0.92 0.07 73); /* Warm sunset gold cream */
+  --color-border-aside: oklch(0.22 0.04 55 / 8%);
+  --color-bg-modal: oklch(0.97 0.03 82 / 96%);
+  --color-focus-ring: oklch(0.68 0.20 70 / 25%);
+
+  /* Redefine active link variables for sidebar context */
+  --color-active-link-bg-start: oklch(0.91 0.09 70 / 22%); 
+  --color-active-link-bg-end: oklch(0.96 0.05 82 / 6%);
+  --color-active-link-text: oklch(0.55 0.20 45); /* Rich ripe mango text color */
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) body,
+:root:is([data-theme="light"], [data-theme="mango"]) #app-container,
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-gray-900,
+:root:is([data-theme="light"], [data-theme="mango"]) .min-h-screen {
   background-color: var(--color-bg-primary) !important;
   color: var(--color-text-primary) !important;
 }
 
-:root:has(#theme-checkbox:checked) header {
-  background-color: rgba(255, 255, 255, 0.85) !important;
-  border-color: rgba(15, 23, 42, 0.08) !important;
-  color: #0f172a !important;
+:root:is([data-theme="light"], [data-theme="mango"]) header {
+  background-color: var(--color-bg-modal) !important;
+  border-color: var(--color-border-aside) !important;
+  color: var(--color-text-primary) !important;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03) !important;
 }
 
-:root:has(#theme-checkbox:checked) header img {
+:root:is([data-theme="light"], [data-theme="mango"]) header img {
   filter: invert(0.1) !important;
 }
 
-:root:has(#theme-checkbox:checked) aside,
-:root:has(#theme-checkbox:checked) .bg-gray-800 {
-  background-color: #ffffff !important;
-  border: 1px solid rgba(15, 23, 42, 0.06) !important;
-  color: #0f172a !important;
+:root:is([data-theme="light"], [data-theme="mango"]) aside,
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-gray-800 {
+  background-color: var(--color-bg-secondary) !important;
+  border: 1px solid var(--color-border-aside) !important;
+  color: var(--color-text-primary) !important;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04) !important;
 }
 
 /* Override gray-700 form groups and options in Light Mode */
-:root:has(#theme-checkbox:checked) .bg-gray-700,
-:root:has(#theme-checkbox:checked) .bg-gray-700\/30 {
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-gray-700,
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-gray-700\/30 {
   background-color: #f1f5f9 !important;
   border-color: #cbd5e1 !important;
 }
 
-:root:has(#theme-checkbox:checked) .hover\:bg-gray-700\/50:hover {
+:root:is([data-theme="light"], [data-theme="mango"]) .hover\:bg-gray-700\/50:hover {
   background-color: #e2e8f0 !important;
 }
 
-:root:has(#theme-checkbox:checked) .peer:checked + div {
+:root:is([data-theme="light"], [data-theme="mango"]) .peer:checked + div {
   background-color: #eff6ff !important;
   border-color: #3b82f6 !important;
 }
 
 /* Campaign selector light style */
-:root:has(#theme-checkbox:checked) .campaign-selector {
+:root:is([data-theme="light"], [data-theme="mango"]) .campaign-selector {
   background-color: #f1f5f9 !important;
   border-bottom: 1px solid #e2e8f0 !important;
   color: #475569 !important;
 }
 
-:root:has(#theme-checkbox:checked) textarea,
-:root:has(#theme-checkbox:checked) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
-:root:has(#theme-checkbox:checked) select {
-  background: rgba(248, 250, 252, 0.8) !important;
+:root:is([data-theme="light"], [data-theme="mango"]) textarea,
+:root:is([data-theme="light"], [data-theme="mango"]) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+:root:is([data-theme="light"], [data-theme="mango"]) select {
+  background: var(--color-bg-secondary) !important;
   border: 1px solid #cbd5e1 !important;
-  color: #0f172a !important;
+  color: var(--color-text-primary) !important;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
-:root:has(#theme-checkbox:checked) textarea:focus,
-:root:has(#theme-checkbox:checked) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
-:root:has(#theme-checkbox:checked) select:focus {
-  border-color: #2563eb !important;
-  box-shadow: 0 0 12px rgba(37, 99, 235, 0.2), inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
-  background: #ffffff !important;
+:root:is([data-theme="light"], [data-theme="mango"]) textarea:focus,
+:root:is([data-theme="light"], [data-theme="mango"]) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+:root:is([data-theme="light"], [data-theme="mango"]) select:focus {
+  border-color: var(--color-interactive-primary) !important;
+  box-shadow: 0 0 12px var(--color-focus-ring), inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  background: var(--color-bg-primary) !important;
 }
 
 /* Custom Toggle Switches visibility in Light Mode */
-:root:has(#theme-checkbox:checked) .relative div[class*="w-11 h-6"] {
+:root:is([data-theme="light"], [data-theme="mango"]) .relative div[class*="w-11 h-6"] {
   background-color: #cbd5e1 !important;
   border: 1px solid #94a3b8 !important;
 }
 
-:root:has(#theme-checkbox:checked) input:checked + div[class*="w-11 h-6"] {
-  background-color: #2563eb !important;
-  border-color: #1d4ed8 !important;
+:root:is([data-theme="light"], [data-theme="mango"]) input:checked + div[class*="w-11 h-6"] {
+  background-color: var(--color-interactive-primary) !important;
+  border-color: var(--color-interactive-hover) !important;
 }
 
 /* Header utility buttons */
-:root:has(#theme-checkbox:checked) header a,
-:root:has(#theme-checkbox:checked) header button {
+:root:is([data-theme="light"], [data-theme="mango"]) header a,
+:root:is([data-theme="light"], [data-theme="mango"]) header button {
   background-color: rgba(15, 23, 42, 0.04) !important;
   border-color: rgba(15, 23, 42, 0.08) !important;
   color: #475569 !important;
 }
 
-:root:has(#theme-checkbox:checked) header a:hover,
-:root:has(#theme-checkbox:checked) header button:hover {
+:root:is([data-theme="light"], [data-theme="mango"]) header a:hover,
+:root:is([data-theme="light"], [data-theme="mango"]) header button:hover {
   background-color: rgba(15, 23, 42, 0.08) !important;
   border-color: rgba(37, 99, 235, 0.3) !important;
-  color: #0f172a !important;
+  color: var(--color-text-primary) !important;
 }
 
 /* Sidebar elements */
-:root:has(#theme-checkbox:checked) aside a {
+:root:is([data-theme="light"], [data-theme="mango"]) aside a {
   color: #475569 !important;
 }
 
-:root:has(#theme-checkbox:checked) aside a:hover {
+:root:is([data-theme="light"], [data-theme="mango"]) aside a:hover {
   background-color: rgba(15, 23, 42, 0.04) !important;
-  color: #0f172a !important;
+  color: var(--color-text-primary) !important;
 }
 
-:root:has(#theme-checkbox:checked) aside a.router-link-active {
-  background-color: #eff6ff !important;
-  color: #2563eb !important;
+:root:is([data-theme="light"], [data-theme="mango"]) aside a.router-link-active {
+  background-color: var(--color-active-link-bg-start) !important;
+  color: var(--color-active-link-text) !important;
 }
 
 /* Label, headings & campaign selection text light styles */
-:root:has(#theme-checkbox:checked) h2,
-:root:has(#theme-checkbox:checked) h3,
-:root:has(#theme-checkbox:checked) h4,
-:root:has(#theme-checkbox:checked) .text-white,
-:root:has(#theme-checkbox:checked) .text-gray-200 {
-  color: #0f172a !important;
+:root:is([data-theme="light"], [data-theme="mango"]) h2,
+:root:is([data-theme="light"], [data-theme="mango"]) h3,
+:root:is([data-theme="light"], [data-theme="mango"]) h4,
+:root:is([data-theme="light"], [data-theme="mango"]) .text-white,
+:root:is([data-theme="light"], [data-theme="mango"]) .text-gray-200 {
+  color: var(--color-text-primary) !important;
 }
 
-:root:has(#theme-checkbox:checked) .text-gray-400,
-:root:has(#theme-checkbox:checked) .text-gray-300,
-:root:has(#theme-checkbox:checked) .label-text,
-:root:has(#theme-checkbox:checked) span.label-text,
-:root:has(#theme-checkbox:checked) span {
-  color: #334155 !important;
+:root:is([data-theme="light"], [data-theme="mango"]) .text-gray-400,
+:root:is([data-theme="light"], [data-theme="mango"]) .text-gray-300,
+:root:is([data-theme="light"], [data-theme="mango"]) .label-text,
+:root:is([data-theme="light"], [data-theme="mango"]) span.label-text,
+:root:is([data-theme="light"], [data-theme="mango"]) span {
+  color: var(--color-text-muted) !important;
 }
 
 /* Prevent overriding text colors of primary action buttons with white text */
-:root:has(#theme-checkbox:checked) button.bg-blue-600,
-:root:has(#theme-checkbox:checked) button.bg-cyan-600,
-:root:has(#theme-checkbox:checked) button.bg-cyan-500,
-:root:has(#theme-checkbox:checked) button[class*="bg-indigo-500"],
-:root:has(#theme-checkbox:checked) span[class*="bg-indigo-500"],
-:root:has(#theme-checkbox:checked) .tab-btn.active,
-:root:has(#theme-checkbox:checked) .bg-emerald-600,
-:root:has(#theme-checkbox:checked) .bg-green-600,
-:root:has(#theme-checkbox:checked) button.btn-primary,
-:root:has(#theme-checkbox:checked) button.bg-red-600 {
+:root:is([data-theme="light"], [data-theme="mango"]) button.bg-blue-600,
+:root:is([data-theme="light"], [data-theme="mango"]) button.bg-cyan-600,
+:root:is([data-theme="light"], [data-theme="mango"]) button.bg-cyan-500,
+:root:is([data-theme="light"], [data-theme="mango"]) button[class*="bg-indigo-500"],
+:root:is([data-theme="light"], [data-theme="mango"]) span[class*="bg-indigo-500"],
+:root:is([data-theme="light"], [data-theme="mango"]) .tab-btn.active,
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-emerald-600,
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-green-600,
+:root:is([data-theme="light"], [data-theme="mango"]) button.btn-primary,
+:root:is([data-theme="light"], [data-theme="mango"]) button.bg-red-600 {
   color: #ffffff !important;
 }
 
 /* Specific rules for MultiSelectDropdown inside the campaign selector */
-:root:has(#theme-checkbox:checked) .relative > div[class*="bg-gray-700"],
-:root:has(#theme-checkbox:checked) .relative div[class*="bg-gray-700"] {
-  background-color: #ffffff !important;
-  border-color: #cbd5e1 !important;
-  color: #0f172a !important;
+:root:is([data-theme="light"], [data-theme="mango"]) .relative > div[class*="bg-gray-700"],
+:root:is([data-theme="light"], [data-theme="mango"]) .relative div[class*="bg-gray-700"] {
+  background-color: var(--color-bg-primary) !important;
+  border-color: var(--color-border-aside) !important;
+  color: var(--color-text-primary) !important;
 }
-:root:has(#theme-checkbox:checked) .relative input[class*="bg-gray-800"] {
-  background-color: #f1f5f9 !important;
-  border-color: #cbd5e1 !important;
-  color: #0f172a !important;
+:root:is([data-theme="light"], [data-theme="mango"]) .relative input[class*="bg-gray-800"] {
+  background-color: var(--color-bg-secondary) !important;
+  border-color: var(--color-border-aside) !important;
+  color: var(--color-text-primary) !important;
 }
 
 /* Accent accordion button */
-:root:has(#theme-checkbox:checked) button.text-cyan-400 {
+:root:is([data-theme="light"], [data-theme="mango"]) button.text-cyan-400 {
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.04), rgba(6, 182, 212, 0.04)) !important;
   border: 1px solid rgba(37, 99, 235, 0.2) !important;
   color: #1d4ed8 !important;
 }
 
-:root:has(#theme-checkbox:checked) button.text-cyan-400:hover {
+:root:is([data-theme="light"], [data-theme="mango"]) button.text-cyan-400:hover {
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(6, 182, 212, 0.08)) !important;
   border-color: #2563eb !important;
   box-shadow: 0 0 15px rgba(37, 99, 235, 0.15) !important;
 }
 
 /* Image modals in light theme */
-:root:has(#theme-checkbox:checked) .bg-gray-900.rounded-lg {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border-color: rgba(15, 23, 42, 0.08) !important;
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-gray-900.rounded-lg {
+  background: var(--color-bg-modal) !important;
+  border-color: var(--color-border-aside) !important;
   box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.25), 0 0 40px rgba(37, 99, 235, 0.06) !important;
 }
 
-:root:has(#theme-checkbox:checked) .fixed.inset-0 {
+:root:is([data-theme="light"], [data-theme="mango"]) .fixed.inset-0 {
   background: rgba(15, 23, 42, 0.4) !important;
 }
 
 /* Aspect ratio & tabs container */
-:root:has(#theme-checkbox:checked) .tabs-container {
-  background: #f1f5f9 !important;
-  border-color: rgba(15, 23, 42, 0.08) !important;
+:root:is([data-theme="light"], [data-theme="mango"]) .tabs-container {
+  background: var(--color-bg-secondary) !important;
+  border-color: var(--color-border-aside) !important;
   box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.05) !important;
 }
 
-:root:has(#theme-checkbox:checked) .tab-btn {
+:root:is([data-theme="light"], [data-theme="mango"]) .tab-btn {
   color: #64748b !important;
 }
 
-:root:has(#theme-checkbox:checked) .tab-btn:hover {
-  color: #0f172a !important;
+:root:is([data-theme="light"], [data-theme="mango"]) .tab-btn:hover {
+  color: var(--color-text-primary) !important;
   background: rgba(15, 23, 42, 0.03) !important;
 }
 
-:root:has(#theme-checkbox:checked) .tab-btn.active {
+:root:is([data-theme="light"], [data-theme="mango"]) .tab-btn.active {
   color: #ffffff !important;
   background: #2563eb !important;
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important;
@@ -350,9 +417,9 @@ aside {
   backdrop-filter: blur(20px) !important;
 }
 
-:root:has(#theme-checkbox:checked) aside {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
-  border-right: 1px solid rgba(15, 23, 42, 0.08) !important;
+:root:is([data-theme="light"], [data-theme="mango"]) aside {
+  background: linear-gradient(180deg, var(--color-bg-aside-start) 0%, var(--color-bg-aside-end) 100%) !important;
+  border-right: 1px solid var(--color-border-aside) !important;
 }
 
 aside nav a {
@@ -376,11 +443,11 @@ aside nav a.router-link-active {
   box-shadow: inset 4px 0 15px rgba(37, 99, 235, 0.1) !important;
 }
 
-:root:has(#theme-checkbox:checked) aside nav a[class*="bg-gray-700"],
-:root:has(#theme-checkbox:checked) aside nav a.router-link-active {
-  background: linear-gradient(90deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.01) 100%) !important;
-  color: #1d4ed8 !important;
-  border-left: 3px solid #2563eb !important;
+:root:is([data-theme="light"], [data-theme="mango"]) aside nav a[class*="bg-gray-700"],
+:root:is([data-theme="light"], [data-theme="mango"]) aside nav a.router-link-active {
+  background: linear-gradient(90deg, var(--color-active-link-bg-start) 0%, var(--color-active-link-bg-end) 100%) !important;
+  color: var(--color-active-link-text) !important;
+  border-left: 3px solid var(--color-interactive-primary) !important;
 }
 
 aside nav a:hover:not([class*="bg-gray-700"]):not(.router-link-active) {
@@ -389,9 +456,9 @@ aside nav a:hover:not([class*="bg-gray-700"]):not(.router-link-active) {
   transform: translateX(4px);
 }
 
-:root:has(#theme-checkbox:checked) aside nav a:hover:not([class*="bg-gray-700"]):not(.router-link-active) {
+:root:is([data-theme="light"], [data-theme="mango"]) aside nav a:hover:not([class*="bg-gray-700"]):not(.router-link-active) {
   background: rgba(15, 23, 42, 0.03) !important;
-  color: #0f172a !important;
+  color: var(--color-text-primary) !important;
 }
 
 /* ==========================================
@@ -407,9 +474,9 @@ aside nav a:hover:not([class*="bg-gray-700"]):not(.router-link-active) {
   border-radius: 16px !important;
 }
 
-:root:has(#theme-checkbox:checked) .campaign-selector,
-:root:has(#theme-checkbox:checked) .bg-gray-800\/50,
-:root:has(#theme-checkbox:checked) .bg-gray-800 {
+:root:is([data-theme="light"], [data-theme="mango"]) .campaign-selector,
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-gray-800\/50,
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-gray-800 {
   background: rgba(255, 255, 255, 0.75) !important;
   border: 1px solid rgba(15, 23, 42, 0.08) !important;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.9) !important;
@@ -455,14 +522,14 @@ input[type="checkbox"].checkbox:checked::after {
   transform: rotate(45deg) translate(-0.5px, -1px) !important;
 }
 
-:root:has(#theme-checkbox:checked) input[type="checkbox"].checkbox {
+:root:is([data-theme="light"], [data-theme="mango"]) input[type="checkbox"].checkbox {
   border: 1px solid #cbd5e1 !important;
-  background: #ffffff !important;
+  background: var(--color-bg-primary) !important;
 }
 
-:root:has(#theme-checkbox:checked) input[type="checkbox"].checkbox:checked {
-  background: #2563eb !important;
-  border-color: #2563eb !important;
+:root:is([data-theme="light"], [data-theme="mango"]) input[type="checkbox"].checkbox:checked {
+  background: var(--color-interactive-primary) !important;
+  border-color: var(--color-interactive-primary) !important;
 }
 
 /* Custom Premium Radio Button Overhaul */
@@ -502,17 +569,17 @@ input[type="radio"]:checked::after {
   border-radius: 50% !important;
 }
 
-:root:has(#theme-checkbox:checked) input[type="radio"] {
+:root:is([data-theme="light"], [data-theme="mango"]) input[type="radio"] {
   border: 1px solid #cbd5e1 !important;
-  background: #ffffff !important;
+  background: var(--color-bg-primary) !important;
 }
 
-:root:has(#theme-checkbox:checked) input[type="radio"]:checked {
-  border-color: #2563eb !important;
+:root:is([data-theme="light"], [data-theme="mango"]) input[type="radio"]:checked {
+  border-color: var(--color-interactive-primary) !important;
 }
 
-:root:has(#theme-checkbox:checked) input[type="radio"]:checked::after {
-  background: #2563eb !important;
+:root:is([data-theme="light"], [data-theme="mango"]) input[type="radio"]:checked::after {
+  background: var(--color-interactive-primary) !important;
 }
 
 /* ==========================================
@@ -550,15 +617,15 @@ div[ref="dropdownRef"] > div.absolute {
   padding: 8px !important;
 }
 
-:root:has(#theme-checkbox:checked) div[ref="dropdownRef"] > div {
+:root:is([data-theme="light"], [data-theme="mango"]) div[ref="dropdownRef"] > div {
   background: rgba(255, 255, 255, 0.8) !important;
   border: 1px solid #cbd5e1 !important;
-  color: #0f172a !important;
+  color: var(--color-text-primary) !important;
 }
 
-:root:has(#theme-checkbox:checked) div[ref="dropdownRef"] > div.absolute {
-  background: #ffffff !important;
-  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+:root:is([data-theme="light"], [data-theme="mango"]) div[ref="dropdownRef"] > div.absolute {
+  background: var(--color-bg-primary) !important;
+  border: 1px solid var(--color-border-aside) !important;
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08) !important;
 }
 
@@ -581,102 +648,72 @@ button.bg-gray-700:hover:not(:disabled) {
   transform: translateY(-1.5px) !important;
 }
 
-:root:has(#theme-checkbox:checked) button.bg-gray-700 {
+:root:is([data-theme="light"], [data-theme="mango"]) button.bg-gray-700 {
   background: rgba(15, 23, 42, 0.04) !important;
   border: 1px solid rgba(15, 23, 42, 0.08) !important;
   color: #475569 !important;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02) !important;
 }
 
-:root:has(#theme-checkbox:checked) button.bg-gray-700:hover:not(:disabled) {
+:root:is([data-theme="light"], [data-theme="mango"]) button.bg-gray-700:hover:not(:disabled) {
   background: rgba(15, 23, 42, 0.08) !important;
   border-color: rgba(15, 23, 42, 0.12) !important;
-  color: #0f172a !important;
+  color: var(--color-text-primary) !important;
   transform: translateY(-1.5px) !important;
 }
 
 /* ==========================================
-   Theme Toggle Slider Styles (Extracted)
+   Theme Selector Segmented Control Styles
    ========================================== */
-.theme-toggle-label {
-  position: relative;
-  display: inline-block;
-  width: 58px;
-  height: 32px;
-  cursor: pointer;
-}
-
-.theme-checkbox {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.theme-toggle-slider {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(31, 41, 55, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 30px;
+.theme-selector-group {
+  display: flex;
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-theme-group);
+  border-radius: 12px;
+  padding: 2px;
+  gap: 2px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-select-btn {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 8px;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  color: var(--color-text-dim);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.theme-toggle-slider::before {
-  content: "";
-  position: absolute;
-  height: 24px;
-  width: 24px;
-  left: 3px;
-  bottom: 3px;
-  background: linear-gradient(135deg, #22d3ee, #2563eb);
-  border-radius: 50%;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.4);
+.theme-select-btn:hover {
+  color: var(--color-text-primary);
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
-.theme-checkbox:checked + .theme-toggle-slider {
-  background-color: #e5e7eb;
-  border-color: #cbd5e1;
+:root[data-theme="light"] .theme-select-btn:hover,
+:root[data-theme="mango"] .theme-select-btn:hover {
+  background-color: rgba(0, 0, 0, 0.03);
 }
 
-.theme-checkbox:checked + .theme-toggle-slider::before {
-  transform: translateX(26px);
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+.theme-select-btn.active {
+  color: var(--color-theme-active-icon) !important;
+  background-color: var(--color-theme-active-bg) !important;
+  border: 1px solid var(--color-theme-active-border) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-.moon-icon, .sun-icon {
+.theme-btn-icon {
   width: 16px;
   height: 16px;
-  transition: opacity 0.3s ease;
-  z-index: 1;
-  pointer-events: none;
+  transition: transform 0.3s ease;
 }
 
-.moon-icon {
-  color: #22d3ee;
-  opacity: 1;
-}
-
-.sun-icon {
-  color: #d97706;
-  opacity: 0.2;
-}
-
-.theme-checkbox:checked + .theme-toggle-slider .moon-icon {
-  opacity: 0.2;
-  color: #9ca3af;
-}
-
-.theme-checkbox:checked + .theme-toggle-slider .sun-icon {
-  opacity: 1;
+.theme-select-btn.active .theme-btn-icon {
+  transform: scale(1.1);
 }
 
 /* ==========================================
@@ -717,5 +754,96 @@ button.bg-gray-700:hover:not(:disabled) {
   background: #2563eb !important;
   box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3) !important;
   transform: scale(1.02);
+}
+
+/* ==========================================
+   Mango Mode Custom Component Enhancements
+   ========================================== */
+
+/* Active theme selector button for Mango */
+.theme-select-btn.mango.active {
+  color: #ffffff !important; /* White mango icon */
+  background: var(--color-mango-gradient-primary) !important; /* Vibrant mango gradient fill */
+  border: 1px solid oklch(0.58 0.22 42 / 40%) !important;
+  box-shadow: 0 3px 12px oklch(0.58 0.22 42 / 30%) !important;
+}
+
+/* Override primary action buttons in Mango Mode to use Sunset Gradient */
+:root[data-theme="mango"] button.bg-blue-600,
+:root[data-theme="mango"] button.bg-cyan-600,
+:root[data-theme="mango"] button.bg-indigo-600,
+:root[data-theme="mango"] button.btn-primary,
+:root[data-theme="mango"] button[class*="bg-indigo-600"],
+:root[data-theme="mango"] button[class*="bg-blue-600"] {
+  background: var(--color-mango-gradient-primary) !important;
+  box-shadow: 0 4px 15px oklch(0.58 0.22 42 / 25%) !important;
+  border: none !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="mango"] button.bg-blue-600:hover:not(:disabled),
+:root[data-theme="mango"] button.bg-cyan-600:hover:not(:disabled),
+:root[data-theme="mango"] button.bg-indigo-600:hover:not(:disabled),
+:root[data-theme="mango"] button.btn-primary:hover:not(:disabled),
+:root[data-theme="mango"] button[class*="bg-indigo-600"]:hover:not(:disabled),
+:root[data-theme="mango"] button[class*="bg-blue-600"]:hover:not(:disabled) {
+  background: var(--color-mango-gradient-hover) !important;
+  box-shadow: 0 6px 22px oklch(0.58 0.22 42 / 35%) !important;
+}
+
+/* Active Tabs in Mango Mode */
+:root[data-theme="mango"] .tab-btn.active {
+  background: var(--color-mango-gradient-primary) !important;
+  box-shadow: 0 4px 14px oklch(0.58 0.22 42 / 25%) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+/* Custom Accordion button text-cyan-400 in Mango Mode */
+:root[data-theme="mango"] button.text-cyan-400 {
+  background: linear-gradient(135deg, oklch(0.97 0.04 82 / 50%), oklch(0.90 0.08 73 / 50%)) !important;
+  border: 1px solid oklch(0.68 0.20 70 / 30%) !important;
+  border-left: 4px solid oklch(0.68 0.20 70) !important;
+  color: oklch(0.55 0.20 45) !important; /* Rich ripe mango text color */
+}
+
+:root[data-theme="mango"] button.text-cyan-400:hover {
+  background: linear-gradient(135deg, oklch(0.97 0.04 82 / 80%), oklch(0.90 0.08 73 / 80%)) !important;
+  border-color: oklch(0.68 0.20 70 / 60%) !important;
+}
+
+/* Map standard Cyan colors to warm Mango colors in Mango Mode */
+:root[data-theme="mango"] .text-cyan-400 {
+  color: oklch(0.60 0.20 60) !important; /* A nice mango-orange color */
+}
+:root[data-theme="mango"] .hover\:text-cyan-300:hover {
+  color: oklch(0.68 0.20 70) !important;
+}
+
+/* Override Campaign Selector Pills in Mango Mode */
+:root[data-theme="mango"] span.bg-indigo-500,
+:root[data-theme="mango"] span[class*="bg-indigo-500"] {
+  background: var(--color-mango-gradient-primary) !important;
+  box-shadow: 0 2px 6px oklch(0.58 0.22 42 / 20%) !important;
+  border-color: oklch(0.58 0.22 42 / 30%) !important;
+}
+
+/* Campaign selector accent tags/slashes in Mango Mode */
+:root[data-theme="mango"] .text-indigo-500,
+:root[data-theme="mango"] span.text-indigo-500 {
+  color: var(--color-interactive-primary) !important;
+}
+
+/* Standard checkbox checked states in Mango Mode */
+:root[data-theme="mango"] input[type="checkbox"]:checked,
+:root[data-theme="mango"] input[type="radio"]:checked {
+  accent-color: var(--color-interactive-primary) !important;
+  background-color: var(--color-interactive-primary) !important;
+  border-color: var(--color-interactive-primary) !important;
+}
+
+/* MultiSelectDropdown hover overrides for Light/Mango modes */
+:root:is([data-theme="light"], [data-theme="mango"]) .hover\:bg-gray-600\/50:hover {
+  background-color: var(--color-bg-tertiary) !important;
 }
 
