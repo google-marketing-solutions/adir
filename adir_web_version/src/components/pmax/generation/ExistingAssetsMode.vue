@@ -27,11 +27,27 @@ const prompt = ref(
 );
 const numTopImages = ref(5);
 const selectedMetric = ref("ctr");
-const aspectRatios = ref([
-  { label: "Square (1:1)", ratio: "1:1", count: 1 },
-  { label: "Portrait (9:16)", ratio: "9:16", count: 0 },
-  { label: "Landscape (16:9)", ratio: "16:9", count: 0 },
-]);
+const aspectRatios = computed(() => configStore.aspectRatios);
+
+const availableToSelectRatios = computed(() => {
+  return configStore.allAllowedAspectRatios.filter(
+    (allowed) => !aspectRatios.value.some((selected) => selected.ratio === allowed.ratio)
+  );
+});
+
+const selectedAllowedRatio = ref("");
+
+const addNewRatio = () => {
+  if (selectedAllowedRatio.value) {
+    const ratioObj = configStore.allAllowedAspectRatios.find(
+      (r) => r.ratio === selectedAllowedRatio.value
+    );
+    if (ratioObj) {
+      configStore.addAspectRatio(ratioObj.label, ratioObj.ratio);
+      selectedAllowedRatio.value = "";
+    }
+  }
+};
 
 const metricsOptions = [
   { label: "CTR", value: "ctr" },
@@ -346,7 +362,7 @@ const handleGenerate = async () => {
 
     <div>
       <h3 class="font-bold">Number of images for each aspect ratio:</h3>
-      <div class="flex gap-4 mt-2">
+      <div class="flex gap-4 mt-2 flex-wrap">
         <div v-for="ar in aspectRatios" :key="ar.ratio" class="form-control">
           <label class="label">
             <span class="label-text">{{ ar.label }}</span>
@@ -357,6 +373,25 @@ const handleGenerate = async () => {
             </option>
           </select>
         </div>
+      </div>
+      
+      <!-- Add Custom Ratio Form -->
+      <div class="flex gap-2 mt-4 items-end border-t border-gray-700 pt-4">
+        <div class="form-control">
+          <label class="label"><span class="label-text text-xs">Add Aspect Ratio</span></label>
+          <select v-model="selectedAllowedRatio" class="bg-gray-700 rounded-md p-2 text-sm w-48">
+            <option value="" disabled>Select ratio...</option>
+            <option v-for="r in availableToSelectRatios" :key="r.ratio" :value="r.ratio">
+              {{ r.label }}
+            </option>
+          </select>
+        </div>
+        <button @click="addNewRatio" class="bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700 text-sm h-10">
+          Add
+        </button>
+        <button @click="configStore.resetAspectRatios" class="bg-red-600 text-white font-bold py-2 px-4 rounded-md hover:bg-red-700 text-sm h-10">
+          Reset
+        </button>
       </div>
     </div>
 
