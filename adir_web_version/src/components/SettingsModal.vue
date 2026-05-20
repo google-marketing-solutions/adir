@@ -219,6 +219,56 @@
           </div>
         </fieldset>
 
+        <fieldset class="border border-gray-700 rounded-md p-4">
+          <legend class="text-lg font-semibold px-2">Agentic Evaluation</legend>
+          <div class="grid grid-cols-1 gap-4">
+            <div class="flex items-center gap-2">
+              <input
+                v-model="configStore.enableEvaluation"
+                type="checkbox"
+                id="enable-evaluation"
+                class="w-4 h-4 text-cyan-600 bg-gray-700 border-gray-600 rounded focus:ring-cyan-500 flex-shrink-0"
+              />
+              <label for="enable-evaluation" class="text-sm font-medium text-gray-300">
+                Enable Agentic Evaluation
+              </label>
+            </div>
+            <div v-if="configStore.enableEvaluation">
+              <label
+                for="max-evaluation-retries"
+                class="block text-sm font-medium text-gray-300 mb-1"
+                >Max Evaluation Retries</label
+              >
+              <select
+                v-model.number="configStore.maxEvaluationRetries"
+                id="max-evaluation-retries"
+                class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
+              >
+                <option :value="1">1</option>
+                <option :value="2">2</option>
+                <option :value="3">3</option>
+                <option :value="4">4</option>
+                <option :value="5">5</option>
+              </select>
+            </div>
+            <div v-if="configStore.enableEvaluation">
+              <label
+                for="brand-guidelines"
+                class="block text-sm font-medium text-gray-300 mb-1"
+                >Brand Guidelines</label
+              >
+              <textarea
+                v-model="configStore.brandGuidelines"
+                id="brand-guidelines"
+                rows="3"
+                class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
+                placeholder="Enter brand guidelines (e.g., colors, logo placement, style...)"
+              ></textarea>
+            </div>
+
+          </div>
+        </fieldset>
+
         <div class="flex justify-end">
           <button
             @click="emit('close')"

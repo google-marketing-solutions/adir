@@ -2,8 +2,9 @@
 import { uploadBase64Image } from "@/services/gcsService";
 import { editImageWithNanoBanana } from "@/services/nanoBananaService";
 import { generateTextFromPrompt } from "@/services/vertexAiService";
+import { evaluateImage, generateEvaluationRules } from "@/services/evaluationService";
 import { useConfigStore } from "@/stores/config";
-import { onMounted, ref, watch } from "vue";
+import { onMounted, ref, watch, computed } from "vue";
 const showPrompt = ref(false);
 
 const emit = defineEmits(["generation-complete", "update:loading"]);
@@ -84,8 +85,39 @@ const aspectRatios = ref([
   { label: "Landscape (16:9)", ratio: "16:9", count: 0 },
 ]);
 const isLoading = ref(false);
+const loadingStatus = ref("");
+const isGeneratingRules = ref(false);
+const rulesErrorMessage = ref("");
 const configStore = useConfigStore();
 const errorMessage = ref("");
+
+const generationLogs = ref([]);
+const showDetailedLogs = ref(false);
+
+const uniqueLogIds = computed(() => {
+  return [...new Set(generationLogs.value.map((log) => log.id))];
+});
+
+const getLogsForId = (id) => {
+  return generationLogs.value.filter((log) => log.id === id);
+};
+
+const getStatusColorClass = (status) => {
+  switch (status) {
+    case "generating":
+      return "bg-blue-900/50 text-blue-300 border border-blue-800/50";
+    case "evaluating":
+      return "bg-yellow-900/50 text-yellow-300 border border-yellow-800/50";
+    case "approved":
+      return "bg-green-900/50 text-green-300 border border-green-800/50";
+    case "rejected":
+      return "bg-orange-900/50 text-orange-300 border border-orange-800/50";
+    case "failed":
+      return "bg-red-900/50 text-red-300 border border-red-800/50";
+    default:
+      return "bg-gray-800 text-gray-300";
+  }
+};
 
 const addCreativeConcept = () => {
   creativeConcepts.value.push({ name: "", description: "" });
@@ -136,8 +168,37 @@ const handlePaste = (event, index) => {
   // If only one line is pasted, do nothing and let the default paste behavior occur.
 };
 
+const generateRules = async () => {
+  isGeneratingRules.value = true;
+  rulesErrorMessage.value = "";
+  try {
+    // Combine base prompt and all concept descriptions to give full context for rule generation
+    const conceptsText = creativeConcepts.value
+      .map((c) => `${c.name ? c.name + ': ' : ''}${c.description}`)
+      .filter(Boolean)
+      .join("\n");
+    
+    const fullPromptContext = `${prompt.value}\n\nCreative Concepts:\n${conceptsText}`;
+    
+    const generated = await generateEvaluationRules(
+      fullPromptContext,
+      configStore.brandGuidelines
+    );
+    configStore.evaluationRules = generated;
+  } catch (error) {
+    rulesErrorMessage.value =
+      error.message || "Failed to generate evaluation rules. Please try again.";
+    console.error("Error generating rules:", error);
+  } finally {
+    isGeneratingRules.value = false;
+  }
+};
+
 const handleGenerate = async () => {
   isLoading.value = true;
+  loadingStatus.value = "Starting generation...";
+  generationLogs.value = []; // Clear previous logs
+  showDetailedLogs.value = false; // Reset collapse state
   emit("update:loading", true);
 
   try {
@@ -167,15 +228,77 @@ const handleGenerate = async () => {
 
         const generationPromises = [];
         for (let i = 0; i < ar.count; i++) {
+          const imageId = `${concept.name || "Default"}: AR ${ar.ratio} (#${i + 1})`;
           // Append aspect ratio to prompt to guide Nano Banana
           const promptWithAr = `${imagePrompt}\n\nGenerate the image with an aspect ratio of ${ar.ratio}.`;
 
           const genPromise = (async () => {
             try {
-              const generatedBase64 = await editImageWithNanoBanana(
-                referenceImages.value,
-                promptWithAr
-              );
+              let currentPrompt = promptWithAr;
+              let approved = false;
+              let attempts = 0;
+              const maxRetries = configStore.enableEvaluation ? configStore.maxEvaluationRetries : 1;
+              let generatedBase64 = "";
+              let evaluationFeedback = "";
+
+              const addLog = (status, message, feedback) => {
+                generationLogs.value.push({
+                  id: imageId,
+                  attempt: attempts,
+                  status,
+                  message,
+                  feedback
+                });
+              };
+
+              while (attempts < maxRetries && !approved) {
+                attempts++;
+                if (configStore.enableEvaluation) {
+                  loadingStatus.value = `Generating images (Attempt ${attempts}/${maxRetries})...`;
+                  addLog('generating', `Generating image...`);
+                } else {
+                  loadingStatus.value = "Generating images...";
+                  addLog('generating', "Generating image...");
+                }
+
+                // Refine prompt if we have feedback
+                if (evaluationFeedback) {
+                  currentPrompt = `${promptWithAr}\n\nRefinement Feedback from previous attempt: ${evaluationFeedback}`;
+                  console.log(`[Evaluation] Refining prompt for attempt ${attempts} with feedback: ${evaluationFeedback}`);
+                }
+
+                generatedBase64 = await editImageWithNanoBanana(
+                  referenceImages.value,
+                  currentPrompt
+                );
+
+                if (configStore.enableEvaluation) {
+                  addLog('evaluating', `Evaluating image...`);
+                  
+                  const evalResult = await evaluateImage(
+                    generatedBase64,
+                    currentPrompt,
+                    configStore.brandGuidelines,
+                    configStore.evaluationRules
+                  );
+
+                  approved = evalResult.approved;
+                  evaluationFeedback = evalResult.feedback;
+
+                  if (approved) {
+                    addLog('approved', `Image approved!`, evaluationFeedback || "Meets all guidelines.");
+                  } else {
+                    addLog('rejected', `Image rejected (Attempt ${attempts}/${maxRetries})`, evaluationFeedback);
+                  }
+                } else {
+                  approved = true; // If evaluation is disabled, we just approve it immediately
+                  addLog('approved', `Image generated successfully.`);
+                }
+              }
+
+              if (configStore.enableEvaluation && !approved) {
+                addLog('failed', `Failed to generate approved image after ${maxRetries} attempts. Using last generation.`, evaluationFeedback);
+              }
 
               const dataUrl = "data:image/png;base64," + generatedBase64;
               const gcsPath = concept.name
@@ -184,7 +307,7 @@ const handleGenerate = async () => {
               const gcsFileName = `${gcsPath}${Date.now()}_${i}_${Math.random().toString(36).slice(2, 7)}.png`;
               return await uploadBase64Image(gcsFileName, dataUrl);
             } catch (e) {
-              console.error("Error generating image with Nano Banana:", e);
+              console.error("Error in image generation/evaluation loop:", e);
               throw e;
             }
           })();
@@ -209,6 +332,7 @@ const handleGenerate = async () => {
     console.error("Error generating images:", error);
   } finally {
     isLoading.value = false;
+    loadingStatus.value = "";
     emit("update:loading", false);
   }
 };
@@ -291,6 +415,35 @@ const handleGenerate = async () => {
         <input type="checkbox" v-model="useGemini" class="checkbox" />
       </label>
     </div>
+
+    <!-- Evaluation Rules Section -->
+    <div v-if="configStore.enableEvaluation" class="border border-gray-700 rounded-md p-4 flex flex-col gap-4 bg-gray-800/30">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-lg text-gray-200">Evaluation Rules</h3>
+        <button
+          @click="generateRules"
+          type="button"
+          class="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-1 px-3 rounded text-sm flex items-center gap-1"
+          :disabled="isGeneratingRules"
+        >
+          <span v-if="isGeneratingRules" class="loading loading-spinner loading-xs"></span>
+          {{ isGeneratingRules ? "Generating..." : "Auto-generate Rules 🪄" }}
+        </button>
+      </div>
+      <p class="text-xs text-gray-400">
+        These rules will be used by the AI Auditor to evaluate generated images. You can edit them below.
+      </p>
+      <textarea
+        v-model="configStore.evaluationRules"
+        placeholder="Click 'Auto-generate Rules' or write your own rules here..."
+        class="bg-gray-700 rounded-md p-2 w-full text-white border border-gray-600 focus:border-cyan-400 focus:outline-none"
+        rows="4"
+      ></textarea>
+      <div v-if="rulesErrorMessage" class="text-yellow-500 text-xs">
+        {{ rulesErrorMessage }}
+      </div>
+    </div>
+
     <div>
       <h3 class="font-bold">Number of images for each aspect ratio:</h3>
       <div class="flex gap-4 mt-2">
@@ -307,13 +460,51 @@ const handleGenerate = async () => {
       </div>
     </div>
 
+    <!-- Consolidated Loading Status Box (Above the button) -->
+    <div v-if="isLoading" class="bg-gray-800/50 border border-gray-700 rounded-md p-4 flex flex-col gap-3">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-3 text-cyan-400 font-semibold">
+          <span class="loading loading-spinner loading-sm"></span>
+          <span>{{ loadingStatus || "Generating images..." }}</span>
+        </div>
+        <button
+          v-if="generationLogs.length > 0"
+          @click="showDetailedLogs = !showDetailedLogs"
+          type="button"
+          class="text-xs text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1 bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded border border-gray-600 transition-colors"
+        >
+          {{ showDetailedLogs ? "Hide Details ▴" : "Show Details ▾" }}
+        </button>
+      </div>
+
+      <!-- Detailed Logs Timeline -->
+      <div v-if="showDetailedLogs" class="mt-2 border-t border-gray-700 pt-3 max-h-60 overflow-y-auto flex flex-col gap-4 text-xs text-gray-300">
+        <div v-for="id in uniqueLogIds" :key="id" class="border border-gray-800 rounded p-2 bg-gray-900/50">
+          <h4 class="font-bold text-cyan-300 mb-2">{{ id }}</h4>
+          <div class="flex flex-col gap-2 pl-2 border-l-2 border-gray-700">
+            <div v-for="(log, idx) in getLogsForId(id)" :key="idx" class="flex flex-col gap-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span :class="getStatusColorClass(log.status)" class="font-semibold uppercase text-[9px] px-1.5 py-0.5 rounded">
+                  {{ log.status }}
+                </span>
+                <span class="text-gray-400 font-medium">Attempt {{ log.attempt }}:</span>
+                <span>{{ log.message }}</span>
+              </div>
+              <div v-if="log.feedback" class="mt-1 ml-6 p-2 bg-gray-800 rounded text-gray-400 font-mono whitespace-pre-wrap text-[10px] border border-gray-700/50 leading-relaxed">
+                <strong>Feedback:</strong> {{ log.feedback }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <button
       @click="handleGenerate"
-      class="bg-cyan-600 text-white font-bold py-2 px-6 rounded-md hover:bg-cyan-700"
+      class="bg-cyan-600 text-white font-bold py-2 px-6 rounded-md hover:bg-cyan-700 disabled:bg-gray-800 disabled:text-gray-500 disabled:border-gray-700 disabled:cursor-not-allowed border border-transparent transition-all duration-200"
       :disabled="isLoading"
     >
-      <span v-if="isLoading" class="loading loading-spinner"></span>
-      {{ isLoading ? "Generating..." : "Generate Images" }}
+      Generate Images
     </button>
     <div v-if="errorMessage" class="text-yellow-500 mt-4">
       {{ errorMessage }}

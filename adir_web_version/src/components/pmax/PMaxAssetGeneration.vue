@@ -93,7 +93,7 @@ const handleGenerationComplete = (imageUrls) => {
         </div>
       </div>
 
-      <div v-if="isLoading" class="flex justify-center items-center mt-4">
+      <div v-if="isLoading && activeMode !== 'Creative Concepts'" class="flex justify-center items-center mt-4">
         <span class="loading loading-spinner loading-lg"></span>
         <p class="ml-4">Generating images...</p>
       </div>
