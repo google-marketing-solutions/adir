@@ -7,6 +7,7 @@ import {
   createCreativeConceptPrompt,
   getCreativeConceptsInstruction,
   extractBrandGuidelines,
+  generateCharacterPrompts,
 } from "@/services/vertexAiService";
 import { evaluateImage, generateEvaluationRules } from "@/services/evaluationService";
 import { useConfigStore } from "@/stores/config";
@@ -67,6 +68,7 @@ watch(
 const useGemini = ref(true);
 const uniqueId = () => Math.random().toString(36).substring(2, 9);
 const creativeConcepts = ref([{ id: uniqueId(), name: "", description: "" }]);
+const isGeneratingCharacters = ref(false);
 const customerId = useConfigStore().customerID;
 const storageKey = `creativeConcepts_${customerId}`;
 const namingTimers = {};
@@ -125,7 +127,7 @@ onMounted(() => {
           name: c.name || "",
           description: c.description || "",
         }));
-        
+
         // Ensure there is at least one concept, and the last one is empty
         const lastConcept = creativeConcepts.value[creativeConcepts.value.length - 1];
         if (lastConcept.description.trim() !== "") {
@@ -415,9 +417,9 @@ const generateRules = async () => {
     const conceptsText = activeConcepts
       .map((c) => `${c.name ? c.name + ': ' : ''}${c.description}`)
       .join("\n");
-    
+
     const fullPromptContext = `${prompt.value}\n\nCreative Concepts:\n${conceptsText}`;
-    
+
     const generated = await generateEvaluationRules(
       fullPromptContext,
       brandStore.guidelines,
@@ -431,6 +433,56 @@ const generateRules = async () => {
     console.error("Error generating rules:", error);
   } finally {
     isGeneratingRules.value = false;
+  }
+};
+
+const handleGenerateCharacters = async () => {
+  isGeneratingCharacters.value = true;
+  isLoading.value = true;
+  emit("update:loading", true);
+  emit("update:loading-message", "Ideating 3 distinct character concepts with Gemini...");
+
+  try {
+    errorMessage.value = "";
+
+    const charPrompts = await generateCharacterPrompts(
+      prompt.value,
+      configStore.geminiModel,
+      brandStore.useGuidelinesInGeneration ? brandStore.guidelines : undefined
+    );
+
+    emit("update:loading-message", "Generating character reference images with Imagen...");
+    for (let i = 0; i < charPrompts.length; i++) {
+      emit("update:loading-message", `Generating character portrait #${i + 1} of 3...`);
+      const generatedBase64 = await editImageWithNanoBanana(
+        [],
+        charPrompts[i],
+        "1:1"
+      );
+      const dataUrl = "data:image/png;base64," + generatedBase64;
+      referenceImages.value.push(dataUrl);
+
+      const gcsFileName = `${configStore.customerID}/Creative Concepts/Characters/char_${Date.now()}_${i}.png`;
+      await uploadBase64Image(gcsFileName, dataUrl);
+    }
+
+    // Tell Gemini to use these newly generated reference images
+    const instructionPrompt = "Ensure the main campaign assets feature the generated character reference portraits consistently.";
+    if (!imageContextInstructions.value.includes(instructionPrompt)) {
+      imageContextInstructions.value = imageContextInstructions.value
+        ? `${imageContextInstructions.value.trim()}\n\n${instructionPrompt}`
+        : instructionPrompt;
+    }
+
+    // Automatically open the Reference Images modal to let the user review
+    showImageModal.value = true;
+  } catch (error) {
+    errorMessage.value = error.message || "Failed to generate characters.";
+    console.error("Error generating characters:", error);
+  } finally {
+    isLoading.value = false;
+    isGeneratingCharacters.value = false;
+    emit("update:loading", false);
   }
 };
 
@@ -523,7 +575,7 @@ const handleGenerate = async () => {
 
                 if (configStore.enableEvaluation) {
                   addLog('evaluating', `Evaluating image...`);
-                  
+
                   const evalResult = await evaluateImage(
                     generatedBase64,
                     currentPrompt,
@@ -745,6 +797,25 @@ defineExpose({ regenerateImages });
           {{ referenceImages.length }}
         </span>
       </button>
+      <button
+        @click="handleGenerateCharacters"
+        :disabled="isLoading"
+        class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-gray-600 border border-[var(--color-text-dim)] self-start flex items-center gap-2 transition-colors disabled:opacity-50"
+      >
+        <span v-if="isGeneratingCharacters" class="loading loading-spinner loading-xs"></span>
+        <span v-else class="material-symbols-outlined text-sm">person</span>
+        {{ isGeneratingCharacters ? "Loading..." : "Generate Characters" }}
+      </button>
+      <button
+        @click="showBrandGuidelinesModal = true"
+        class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-gray-600 border border-[var(--color-text-dim)] self-start flex items-center gap-2 transition-colors"
+      >
+        <span class="material-symbols-outlined text-sm">menu_book</span>
+        Configure Brand Guidelines
+        <span v-if="brandStore.guidelines" class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] text-xs rounded-full px-2 py-0.5">
+          Configured
+        </span>
+      </button>
     </div>
 
     <div class="form-control max-w-xs">
@@ -756,6 +827,8 @@ defineExpose({ regenerateImages });
         <span class="ml-3 text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" :class="{'text-[var(--color-text-primary)]': useGemini}">Use Gemini to improve prompt</span>
       </label>
     </div>
+
+
 
     <!-- Evaluation Rules Section -->
     <div v-if="configStore.enableEvaluation" class="border border-gray-700 rounded-md p-4 flex flex-col gap-4 bg-gray-800/30">
@@ -938,7 +1011,7 @@ defineExpose({ regenerateImages });
       </div>
     </div>
 
-    
+
   </div>
 </template>
 

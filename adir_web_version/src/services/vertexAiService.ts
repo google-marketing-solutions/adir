@@ -294,3 +294,51 @@ export async function createCreativeConceptPrompt(
     reference_images
   );
 }
+
+/**
+ * Generates exactly 3 distinct character design prompts from a creative brief and optional brand guidelines.
+ * @param {string} creativeBrief - The creative brief or baseline instructions.
+ * @param {string} modelId - The Gemini model ID.
+ * @param {string} [brandGuidelines] - Optional brand guidelines.
+ * @return {Promise<string[]>} An array of exactly 3 image generation prompt strings.
+ */
+export async function generateCharacterPrompts(
+  creativeBrief: string,
+  modelId: string,
+  brandGuidelines?: string
+): Promise<string[]> {
+  let systemPrompt = `You are a creative director and character designer.
+Your task is to read the following creative brief and generate exactly 3 distinct character concepts (e.g., representing diverse aspects of the target audience).
+For each character concept, you must write a highly-detailed image prompt optimized for a photorealistic AI image generator (like Imagen).
+The character prompts should focus solely on generating a high-quality, isolated portrait of that single character on a clean, solid neutral background (like a solid studio gray background) to make it suitable as a reference image. Avoid complex scenes, landscapes, text, or multiple people.
+
+Adhere strictly to the following instructions:
+1. Focus on the character's appearance, expression, age, gender, ethnicity, clothing, and style.
+2. Ensure the characters represent distinct and diverse personas fitting the creative brief.
+3. The background MUST be a solid, uniform, neutral color.
+4. Do not include any conversational filler, framing, or explanations.
+5. Output exactly 3 prompts, one per line, each starting with "a photo of". Do not number the lines.`;
+
+  if (brandGuidelines) {
+    systemPrompt += `\n\nAdhere strictly to the following brand guidelines:\n${brandGuidelines}`;
+  }
+
+  const promptForGemini = `${systemPrompt}\n\nHere is the creative brief:\n${creativeBrief}\n\nGenerate the 3 character prompts now (exactly 1 prompt per line, no numbers, starting with "a photo of"):`;
+
+  const rawOutput = await generateTextFromPrompt(promptForGemini, modelId);
+  console.log("Raw character prompts from Gemini:", rawOutput);
+
+  const prompts = rawOutput
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && (line.toLowerCase().startsWith("a photo of") || line.toLowerCase().startsWith("photo of")));
+
+  const formattedPrompts = prompts.map(p => p.toLowerCase().startsWith("a photo of") ? p : `a ${p}`);
+
+  // Fallback to make sure we always return exactly 3 valid prompts
+  while (formattedPrompts.length < 3) {
+    formattedPrompts.push(`a photo of a professional corporate specialist representing the brand, high quality, studio portrait, solid neutral background`);
+  }
+
+  return formattedPrompts.slice(0, 3);
+}
