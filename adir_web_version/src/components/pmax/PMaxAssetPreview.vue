@@ -410,6 +410,29 @@ const handleEditSubmit = async () => {
     />
     <h1 class="mb-6">Generated Asset Preview</h1>
 
+    <!-- Workflow Stepper -->
+    <div class="flex items-center justify-between mb-8 max-w-2xl mx-auto">
+      <!-- Step 1 -->
+      <div class="flex flex-col items-center gap-2">
+        <div class="w-10 h-10 rounded-full bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] flex items-center justify-center font-bold">1</div>
+        <span class="text-sm font-medium text-[var(--color-text-primary)]">Configure</span>
+      </div>
+      <!-- Line (Active) -->
+      <div class="flex-1 h-1 bg-[var(--color-interactive-primary)] mx-4"></div>
+      <!-- Step 2 -->
+      <div class="flex flex-col items-center gap-2">
+        <div class="w-10 h-10 rounded-full bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] flex items-center justify-center font-bold">2</div>
+        <span class="text-sm font-medium text-[var(--color-text-primary)]">Generate</span>
+      </div>
+      <!-- Line (Active) -->
+      <div class="flex-1 h-1 bg-[var(--color-interactive-primary)] mx-4"></div>
+      <!-- Step 3 -->
+      <div class="flex flex-col items-center gap-2">
+        <div class="w-10 h-10 rounded-full bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] flex items-center justify-center font-bold">3</div>
+        <span class="text-sm font-medium text-[var(--color-text-primary)]">Review</span>
+      </div>
+    </div>
+
     <div v-if="isLoading" :style="{ columns: columnCount }" class="gap-4">
       <div v-for="i in 12" :key="i" class="bg-[var(--color-bg-secondary)] rounded-xl mb-4 break-inside-avoid animate-pulse" :style="{ height: skeletonHeights[(i - 1) % skeletonHeights.length] + 'px' }">
         <div class="w-full h-full bg-[var(--color-bg-tertiary)]/50 rounded-xl"></div>
