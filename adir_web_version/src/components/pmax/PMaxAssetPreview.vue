@@ -41,6 +41,12 @@ const showConfirmationModal = ref(false);
 const confirmationMessage = ref("");
 const confirmationTitle = ref("");
 
+const toggleSelection = (asset) => {
+  if (!asset.uploaded) {
+    asset.selected = !asset.selected;
+  }
+};
+
 const fetchImages = async (force = false) => {
   if (!configStore.customerID) {
     console.error("Customer ID not available in config store.");
@@ -589,7 +595,8 @@ const handleEditSubmit = async () => {
                 <div
                   v-for="asset in group.assets"
                   :key="asset.id"
-                  class="relative break-inside-avoid mb-4"
+                  class="relative break-inside-avoid mb-4 group cursor-pointer"
+                  @click="toggleSelection(asset)"
                 >
                   <GcsImage
                     :gcs-uri="asset.src"
@@ -605,6 +612,7 @@ const handleEditSubmit = async () => {
                     v-model="asset.selected"
                     class="absolute top-2 left-2 h-5 w-5 rounded"
                     :disabled="asset.uploaded"
+                    @click.stop
                   />
                   <div
                     v-if="asset.uploaded"
@@ -613,8 +621,8 @@ const handleEditSubmit = async () => {
                     ✓
                   </div>
                   <button
-                    @click.prevent="openEditModal(asset)"
-                    class="absolute bottom-2 right-2 bg-amber-500 text-gray-900 rounded-md px-2 py-1 text-xs hover:bg-amber-600 flex items-center gap-1 font-medium"
+                    @click.prevent.stop="openEditModal(asset)"
+                    class="absolute bottom-2 right-2 bg-amber-500 text-gray-900 rounded-md px-2 py-1 text-xs hover:bg-amber-600 flex items-center gap-1 font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                     title="Edit with Nano Banana"
                   >
                     <span style="filter: drop-shadow(0 0 1px rgba(0,0,0,0.8))">🍌</span>
