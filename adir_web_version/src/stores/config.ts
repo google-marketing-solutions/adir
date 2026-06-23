@@ -11,9 +11,9 @@ export const useConfigStore = defineStore("config", {
     mccID: "",
     customerID: "",
     developerToken: "",
-    geminiModel: "gemini-3-flash-preview",
-    nanoBananaModel: "gemini-3.1-flash-image-preview",
-    imageGenModel: "imagen-3.0-generate-002",
+    geminiModel: "gemini-3.5-flash",
+    nanoBananaModel: "gemini-3.1-flash-image",
+    imageGenModel: "imagen-4.0-generate-001",
     googleClientId: "",
     useSecretManager: false,
     enableEvaluation: false,
@@ -24,31 +24,8 @@ export const useConfigStore = defineStore("config", {
       { label: "Portrait (9:16)", ratio: "9:16", count: 0 },
       { label: "Landscape (16:9)", ratio: "16:9", count: 0 },
     ],
-    promptTemplates: [
-      {
-        label: "More of the same",
-        prompt: "Create a high-fidelity image that precisely replicates the artistic style, lighting, and color palette of the reference material, ensuring seamless aesthetic continuity and tonal alignment with the existing assets.",
-      },
-      {
-        label: "Outpaint & Keep Content Intact",
-        prompt: `Crop or outpaint the provided image to the requested aspect ratio.
-RESTRICTION: DO NOT modify, rotate, reposition, or alter any existing objects, people, or text in the original image. The original content must remain exactly as it is.
-ACTION: Extend the image PURELY with environmental background (e.g., sky, walls, floors, empty space) to fill the new aspect ratio. Maintain the same style, lighting, and tone.
-CRITICAL: NO NEW ADDITIONS. Do not add any new icons, symbols, writing, or objects. The new areas must be completely empty.`,
-      },
-      {
-        label: "Remove Background",
-        prompt: "Remove the background of the image and replace it with a clean, minimalist studio background with soft lighting.",
-      },
-      {
-        label: "Black Friday Theme",
-        prompt: "Add subtle Black Friday elements to the background, like dark aesthetic, red accents, and a mood of high-end retail sale, without altering the main subject.",
-      },
-      {
-        label: "Saved by the Bell",
-        prompt: "Seamless flat-lay pattern, 1990s Memphis design aesthetic, abstract geometric shapes featuring bold neon zig-zags, floating squiggles, and vibrant teal triangles on a soft lavender background. Minimalist but high-energy, clean vector art style, balanced composition, soft even lighting.",
-      }
-    ],
+    useRedirectFlow: false,
+    oneByOneReview: false,
   }),
   getters: {
     allAllowedAspectRatios: () => [
@@ -75,9 +52,7 @@ CRITICAL: NO NEW ADDITIONS. Do not add any new icons, symbols, writing, or objec
         this.aspectRatios.push({ label, ratio, count: 0 });
       }
     },
-    addPromptTemplate(label: string, prompt: string) {
-      this.promptTemplates.push({ label, prompt });
-    },
+
     resetAspectRatios() {
       this.aspectRatios = [
         { label: "Square (1:1)", ratio: "1:1", count: 0 },

@@ -7,7 +7,6 @@ import { useRouter } from "vue-router";
 import LoadingSpinner from "@/components/LoadingSpinner.vue";
 import { extractBrandGuidelines } from "@/services/vertexAiService";
 import { useConfigStore } from "@/stores/config";
-import AssetGroupNameMode from "./generation/AssetGroupNameMode.vue";
 import CreativeConceptsMode from "./generation/CreativeConceptsMode.vue";
 import ExistingAssetsMode from "./generation/ExistingAssetsMode.vue";
 import SearchSignalKeywordsMode from "./generation/SearchSignalKeywordsMode.vue";
@@ -23,8 +22,7 @@ const router = useRouter();
 const activeMode = ref("Existing Asset Based Generation 🍌");
 const modes = {
   "Existing Asset Based Generation 🍌": ExistingAssetsMode,
-  "Asset Group / Ad Group Name": AssetGroupNameMode,
-  "Search Signal Keywords": SearchSignalKeywordsMode,
+  "Keyword Context (Pmax Only)": SearchSignalKeywordsMode,
   "Free form": CreativeConceptsMode,
 };
 
@@ -98,28 +96,33 @@ const activeModeComponent = ref(null);
 
 const handleGenerationComplete = (images) => {
   if (images && images.length > 0) {
-    // Check if the first item is a rich object or just a string (GCS URI)
-    // If it's a string, we might need to wrap it, but we updated CreativeConceptsMode to return rich objects.
-    // Other modes still return strings, so we should normalize them here for backward compatibility.
-    const normalizedImages = images.map((img, index) => {
-      if (typeof img === "string") {
-        return {
-          id: `gen-${index}-${Date.now()}`,
-          gcsUri: img,
-          conceptName: "Generated Image",
-          conceptDescription: "Generated via " + activeMode.value,
-          prompt: "",
-          aspectRatio: "Unknown",
-          status: "pending",
-          feedback: "",
-          attempt: 1,
-        };
-      }
-      return img;
-    });
+    if (configStore.oneByOneReview) {
+      // Check if the first item is a rich object or just a string (GCS URI)
+      // If it's a string, we might need to wrap it, but we updated CreativeConceptsMode to return rich objects.
+      // Other modes still return strings, so we should normalize them here for backward compatibility.
+      const normalizedImages = images.map((img, index) => {
+        if (typeof img === "string") {
+          return {
+            id: `gen-${index}-${Date.now()}`,
+            gcsUri: img,
+            conceptName: "Generated Image",
+            conceptDescription: "Generated via " + activeMode.value,
+            prompt: "",
+            aspectRatio: "Unknown",
+            status: "pending",
+            feedback: "",
+            attempt: 1,
+          };
+        }
+        return img;
+      });
 
-    generatedImages.value = normalizedImages;
-    step.value = "review";
+      generatedImages.value = normalizedImages;
+      step.value = "review";
+    } else {
+      assetStore.setNeedsRefresh(true);
+      router.push("/asset-preview");
+    }
   }
 };
 
@@ -223,6 +226,21 @@ const handleFinish = async (approvedImages) => {
       </div>
     </div>
 
+    <!-- One-by-One Review Toggle -->
+    <div v-if="step === 'configure'" class="flex justify-center mb-6">
+      <label class="flex items-center cursor-pointer group">
+        <div class="relative">
+          <input
+            type="checkbox"
+            v-model="configStore.oneByOneReview"
+            class="sr-only peer"
+          />
+          <div class="w-11 h-6 bg-[var(--color-bg-tertiary)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--color-interactive-focus)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-interactive-primary)]"></div>
+        </div>
+        <span class="ml-3 text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" :class="{'text-[var(--color-text-primary)]': configStore.oneByOneReview}">One-by-One human review</span>
+      </label>
+    </div>
+
     <!-- Step 1: Configure -->
     <div v-show="step === 'configure'" class="bg-[var(--color-bg-secondary)] p-6 rounded-xl mb-6 border border-[var(--color-bg-tertiary)]">
       <div class="mb-6 flex justify-between items-end">
@@ -235,7 +253,7 @@ const handleFinish = async (approvedImages) => {
               <button
                 v-for="(name, index) in Object.keys(modes)"
                 :key="name"
-                class="btn flex-1 font-medium py-2 px-4 rounded-md transition-colors duration-200 text-sm"
+                class="btn flex-1 font-medium py-2 px-4 rounded-md transition-colors duration-200 text-sm whitespace-nowrap"
                 :class="[
                   {
                     'bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)]': activeMode === name,

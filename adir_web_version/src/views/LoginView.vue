@@ -14,6 +14,16 @@
           v-model="configStore.googleClientId"
         />
       </div>
+      <div class="input-group checkbox-group">
+        <label class="checkbox-label">
+          <input
+            type="checkbox"
+            id="use-redirect-flow"
+            v-model="configStore.useRedirectFlow"
+          />
+          Use Redirect Flow (fixes popup errors)
+        </label>
+      </div>
       <button class="google-signin" @click="handleLogin">
         Sign in with Google
       </button>
@@ -25,7 +35,10 @@
 </template>
 
 <script setup>
-import { createTokenClient } from "@/services/googleAuth";
+import {
+  createTokenClient,
+  redirectToGoogleSignIn,
+} from "@/services/googleAuth";
 import { useAuthStore } from "@/stores/auth";
 import { useConfigStore } from "@/stores/config";
 import { useRouter } from "vue-router";
@@ -41,6 +54,11 @@ async function handleLogin() {
   const clientId = configStore.googleClientId;
   if (!clientId) {
     alert("Please enter a Client ID");
+    return;
+  }
+
+  if (configStore.useRedirectFlow) {
+    redirectToGoogleSignIn(clientId, GOOGLE_API_SCOPES);
     return;
   }
 
@@ -157,5 +175,26 @@ async function handleLogin() {
 
 .google-signin:hover {
   background-color: #357ae8;
+}
+
+.checkbox-group {
+  margin-top: -8px;
+  margin-bottom: 24px;
+}
+
+.checkbox-label {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: #9ca3af; /* text-gray-400 */
+  cursor: pointer;
+  user-select: none;
+  font-weight: normal !important;
+}
+
+.checkbox-label input {
+  width: auto !important;
+  cursor: pointer;
 }
 </style>

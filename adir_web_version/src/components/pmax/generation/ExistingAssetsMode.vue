@@ -8,7 +8,8 @@ import { editImageWithNanoBanana } from "@/services/nanoBananaService";
 import { generateTextFromPrompt } from "@/services/vertexAiService";
 import { useBrandStore } from "@/stores/brandStore";
 import { useConfigStore } from "@/stores/config";
-import { ref, computed } from "vue";
+import { ref, computed, nextTick, watch } from "vue";
+import ReferenceImagesModal from "./ReferenceImagesModal.vue";
 
 const emit = defineEmits(["generation-complete", "update:loading"]);
 
@@ -24,20 +25,204 @@ const props = defineProps({
 });
 
 const configStore = useConfigStore();
-const selectedTemplate = ref(configStore.promptTemplates[0]);
-const prompt = ref(selectedTemplate.value?.prompt || "");
+
+const referenceImages = ref([]); // Array of base64 Data URLs
+const imageContextInstructions = ref("");
+const showImageModal = ref(false);
+
+const maxCampaignImages = computed(() => 14 - referenceImages.value.length);
+
+watch(maxCampaignImages, (newMax) => {
+  if (numTopImages.value > newMax) {
+    numTopImages.value = Math.max(1, newMax);
+  }
+});
+
+const handleValidationError = (msg) => {
+  errorMessage.value = msg;
+};
+
+const DEFAULT_TEMPLATES = [
+  {
+    label: "More of the same",
+    prompt: `Analyze the provided reference images to identify:
+1. The core product, service, or subject being advertised.
+2. The visual style, including the color palette, lighting, composition, and brand atmosphere.
+
+Generate a new marketing image that advertises the exact same product, service, or subject. Show it from a different angle, in a new setting, or in a realistic usage scenario. 
+
+Ensure the new image maintains the same visual identity and remains clean, professional, and optimized for digital advertising with no text or logos.`,
+  },
+  {
+    label: "Outpaint & Keep Content Intact",
+    prompt: `Crop or outpaint the provided image to the requested aspect ratio.
+RESTRICTION: DO NOT modify, rotate, reposition, or alter any existing objects, people, or text in the original image. The original content must remain exactly as it is.
+ACTION: Extend the image PURELY with environmental background (e.g., sky, walls, floors, empty space) to fill the new aspect ratio. Maintain the same style, lighting, and tone.
+CRITICAL: NO NEW ADDITIONS. Do not add any new icons, symbols, writing, or objects. The new areas must be completely empty.`,
+  },
+  {
+    label: "Remove Background",
+    prompt:
+      "Remove the background of the image and replace it with a clean, minimalist studio background with soft lighting.",
+  },
+  {
+    label: "Holiday/Seasonal Event Theme",
+    prompt:
+      "Create an image suited for a pMax or Demand Gen campaign for the same campaign as the referenced images, that will be part of a {holiday} themed campaign.",
+  },
+  {
+    label: "Saved by the Bell",
+    prompt:
+      "Seamless flat-lay pattern, 1990s Memphis design aesthetic, abstract geometric shapes featuring bold neon zig-zags, floating squiggles, and vibrant teal triangles on a soft lavender background. Minimalist but high-energy, clean vector art style, balanced composition, soft even lighting.",
+  },
+];
+
+const DEFAULT_HOLIDAYS = [
+  "Black Friday",
+  "Christmas",
+  "Halloween",
+  "Thanksgiving",
+  "Valentine's Day",
+  "Easter",
+  "New Year",
+  "Hanukkah",
+  "Diwali",
+  "Eid",
+  "Summer",
+  "Spring",
+  "Autumn/Fall",
+  "Winter",
+];
+
+const loadHolidays = () => {
+  const saved = localStorage.getItem("adir_custom_holidays");
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return [...DEFAULT_HOLIDAYS, ...parsed];
+      }
+    } catch (e) {
+      console.error("Failed to parse custom holidays", e);
+    }
+  }
+  return [...DEFAULT_HOLIDAYS];
+};
+
+const holidayOptions = ref(loadHolidays());
+const selectedHoliday = ref(holidayOptions.value[0]);
+const showCustomHolidayInput = ref(false);
+const customHolidayName = ref("");
+const customHolidayInputRef = ref(null);
+
+const loadTemplates = () => {
+  const saved = localStorage.getItem("adir_prompt_templates");
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      // Migrate old templates if found in user's saved templates
+      return parsed.map((t) => {
+        if (t.label === "Black Friday Theme") {
+          return {
+            label: "Holiday/Seasonal Event Theme",
+            prompt:
+              "Create an image suited for a pMax or Demand Gen campaign for the same campaign as the referenced images, that will be part of a {holiday} themed campaign.",
+          };
+        }
+        if (t.label === "More of the same") {
+          return {
+            label: "More of the same",
+            prompt: `Analyze the provided reference images to identify:
+1. The core product, service, or subject being advertised.
+2. The visual style, including the color palette, lighting, composition, and brand atmosphere.
+
+Generate a new marketing image that advertises the exact same product, service, or subject. Show it from a different angle, in a new setting, or in a realistic usage scenario. 
+
+Ensure the new image maintains the same visual identity and remains clean, professional, and optimized for digital advertising with no text or logos.`,
+          };
+        }
+        return t;
+      });
+    } catch (e) {
+      console.error("Failed to parse saved templates", e);
+    }
+  }
+  return [...DEFAULT_TEMPLATES];
+};
+
+const promptTemplates = ref(loadTemplates());
+const selectedTemplate = ref(promptTemplates.value[0]);
+
+const getInitialPrompt = () => {
+  const template = selectedTemplate.value;
+  if (!template) return "";
+  if (template.label === "Holiday/Seasonal Event Theme") {
+    return `Create an image suited for a pMax or Demand Gen campaign for the same campaign as the referenced images, that will be part of a ${selectedHoliday.value} themed campaign.`;
+  }
+  return template.prompt;
+};
+
+const prompt = ref(getInitialPrompt());
 const newTemplateLabel = ref("");
 const isRefining = ref(false);
 
+const updateHolidayPrompt = () => {
+  if (selectedTemplate.value && selectedTemplate.value.label === "Holiday/Seasonal Event Theme") {
+    prompt.value = `Create an image suited for a pMax or Demand Gen campaign for the same campaign as the referenced images, that will be part of a ${selectedHoliday.value} themed campaign.`;
+  }
+};
+
 const applyTemplate = () => {
   if (selectedTemplate.value) {
-    prompt.value = selectedTemplate.value.prompt;
+    if (selectedTemplate.value.label === "Holiday/Seasonal Event Theme") {
+      updateHolidayPrompt();
+    } else {
+      prompt.value = selectedTemplate.value.prompt;
+    }
+  }
+};
+
+const onHolidayChange = () => {
+  if (selectedHoliday.value === "__ADD_CUSTOM__") {
+    showCustomHolidayInput.value = true;
+    customHolidayName.value = "";
+    nextTick(() => {
+      customHolidayInputRef.value?.focus();
+    });
+  } else {
+    showCustomHolidayInput.value = false;
+    updateHolidayPrompt();
+  }
+};
+
+const saveCustomHoliday = () => {
+  const name = customHolidayName.value.trim();
+  if (name) {
+    const exists = holidayOptions.value.some(
+      (h) => h.toLowerCase() === name.toLowerCase()
+    );
+    if (!exists) {
+      holidayOptions.value.push(name);
+      const customOnly = holidayOptions.value.filter((h) => !DEFAULT_HOLIDAYS.includes(h));
+      localStorage.setItem("adir_custom_holidays", JSON.stringify(customOnly));
+    }
+    selectedHoliday.value = name;
+    showCustomHolidayInput.value = false;
+    updateHolidayPrompt();
+  } else {
+    selectedHoliday.value = holidayOptions.value[0];
+    showCustomHolidayInput.value = false;
+    updateHolidayPrompt();
   }
 };
 
 const saveAsTemplate = () => {
   if (newTemplateLabel.value && prompt.value) {
-    configStore.addPromptTemplate(newTemplateLabel.value, prompt.value);
+    promptTemplates.value.push({
+      label: newTemplateLabel.value,
+      prompt: prompt.value,
+    });
+    localStorage.setItem("adir_prompt_templates", JSON.stringify(promptTemplates.value));
     newTemplateLabel.value = "";
   }
 };
@@ -273,6 +458,9 @@ const handleGenerate = async () => {
           if (brandStore.useGuidelinesInGeneration && brandStore.guidelines) {
             finalPrompt += `\n\nYou MUST follow these Brand Guidelines:\n${brandStore.guidelines}`;
           }
+          if (referenceImages.value.length > 0 && imageContextInstructions.value) {
+            finalPrompt += `\n\nInstructions for using the attached reference images:\n${imageContextInstructions.value}`;
+          }
 
           jobObjects.push({
             imageUrls: imageInfos.map((img) => img.url),
@@ -303,7 +491,7 @@ const handleGenerate = async () => {
         );
 
         const generatedBase64 = await editImageWithNanoBanana(
-          base64Images,
+          [...base64Images, ...referenceImages.value],
           job.prompt,
           job.aspectRatio
         );
@@ -347,7 +535,7 @@ const handleGenerate = async () => {
         v-model.number="numTopImages"
         class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] rounded-md p-2 w-full max-w-xs border border-transparent focus:border-[var(--color-interactive-focus)] focus:outline-none"
       >
-        <option v-for="i in 14" :key="i" :value="i">
+        <option v-for="i in maxCampaignImages" :key="i" :value="i">
           {{ i }}
         </option>
       </select>
@@ -381,12 +569,36 @@ const handleGenerate = async () => {
         <!-- Prompt Management Toolbar -->
         <div class="flex gap-2 items-center text-sm">
           <!-- Select Template -->
-          <select v-model="selectedTemplate" @change="applyTemplate" class="bg-gray-700 rounded-md p-1 text-xs max-w-48">
+          <select v-model="selectedTemplate" @change="applyTemplate" class="bg-gray-700 text-white rounded-md p-1 text-xs max-w-48">
             <option :value="null" disabled>Select template...</option>
-            <option v-for="t in configStore.promptTemplates" :key="t.label" :value="t">
+            <option v-for="t in promptTemplates" :key="t.label" :value="t">
               {{ t.label }}
             </option>
           </select>
+
+          <!-- Holiday Selection -->
+          <select
+            v-if="selectedTemplate && selectedTemplate.label === 'Holiday/Seasonal Event Theme' && !showCustomHolidayInput"
+            v-model="selectedHoliday"
+            @change="onHolidayChange"
+            class="bg-gray-700 text-white rounded-md p-1 text-xs max-w-48 focus:outline-none"
+          >
+            <option v-for="holiday in holidayOptions" :key="holiday" :value="holiday">
+              {{ holiday }}
+            </option>
+            <option value="__ADD_CUSTOM__">+ Add Custom Holiday...</option>
+          </select>
+
+          <!-- Custom Holiday Input -->
+          <input
+            v-if="selectedTemplate && selectedTemplate.label === 'Holiday/Seasonal Event Theme' && showCustomHolidayInput"
+            ref="customHolidayInputRef"
+            v-model="customHolidayName"
+            @keyup.enter="saveCustomHoliday"
+            @blur="saveCustomHoliday"
+            placeholder="Type custom holiday..."
+            class="bg-gray-700 text-white rounded-md p-1 text-xs w-36 focus:outline-none"
+          />
           
           <!-- Refine Button -->
           <button @click.prevent="refinePrompt" :disabled="isRefining" class="bg-yellow-600 text-white px-2 py-1 rounded-md hover:bg-yellow-700 text-xs flex items-center gap-1">
@@ -447,14 +659,37 @@ const handleGenerate = async () => {
       </div>
     </div>
 
-    <button
-      @click="handleGenerate"
-      class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-[var(--color-interactive-hover)] self-start transition-colors disabled:opacity-50"
-      :disabled="isLoading"
-    >
-      <span v-if="isLoading" class="loading loading-spinner mr-2"></span>
-      {{ isLoading ? "Generating..." : "Generate Images" }}
-    </button>
+    <div class="flex gap-4 items-center">
+      <button
+        @click="handleGenerate"
+        class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-[var(--color-interactive-hover)] transition-colors disabled:opacity-50"
+        :disabled="isLoading"
+      >
+        <span v-if="isLoading" class="loading loading-spinner mr-2"></span>
+        {{ isLoading ? "Generating..." : "Generate Images" }}
+      </button>
+
+      <button
+        @click="showImageModal = true"
+        type="button"
+        class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-gray-600 border border-[var(--color-text-dim)] flex items-center gap-2 transition-colors"
+      >
+        <span class="material-symbols-outlined text-sm">image</span>
+        Configure Reference Images
+        <span v-if="referenceImages.length > 0" class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] text-xs rounded-full px-2 py-0.5">
+          {{ referenceImages.length }}
+        </span>
+      </button>
+    </div>
+
+    <!-- Reference Images Modal -->
+    <ReferenceImagesModal
+      v-model:show="showImageModal"
+      v-model:images="referenceImages"
+      v-model:instructions="imageContextInstructions"
+      :max-images="13"
+      @validation-error="handleValidationError"
+    />
 
     <div
       v-if="warnings.length > 0"

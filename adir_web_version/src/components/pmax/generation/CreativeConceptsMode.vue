@@ -6,13 +6,12 @@ import {
   generateTextFromPrompt,
   createCreativeConceptPrompt,
   getCreativeConceptsInstruction,
-  extractBrandGuidelines,
-  generateCharacterPrompts,
 } from "@/services/vertexAiService";
 import { evaluateImage, generateEvaluationRules } from "@/services/evaluationService";
 import { useConfigStore } from "@/stores/config";
 import { onMounted, ref, watch, computed, nextTick } from "vue";
 import LoadingSpinner from "@/components/LoadingSpinner.vue";
+import ReferenceImagesModal from "./ReferenceImagesModal.vue";
 const showPrompt = ref(false);
 
 const emit = defineEmits(["generation-complete", "update:loading"]);
@@ -24,21 +23,7 @@ const referenceImages = ref([]); // Array of base64 Data URLs
 const imageContextInstructions = ref("");
 const showImageModal = ref(false);
 
-// Brand Guidelines Modal State
-const showBrandGuidelinesModal = ref(false);
-const guidelinesActiveTab = ref("upload");
-const guidelinesText = ref(brandStore.guidelines);
-const selectedBrandFiles = ref([]);
-const websiteUrl = ref("");
-const isProcessingGuidelines = ref(false);
-const brandNotification = ref({ show: false, message: "", type: "info" });
 
-// Sync guidelines textarea when modal opens
-watch(showBrandGuidelinesModal, (isOpen) => {
-  if (isOpen) {
-    guidelinesText.value = brandStore.guidelines;
-  }
-});
 
 const prompt = ref(
   getCreativeConceptsInstruction(
@@ -67,8 +52,66 @@ watch(
 
 const useGemini = ref(true);
 const uniqueId = () => Math.random().toString(36).substring(2, 9);
-const creativeConcepts = ref([{ id: uniqueId(), name: "", description: "" }]);
-const isGeneratingCharacters = ref(false);
+const createConcept = (name = "", description = "", referenceImages = [], imageContextInstructions = "") => ({
+  id: uniqueId(),
+  name,
+  description,
+  referenceImages,
+  imageContextInstructions,
+});
+const creativeConcepts = ref([createConcept()]);
+const activeConceptModalIndex = ref(-1);
+
+const currentModalImages = computed({
+  get() {
+    if (activeConceptModalIndex.value >= 0 && creativeConcepts.value[activeConceptModalIndex.value]) {
+      return creativeConcepts.value[activeConceptModalIndex.value].referenceImages || [];
+    }
+    return referenceImages.value;
+  },
+  set(val) {
+    if (activeConceptModalIndex.value >= 0 && creativeConcepts.value[activeConceptModalIndex.value]) {
+      creativeConcepts.value[activeConceptModalIndex.value].referenceImages = val;
+    } else {
+      referenceImages.value = val;
+    }
+  }
+});
+
+const currentModalInstructions = computed({
+  get() {
+    if (activeConceptModalIndex.value >= 0 && creativeConcepts.value[activeConceptModalIndex.value]) {
+      return creativeConcepts.value[activeConceptModalIndex.value].imageContextInstructions || "";
+    }
+    return imageContextInstructions.value;
+  },
+  set(val) {
+    if (activeConceptModalIndex.value >= 0 && creativeConcepts.value[activeConceptModalIndex.value]) {
+      creativeConcepts.value[activeConceptModalIndex.value].imageContextInstructions = val;
+    } else {
+      imageContextInstructions.value = val;
+    }
+  }
+});
+
+const currentModalTitle = computed(() => {
+  if (activeConceptModalIndex.value >= 0 && creativeConcepts.value[activeConceptModalIndex.value]) {
+    const name = creativeConcepts.value[activeConceptModalIndex.value].name || "Concept";
+    return `Configure Reference Images - ${name}`;
+  }
+  return "Configure Reference Images";
+});
+
+const openConceptImageModal = (index) => {
+  activeConceptModalIndex.value = index;
+  showImageModal.value = true;
+};
+
+const openGlobalImageModal = () => {
+  activeConceptModalIndex.value = -1;
+  showImageModal.value = true;
+};
+
 const customerId = useConfigStore().customerID;
 const storageKey = `creativeConcepts_${customerId}`;
 const namingTimers = {};
@@ -85,35 +128,8 @@ const adjustAllTextareas = () => {
   });
 };
 
-const handleFileSelect = (event) => {
-  const files = event.target.files;
-  if (!files) return;
-  loadFiles(files);
-};
-
-const handleDrop = (event) => {
-  const files = event.dataTransfer.files;
-  if (!files) return;
-  loadFiles(files);
-};
-
-const loadFiles = (files) => {
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    if (!file.type.startsWith("image/")) continue;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (e.target?.result) {
-        referenceImages.value.push(e.target.result);
-      }
-    };
-    reader.readAsDataURL(file);
-  }
-};
-
-const removeImage = (index) => {
-  referenceImages.value.splice(index, 1);
+const handleValidationError = (msg) => {
+  errorMessage.value = msg;
 };
 
 onMounted(() => {
@@ -126,12 +142,14 @@ onMounted(() => {
           id: c.id || uniqueId(),
           name: c.name || "",
           description: c.description || "",
+          referenceImages: Array.isArray(c.referenceImages) ? c.referenceImages : [],
+          imageContextInstructions: c.imageContextInstructions || "",
         }));
 
         // Ensure there is at least one concept, and the last one is empty
         const lastConcept = creativeConcepts.value[creativeConcepts.value.length - 1];
         if (lastConcept.description.trim() !== "") {
-          creativeConcepts.value.push({ id: uniqueId(), name: "", description: "" });
+          creativeConcepts.value.push(createConcept());
         }
         adjustAllTextareas();
         return;
@@ -140,7 +158,7 @@ onMounted(() => {
       console.error("Failed to parse saved creative concepts:", e);
     }
   }
-  creativeConcepts.value = [{ id: uniqueId(), name: "", description: "" }];
+  creativeConcepts.value = [createConcept()];
   adjustAllTextareas();
 });
 
@@ -209,10 +227,10 @@ const getStatusColorClass = (status) => {
 
 const generateConceptName = async (concept) => {
   const modelId = configStore.geminiModel || "gemini-1.5-flash";
-  const promptText = `Based on the following description of a creative concept, generate a very concise, descriptive, and catchy name.
-The name must be at most 3 words.
+  const promptText = `Based on the following description of a creative concept, generate a simple, direct, and factual name that clearly summarizes the concept.
+Do NOT use marketing slogans, catchy titles, or dramatic phrasing. Just state the core concept or subject simply in 2 to 4 words.
 Do not use any punctuation, quotation marks, or extra text.
-Return ONLY the name itself, nothing else.
+Return ONLY the simple name itself, nothing else.
 
 Description: "${concept.description}"`;
 
@@ -260,11 +278,7 @@ const onDescriptionInput = (event, index) => {
 
   // 1. If we are typing in the last concept, auto-append a new empty one
   if (index === creativeConcepts.value.length - 1 && concept.description.trim() !== "") {
-    creativeConcepts.value.push({
-      id: uniqueId(),
-      name: "",
-      description: "",
-    });
+    creativeConcepts.value.push(createConcept());
   }
 
   // Immediately update concept name if description is not empty
@@ -303,7 +317,7 @@ const handlePaste = (event, index) => {
         name = line.substring(0, tabIndex);
         description = line.substring(tabIndex + 1);
       }
-      return { id: uniqueId(), name, description };
+      return createConcept(name, description);
     });
 
     // Replace the current empty concept if it's the only one
@@ -312,7 +326,7 @@ const handlePaste = (event, index) => {
       !creativeConcepts.value[0].name &&
       !creativeConcepts.value[0].description
     ) {
-      creativeConcepts.value = [...pastedConcepts, { id: uniqueId(), name: "", description: "" }];
+      creativeConcepts.value = [...pastedConcepts, createConcept()];
     } else {
       // Update the current row with the first line of pasted data
       const firstPasted = pastedConcepts.shift();
@@ -327,7 +341,7 @@ const handlePaste = (event, index) => {
       // If the last one is now non-empty, ensure we have a trailing empty concept
       const lastConcept = creativeConcepts.value[creativeConcepts.value.length - 1];
       if (lastConcept.description.trim() !== "") {
-        creativeConcepts.value.push({ id: uniqueId(), name: "", description: "" });
+        creativeConcepts.value.push(createConcept());
       }
     }
 
@@ -343,70 +357,7 @@ const handlePaste = (event, index) => {
   }
 };
 
-const handleBrandFileChange = (event) => {
-  selectedBrandFiles.value = Array.from(event.target.files);
-};
 
-const brandFileToBase64 = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = (error) => reject(error);
-  });
-};
-
-const showBrandNotification = (message, type = "info") => {
-  brandNotification.value = { show: true, message, type };
-  setTimeout(() => {
-    brandNotification.value.show = false;
-  }, 3000);
-};
-
-const processGuidelines = async () => {
-  isProcessingGuidelines.value = true;
-  try {
-    const modelId = configStore.geminiModel || "gemini-1.5-flash";
-    let result = "";
-
-    if (guidelinesActiveTab.value === "upload") {
-      if (selectedBrandFiles.value.length === 0) {
-        showBrandNotification("Please select at least one file.", "warning");
-        return;
-      }
-      const file = selectedBrandFiles.value[0];
-      const base64Data = await brandFileToBase64(file);
-      const fileData = { mimeType: file.type, data: base64Data };
-      const prompt = "Extract brand guidelines from this file. Focus on color palette, typography, and visual style. Do NOT include any introductory or concluding text. Start directly with the guidelines.";
-      result = await extractBrandGuidelines(prompt, modelId, false, fileData);
-    } else if (guidelinesActiveTab.value === "inference") {
-      if (!websiteUrl.value) {
-        showBrandNotification("Please enter a website URL.", "warning");
-        return;
-      }
-      const prompt = `Analyze the website ${websiteUrl.value} and infer its brand guidelines. Focus on color palette, typography, tone of voice, and visual style based on the site content. Do NOT include any introductory or concluding text. Start directly with the guidelines.`;
-      result = await extractBrandGuidelines(prompt, modelId, true);
-    }
-
-    if (result) {
-      guidelinesText.value = result;
-      brandStore.setGuidelines(result);
-      showBrandNotification("Guidelines inferred and saved!", "success");
-    } else {
-      showBrandNotification("No guidelines could be extracted.", "warning");
-    }
-  } catch (error) {
-    console.error("Error processing guidelines:", error);
-    showBrandNotification("Failed to process guidelines.", "error");
-  } finally {
-    isProcessingGuidelines.value = false;
-  }
-};
-
-const handleSaveGuidelines = () => {
-  brandStore.setGuidelines(guidelinesText.value);
-  showBrandNotification("Guidelines saved!", "success");
-};
 
 const generateRules = async () => {
   isGeneratingRules.value = true;
@@ -419,11 +370,13 @@ const generateRules = async () => {
       .join("\n");
 
     const fullPromptContext = `${prompt.value}\n\nCreative Concepts:\n${conceptsText}`;
+    const allActiveConceptImages = activeConcepts.flatMap((c) => c.referenceImages || []);
+    const combinedRulesImages = [...referenceImages.value, ...allActiveConceptImages];
 
     const generated = await generateEvaluationRules(
       fullPromptContext,
       brandStore.guidelines,
-      referenceImages.value,
+      combinedRulesImages,
       imageContextInstructions.value
     );
     configStore.evaluationRules = generated;
@@ -436,55 +389,7 @@ const generateRules = async () => {
   }
 };
 
-const handleGenerateCharacters = async () => {
-  isGeneratingCharacters.value = true;
-  isLoading.value = true;
-  emit("update:loading", true);
-  emit("update:loading-message", "Ideating 3 distinct character concepts with Gemini...");
 
-  try {
-    errorMessage.value = "";
-
-    const charPrompts = await generateCharacterPrompts(
-      prompt.value,
-      configStore.geminiModel,
-      brandStore.useGuidelinesInGeneration ? brandStore.guidelines : undefined
-    );
-
-    emit("update:loading-message", "Generating character reference images with Imagen...");
-    for (let i = 0; i < charPrompts.length; i++) {
-      emit("update:loading-message", `Generating character portrait #${i + 1} of 3...`);
-      const generatedBase64 = await editImageWithNanoBanana(
-        [],
-        charPrompts[i],
-        "1:1"
-      );
-      const dataUrl = "data:image/png;base64," + generatedBase64;
-      referenceImages.value.push(dataUrl);
-
-      const gcsFileName = `${configStore.customerID}/Creative Concepts/Characters/char_${Date.now()}_${i}.png`;
-      await uploadBase64Image(gcsFileName, dataUrl);
-    }
-
-    // Tell Gemini to use these newly generated reference images
-    const instructionPrompt = "Ensure the main campaign assets feature the generated character reference portraits consistently.";
-    if (!imageContextInstructions.value.includes(instructionPrompt)) {
-      imageContextInstructions.value = imageContextInstructions.value
-        ? `${imageContextInstructions.value.trim()}\n\n${instructionPrompt}`
-        : instructionPrompt;
-    }
-
-    // Automatically open the Reference Images modal to let the user review
-    showImageModal.value = true;
-  } catch (error) {
-    errorMessage.value = error.message || "Failed to generate characters.";
-    console.error("Error generating characters:", error);
-  } finally {
-    isLoading.value = false;
-    isGeneratingCharacters.value = false;
-    emit("update:loading", false);
-  }
-};
 
 const handleGenerate = async () => {
   const activeConcepts = creativeConcepts.value.filter((c) => c.description.trim() !== "");
@@ -505,6 +410,14 @@ const handleGenerate = async () => {
 
     const conceptPromises = activeConcepts.map(async (concept) => {
       let imagePrompt = prompt.value;
+      const combinedImages = [...referenceImages.value, ...(concept.referenceImages || [])];
+      let combinedInstructions = "";
+      if (referenceImages.value.length > 0 && imageContextInstructions.value) {
+        combinedInstructions += `Global reference images instructions:\n${imageContextInstructions.value}\n\n`;
+      }
+      if ((concept.referenceImages || []).length > 0 && concept.imageContextInstructions) {
+        combinedInstructions += `Concept "${concept.name || 'Concept'}" reference images instructions:\n${concept.imageContextInstructions}`;
+      }
 
       if (useGemini.value) {
         emit("update:loading-message", "Generating detailed image prompt with Gemini...");
@@ -512,15 +425,15 @@ const handleGenerate = async () => {
           prompt.value,
           concept.description,
           configStore.geminiModel,
-          referenceImages.value,
+          combinedImages,
           brandStore.useGuidelinesInGeneration ? brandStore.guidelines : undefined
         );
       } else if (concept.description) {
         imagePrompt = `${prompt.value}\n\nCreative Concept: ${concept.description}`;
       }
 
-      if (referenceImages.value.length > 0 && imageContextInstructions.value) {
-        imagePrompt += `\n\nInstructions for using the attached reference images:\n${imageContextInstructions.value}`;
+      if (combinedImages.length > 0 && combinedInstructions.trim()) {
+        imagePrompt += `\n\nInstructions for using the attached reference images:\n${combinedInstructions.trim()}`;
       }
 
       emit("update:loading-message", "Generating images with Imagen...");
@@ -576,7 +489,7 @@ const handleGenerate = async () => {
                 }
 
                 generatedBase64 = await editImageWithNanoBanana(
-                  referenceImages.value,
+                  combinedImages,
                   finalPrompt,
                   ar.ratio
                 );
@@ -609,7 +522,10 @@ const handleGenerate = async () => {
                 addLog('failed', `Failed to generate approved image after ${maxRetries} attempts. Using last generation.`, evaluationFeedback, generatedBase64);
               }
 
-              const gcsFileName = `${gcsPath}${Date.now()}_${i}_${ar.ratio.replace(":", "-")}_${Math.random().toString(36).slice(2, 7)}.png`;
+              const dataUrl = "data:image/png;base64," + generatedBase64;
+              const cleanConceptName = (concept.name || "Concept").trim().replace(/[/\\?%*:|"<>]/g, "-");
+              const gcsPath = `${configStore.customerID}/Creative Concepts/${cleanConceptName}/`;
+              const gcsFileName = `${gcsPath}${cleanConceptName}_${ar.ratio.replace(":", "-")}_${i + 1}_${Date.now()}.png`;
               const gcsUri = await uploadBase64Image(gcsFileName, dataUrl);
 
               return {
@@ -670,7 +586,8 @@ const regenerateImages = async (rejectedImages) => {
       const concept = creativeConcepts.value.find((c) => c.id === img.conceptId) || {
         id: img.conceptId,
         name: img.conceptName,
-        description: img.conceptDescription
+        description: img.conceptDescription,
+        referenceImages: []
       };
 
       const refinedPrompt = img.feedback?.trim()
@@ -699,8 +616,9 @@ const regenerateImages = async (rejectedImages) => {
         finalPrompt += `\n\nYou MUST strictly adhere to these Image Constraints/Rules:\n${configStore.evaluationRules}`;
       }
 
+      const combinedImages = [...referenceImages.value, ...(concept.referenceImages || [])];
       const generatedBase64 = await editImageWithNanoBanana(
-        referenceImages.value,
+        combinedImages,
         finalPrompt,
         img.aspectRatio
       );
@@ -708,10 +626,9 @@ const regenerateImages = async (rejectedImages) => {
       addLog('approved', `Image regenerated successfully.`, "", generatedBase64);
 
       const dataUrl = "data:image/png;base64," + generatedBase64;
-      const gcsPath = concept.name
-        ? `${configStore.customerID}/Creative Concepts/${concept.name}/GENERATED/`
-        : `${configStore.customerID}/Creative Concepts/GENERATED/`;
-      const gcsFileName = `${gcsPath}${Date.now()}_regen_${Math.random().toString(36).slice(2, 7)}.png`;
+      const cleanConceptName = (concept.name || "Concept").trim().replace(/[/\\?%*:|"<>]/g, "-");
+      const gcsPath = `${configStore.customerID}/Creative Concepts/${cleanConceptName}/`;
+      const gcsFileName = `${gcsPath}${cleanConceptName}_regen_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.png`;
       const gcsUri = await uploadBase64Image(gcsFileName, dataUrl);
 
       return {
@@ -779,7 +696,7 @@ defineExpose({ regenerateImages });
           @input="onDescriptionInput($event, index)"
           @paste="handlePaste($event, index)"
           :placeholder="index === 0 ? 'Describe what you want to see...' : 'Describe another concept...'"
-          class="concept-textarea text-[var(--color-text-primary)] w-full resize-none overflow-hidden pr-8"
+          class="concept-textarea text-[var(--color-text-primary)] w-full resize-none overflow-hidden pr-20"
           rows="1"
         ></textarea>
 
@@ -790,46 +707,43 @@ defineExpose({ regenerateImages });
           {{ concept.name || 'New concept' }}
         </label>
 
-        <!-- Delete Button -->
-        <button
-          v-if="index < creativeConcepts.length - 1"
-          @click="removeCreativeConcept(index)"
-          class="absolute top-2 right-2 text-[var(--color-text-muted)] hover:text-[var(--color-status-error)] transition-colors font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-[var(--color-bg-tertiary)]"
-          title="Remove concept"
-        >
-          ✕
-        </button>
+        <div class="absolute top-2 right-2 flex items-center gap-1">
+          <!-- Concept Reference Images Button -->
+          <button
+            @click="openConceptImageModal(index)"
+            class="text-[var(--color-text-muted)] hover:text-[var(--color-interactive-primary)] transition-colors font-bold h-6 px-1.5 flex items-center justify-center rounded hover:bg-[var(--color-bg-tertiary)] gap-1"
+            title="Configure concept reference images"
+            type="button"
+          >
+            <span class="material-symbols-outlined text-sm">image</span>
+            <span v-if="concept.referenceImages && concept.referenceImages.length > 0" class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] text-[10px] rounded-full px-1.5 py-0.5 font-semibold">
+              {{ concept.referenceImages.length }}
+            </span>
+          </button>
+
+          <!-- Delete Button -->
+          <button
+            v-if="index < creativeConcepts.length - 1"
+            @click="removeCreativeConcept(index)"
+            class="text-[var(--color-text-muted)] hover:text-[var(--color-status-error)] transition-colors font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-[var(--color-bg-tertiary)]"
+            title="Remove concept"
+            type="button"
+          >
+            ✕
+          </button>
+        </div>
       </div>
     </div>
 
     <div class="flex gap-4">
       <button
-        @click="showImageModal = true"
+        @click="openGlobalImageModal"
         class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-gray-600 border border-[var(--color-text-dim)] self-start flex items-center gap-2 transition-colors"
       >
         <span class="material-symbols-outlined text-sm">image</span>
         Configure Reference Images
         <span v-if="referenceImages.length > 0" class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] text-xs rounded-full px-2 py-0.5">
           {{ referenceImages.length }}
-        </span>
-      </button>
-      <button
-        @click="handleGenerateCharacters"
-        :disabled="isLoading"
-        class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-gray-600 border border-[var(--color-text-dim)] self-start flex items-center gap-2 transition-colors disabled:opacity-50"
-      >
-        <span v-if="isGeneratingCharacters" class="loading loading-spinner loading-xs"></span>
-        <span v-else class="material-symbols-outlined text-sm">person</span>
-        {{ isGeneratingCharacters ? "Loading..." : "Generate Characters" }}
-      </button>
-      <button
-        @click="showBrandGuidelinesModal = true"
-        class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] font-bold py-2 px-6 rounded-md hover:bg-gray-600 border border-[var(--color-text-dim)] self-start flex items-center gap-2 transition-colors"
-      >
-        <span class="material-symbols-outlined text-sm">menu_book</span>
-        Configure Brand Guidelines
-        <span v-if="brandStore.guidelines" class="bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] text-xs rounded-full px-2 py-0.5">
-          Configured
         </span>
       </button>
     </div>
@@ -970,62 +884,13 @@ defineExpose({ regenerateImages });
     </div>
 
     <!-- Reference Images Modal -->
-    <div v-if="showImageModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
-      <div class="bg-[var(--color-bg-secondary)] rounded-2xl p-6 max-w-2xl w-full flex flex-col gap-4 max-h-[90vh] overflow-y-auto border border-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] shadow-2xl">
-        <h2 class="text-xl font-bold text-[var(--color-text-primary)]">Configure Reference Images</h2>
-
-        <!-- Upload Zone -->
-        <div
-          @dragover.prevent
-          @drop.prevent="handleDrop"
-          @click="$refs.fileInput.click()"
-          class="border-2 border-dashed border-[var(--color-text-dim)] rounded-lg p-8 text-center cursor-pointer hover:border-[var(--color-interactive-primary)] transition-colors bg-[var(--color-bg-tertiary)]/50"
-        >
-          <p class="text-[var(--color-text-muted)]">Drag & drop images here or click to browse</p>
-          <input
-            type="file"
-            ref="fileInput"
-            multiple
-            accept="image/*"
-            class="hidden"
-            @change="handleFileSelect"
-          />
-        </div>
-
-        <!-- Thumbnail Preview Grid -->
-        <div v-if="referenceImages.length > 0" class="grid grid-cols-4 gap-4 mt-2">
-          <div v-for="(img, idx) in referenceImages" :key="idx" class="relative group aspect-square bg-gray-900 rounded-md overflow-hidden border border-gray-700">
-            <img :src="img" class="w-full h-full object-cover" />
-            <button
-              @click="removeImage(idx)"
-              class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              X
-            </button>
-          </div>
-        </div>
-
-        <!-- Context Instructions Text Area -->
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text text-lg font-bold text-gray-200">How should these images be used for context?</span>
-          </label>
-          <textarea
-            v-model="imageContextInstructions"
-            placeholder="e.g., Use the style and color palette of Image 1, but use the composition and layout of Image 2."
-            class="bg-gray-700 rounded-md p-2 w-full text-white border border-gray-600 focus:border-cyan-400 focus:outline-none"
-            rows="4"
-          ></textarea>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="flex justify-end gap-4 mt-4">
-          <button @click="showImageModal = false" class="bg-cyan-600 text-white px-6 py-2 rounded-md hover:bg-cyan-700 font-bold">
-            Save & Close
-          </button>
-        </div>
-      </div>
-    </div>
+    <ReferenceImagesModal
+      v-model:show="showImageModal"
+      v-model:images="currentModalImages"
+      v-model:instructions="currentModalInstructions"
+      :title="currentModalTitle"
+      @validation-error="handleValidationError"
+    />
 
 
   </div>

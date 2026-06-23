@@ -464,7 +464,7 @@ async function confirmRemoval() {
       @confirm="confirmRemoval"
     />
     <div v-if="removalStep === 1">
-      <h1 class="mb-6">Pull Low-Performing PMax \u0026 Demand Gen Assets</h1>
+      <h1 class="mb-6">Pull Low-Performing PMax & Demand Gen Assets</h1>
       <div class="bg-[var(--color-bg-secondary)] p-6 rounded-xl mb-6 border border-[var(--color-bg-tertiary)]">
         <p class="text-gray-400 mb-6">
           Define the performance threshold to identify assets for removal. Add

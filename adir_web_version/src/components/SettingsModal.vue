@@ -177,11 +177,9 @@
                 id="gemini-model"
                 class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
               >
+                <option>gemini-3.5-flash</option>
                 <option>gemini-3.1-pro-preview</option>
-                <option>gemini-3-flash-preview</option>
-                <option>gemini-2.5-pro</option>
-                <option>gemini-2.5-flash</option>
-                <option>gemini-2.5-flash-lite</option>
+                <option>gemini-3.1-flash-lite</option>
               </select>
             </div>
             <div>
@@ -198,7 +196,6 @@
                 <option>Imagen-4.0-generate-001</option>
                 <option>Imagen-4.0-ultra-generate-001</option>
                 <option>Imagen-4.0-fast-generate-001</option>
-                <option>Imagen-3.0-generate-002</option>
               </select>
             </div>
             <div>
@@ -212,8 +209,8 @@
                 id="nano-banana-model"
                 class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
               >
-                <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview</option>
-                <option value="gemini-3-pro-image-preview">gemini-3-pro-image-preview</option>
+                <option value="gemini-3.1-flash-image">Nano Banana 2</option>
+                <option value="gemini-3-pro-image">Nano Banana Pro</option>
               </select>
             </div>
           </div>
