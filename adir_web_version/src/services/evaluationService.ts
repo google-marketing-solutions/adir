@@ -1,5 +1,6 @@
 import { useConfigStore } from "../stores/config";
 import { createVertexAiApiClient, DefaultSecuritySettings } from "./apiService";
+import { resolveGeminiModelId } from "./vertexAiService";
 
 export interface EvaluationResult {
   approved: boolean;
@@ -21,8 +22,7 @@ export async function evaluateImage(
   evaluationRules: string
 ): Promise<EvaluationResult> {
   const configStore = useConfigStore();
-  const modelId = configStore.geminiModel || "gemini-3-flash-preview";
-  const modelIdLowerCase = modelId.toLowerCase();
+  const modelIdLowerCase = resolveGeminiModelId(configStore.geminiModel);
   
   // Use v1beta1 as it has better support for structured outputs and system instructions
   const apiClient = createVertexAiApiClient({
@@ -131,8 +131,7 @@ export async function generateEvaluationRules(
   imageContextInstructions?: string
 ): Promise<string> {
   const configStore = useConfigStore();
-  const modelId = configStore.geminiModel || "gemini-3-flash-preview";
-  const modelIdLowerCase = modelId.toLowerCase();
+  const modelIdLowerCase = resolveGeminiModelId(configStore.geminiModel);
 
   const apiClient = createVertexAiApiClient({
     apiVersion: "v1beta1",

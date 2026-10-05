@@ -11,9 +11,8 @@ export const useConfigStore = defineStore("config", {
     mccID: "",
     customerID: "",
     developerToken: "",
-    geminiModel: "gemini-3.5-flash",
+    geminiModel: "gemini-flash-latest",
     nanoBananaModel: "gemini-3.1-flash-image",
-    imageGenModel: "imagen-4.0-generate-001",
     googleClientId: "",
     useSecretManager: false,
     enableEvaluation: false,
@@ -61,5 +60,14 @@ export const useConfigStore = defineStore("config", {
       ];
     },
   },
-  persist: true,
+  persist: {
+    afterHydrate: (ctx) => {
+      if (typeof ctx.store.mccID === "string") {
+        ctx.store.mccID = ctx.store.mccID.replace(/[-\s]+/g, "");
+      }
+      if (typeof ctx.store.customerID === "string") {
+        ctx.store.customerID = ctx.store.customerID.replace(/[-\s]+/g, "");
+      }
+    },
+  },
 });

@@ -4,10 +4,8 @@ import {
   fetchAssetGroupsByCampaignIds,
   getSearchSignalKeywordsForAdGroup,
 } from "@/services/googleAdsService";
-import {
-  generateImagesFromPrompt,
-  generateTextFromPrompt,
-} from "@/services/vertexAiService";
+import { editImageWithNanoBanana } from "@/services/nanoBananaService";
+import { generateTextFromPrompt } from "@/services/vertexAiService";
 import { useBrandStore } from "@/stores/brandStore";
 import { useConfigStore } from "@/stores/config";
 import { computed, ref } from "vue";
@@ -146,7 +144,6 @@ const handleGenerate = async () => {
         Array.from({ length: ar.count }, (_, i) => ({
           prompt: imagePrompt,
           aspectRatio: ar.ratio,
-          sampleCount: 1,
           gcsPath: `${gcsPath}${Date.now()}_${i}_${ar.ratio.replace(":", "-")}_${Math.random().toString(36).slice(2, 7)}.png`,
         })),
       );
@@ -155,13 +152,12 @@ const handleGenerate = async () => {
     console.log("Job objects:", jobObjects);
 
     const generationPromises = jobObjects.map(async (job) => {
-      const base64Images = await generateImagesFromPrompt(
+      const generatedBase64 = await editImageWithNanoBanana(
+        [],
         job.prompt,
         job.aspectRatio,
-        job.sampleCount,
-        configStore.imageGenModel,
       );
-      const dataUrl = "data:image/png;base64," + base64Images[0];
+      const dataUrl = "data:image/png;base64," + generatedBase64;
       return uploadBase64Image(job.gcsPath, dataUrl);
     });
 

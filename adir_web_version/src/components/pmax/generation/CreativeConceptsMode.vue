@@ -226,7 +226,7 @@ const getStatusColorClass = (status) => {
 };
 
 const generateConceptName = async (concept) => {
-  const modelId = configStore.geminiModel || "gemini-1.5-flash";
+  const modelId = configStore.geminiModel || "gemini-flash-latest";
   const promptText = `Based on the following description of a creative concept, generate a simple, direct, and factual name that clearly summarizes the concept.
 Do NOT use marketing slogans, catchy titles, or dramatic phrasing. Just state the core concept or subject simply in 2 to 4 words.
 Do not use any punctuation, quotation marks, or extra text.
@@ -436,7 +436,7 @@ const handleGenerate = async () => {
         imagePrompt += `\n\nInstructions for using the attached reference images:\n${combinedInstructions.trim()}`;
       }
 
-      emit("update:loading-message", "Generating images with Imagen...");
+      emit("update:loading-message", "Generating images with Nano Banana...");
       const arPromises = aspectRatios.value.map(async (ar) => {
         if (ar.count <= 0) return [];
 

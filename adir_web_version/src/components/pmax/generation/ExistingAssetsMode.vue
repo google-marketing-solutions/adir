@@ -231,8 +231,25 @@ const refinePrompt = async () => {
   if (!prompt.value) return;
   isRefining.value = true;
   try {
-    const metaPrompt = `You are an expert prompt engineer. Refine the following prompt to be more effective for image generation, keeping the core intent. Return ONLY the refined prompt text: "${prompt.value}"`;
-    const refined = await generateTextFromPrompt(metaPrompt, configStore.geminiModel);
+    const metaPrompt = `You are an expert prompt engineer and senior PPC specialist specializing in Google Ads Performance Max (PMax) and Demand Gen campaigns.
+
+Your objective is to optimize the given prompt so that—when combined with the provided reference image assets—it generates high-converting, high-CTR visual assets optimized for Google Ads feeds (Discover, YouTube, Gmail, and Display).
+
+Refinement Rules:
+1. Maintain Core Intent: Keep the original subject, message, and concept intact. Do not change the core idea of what the user wants to generate.
+2. Direct-Response Visual Hooks: Enhance the prompt with explicit visual detail—such as dynamic framing, subject separation, professional lighting, and visual contrast—to maximize stopping power and engagement in mobile feeds.
+3. Synergy with Reference Assets: Instruct the generator to harmonize key visual cues (brand mood, tone, product placement) from the reference images while creating fresh, scroll-stopping variations.
+4. Ad Best Practices: Keep visuals clean and subject-focused. Do not add embedded text, logos, or artificial borders.
+5. Format: Write the refined prompt as a concise, direct instruction set optimized for advanced AI image models.
+
+Original Prompt:
+"${prompt.value}"
+
+CRITICAL INSTRUCTION: Return ONLY the refined prompt text itself. Do not include quotes, greetings, explanations, or markdown formatting.`;
+    let refined = await generateTextFromPrompt(metaPrompt, configStore.geminiModel);
+    if (refined) {
+      refined = refined.replace(/^["'`\s]+|["'`\s]+$/g, "");
+    }
     prompt.value = refined;
   } catch (error) {
     console.error("Failed to refine prompt:", error);
@@ -353,7 +370,15 @@ const handleGenerate = async () => {
         return campaignId && selectedCampaignIds.has(String(campaignId).trim());
       });
     }
-    debugInfo.value = `Selected: ${selectedCampaignNames.join(", ")} | Found Assets: ${allAssets.length}`;
+    const standardCount = allAssets.filter((a) => a.sourceType !== "carousel_card").length;
+    const carouselCount = allAssets.filter((a) => a.sourceType === "carousel_card").length;
+    debugInfo.value = `Selected: ${selectedCampaignNames.join(", ")} | Total Assets: ${allAssets.length} (Standard: ${standardCount}, Carousel Cards: ${carouselCount})`;
+    console.log("=== Demand Gen Existing Assets Summary ===", {
+      total: allAssets.length,
+      standardCount,
+      carouselCount,
+      allAssets,
+    });
 
     if (allAssets.length === 0) {
       errorMessage.value =
@@ -435,7 +460,11 @@ const handleGenerate = async () => {
         for (let i = 0; i < ar.count; i++) {
           const imageInfos = selectedAssets
             .map((row) => {
-              const imageUrl = row.asset?.imageAsset?.fullSize?.url;
+              const imageUrl =
+                row.asset?.imageAsset?.fullSize?.url ||
+                row.asset?.image_asset?.full_size?.url ||
+                row.asset?.imageAsset?.full_size?.url ||
+                row.asset?.image_asset?.fullSize?.url;
               return imageUrl ? { url: imageUrl, row } : null;
             })
             .filter((img) => img !== null);

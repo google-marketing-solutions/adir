@@ -8,7 +8,7 @@ import {
   moveImages,
   removeImages,
 } from "@/services/gcsService";
-import { uploadImageAssets } from "@/services/googleAdsService";
+import { uploadImageAssets, formatGoogleAdsAssetName } from "@/services/googleAdsService";
 import { useAssetStore } from "@/stores/assetStore";
 import { useConfigStore } from "@/stores/config";
 import { editImageWithNanoBanana } from "@/services/nanoBananaService";
@@ -306,15 +306,9 @@ const uploadImages = async (images) => {
     const imagesWithContent = await Promise.all(
       images.map(async (image) => {
         const base64Content = await downloadFileAsBase64(image.gcsUri);
-        const parts = image.name.split("/");
-        const filteredParts = parts.filter((part, index) => {
-          if (index === 0) return false; // Skip customer ID
-          if (part === "GENERATED" || part === "UPLOADED") return false; // Skip status folders
-          return true;
-        });
-        const shortName = `adir_${filteredParts.join("_")}`;
+        const safeName = formatGoogleAdsAssetName(image.name);
         return {
-          name: shortName,
+          name: safeName,
           content: base64Content,
         };
       })

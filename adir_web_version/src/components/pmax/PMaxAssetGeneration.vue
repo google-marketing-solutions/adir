@@ -226,7 +226,7 @@ const handleFinish = async (approvedImages) => {
       </div>
     </div>
 
-    <!-- One-by-One Review Toggle -->
+    <!-- One-by-One Review Toggle (Commented out)
     <div v-if="step === 'configure'" class="flex justify-center mb-6">
       <label class="flex items-center cursor-pointer group">
         <div class="relative">
@@ -240,6 +240,7 @@ const handleFinish = async (approvedImages) => {
         <span class="ml-3 text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" :class="{'text-[var(--color-text-primary)]': configStore.oneByOneReview}">One-by-One human review</span>
       </label>
     </div>
+    -->
 
     <!-- Step 1: Configure -->
     <div v-show="step === 'configure'" class="bg-[var(--color-bg-secondary)] p-6 rounded-xl mb-6 border border-[var(--color-bg-tertiary)]">

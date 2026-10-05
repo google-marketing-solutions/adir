@@ -1,51 +1,33 @@
 import {createVertexAiApiClient, DefaultSecuritySettings} from "./apiService";
+
 /**
- * Generates images from a text prompt using a specified Vertex AI model.
- * @param {string} prompt - The text prompt to generate images from.
- * @param {string} aspectRatio - The desired aspect ratio of the generated images.
- * @param {number} sampleCount - The number of images to generate.
- * @param {string} modelId - The ID of the Vertex AI model to use.
- * @return {Promise<string[]>} A promise that resolves to an array of Base64 encoded image strings.
+ * Resolves Gemini model aliases (such as `gemini-flash-latest` or `gemini-pro-latest`,
+ * which exist on the Gemini Developer API `generativelanguage.googleapis.com` but NOT
+ * as publisher model IDs on Google Cloud Vertex AI `aiplatform.googleapis.com`) to the
+ * official Vertex AI publisher model IDs (`gemini-3.8-flash` and `gemini-3.1-pro-preview`).
+ * @param {string} [modelId] - The selected model ID or alias.
+ * @return {string} The resolved Vertex AI publisher model ID.
  */
-export async function generateImagesFromPrompt(
-  prompt: string,
-  aspectRatio: string,
-  sampleCount: number,
-  modelId: string
-): Promise<string[]> {
-  const apiClient = createVertexAiApiClient();
-  const effectiveModelId = modelId || "imagen-3.0-generate-002";
-  const modelIdLowerCase = effectiveModelId.toLowerCase();
-  const action = "predict";
-  let path;
-
+export function resolveGeminiModelId(modelId?: string): string {
+  const raw = (modelId || "gemini-flash-latest").trim().toLowerCase();
   if (
-    modelIdLowerCase.includes("imagen") ||
-    modelIdLowerCase.includes("gemini")
+    raw === "gemini-flash-latest" ||
+    raw === "gemini-latest" ||
+    raw === "gemini-next" ||
+    raw === "gemini-3.5-flash" ||
+    raw === "gemini-3.1-flash-lite" ||
+    raw === "gemini-1.5-flash"
   ) {
-    path = `/publishers/google/models/${modelIdLowerCase}:${action}`;
-  } else {
-    path = `/endpoints/${modelIdLowerCase}:${action}`;
+    return "gemini-3.8-flash";
   }
-
-  const body = {
-    instances: [{ prompt }],
-    parameters: {
-      sampleCount,
-      aspectRatio,
-    },
-  };
-
-  const response = await apiClient.post(path, body);
-
-  if (response.predictions) {
-    return response.predictions.map(
-      (prediction: { bytesBase64Encoded: string }) =>
-        prediction.bytesBase64Encoded
-    );
+  if (
+    raw === "gemini-pro-latest" ||
+    raw === "gemini-3.1-pro" ||
+    raw === "gemini-3.1-pro-preview"
+  ) {
+    return "gemini-3.1-pro-preview";
   }
-
-  return [];
+  return raw;
 }
 
 /**
@@ -104,9 +86,6 @@ adding text. The final visual should be completely text-free.
 *Your entire output must be ONLY the final image generation prompt.
 Do not add any conversational text, titles, or explanations.*
 ${brandGuidelinesString}${referenceImagesString}Here is the creative vision description:`;
-
-  console.log("Generated instruction:", instruction);
-
   return instruction;
 }
 
@@ -122,7 +101,7 @@ export async function generateTextFromPrompt(
   modelId: string,
   reference_images?: string[]
 ): Promise<string> {
-  const modelIdLowerCase = modelId.toLowerCase();
+  const modelIdLowerCase = resolveGeminiModelId(modelId);
 
   const parts: any[] = [{ text: prompt }];
   if (reference_images && reference_images.length > 0) {
@@ -136,7 +115,7 @@ export async function generateTextFromPrompt(
     });
   }
 
-  if (modelIdLowerCase.includes("gemini-3")) {
+  if (modelIdLowerCase.includes("gemini")) {
     const apiClient = createVertexAiApiClient({
       apiVersion: "v1beta1",
       useGlobalEndpoint: true,
@@ -149,20 +128,22 @@ export async function generateTextFromPrompt(
         topP: 0.95,
         maxOutputTokens: 8192,
       },
+      safetySettings: DefaultSecuritySettings,
     };
     try {
       const response = await apiClient.post(endpoint, body);
-      if (
-        response.candidates &&
-        response.candidates[0].content &&
-        response.candidates[0].content.parts[0]
-      ) {
-        const generatedText = response.candidates[0].content.parts[0].text;
-        return generatedText;
+      const candidateParts = response?.candidates?.[0]?.content?.parts;
+      if (Array.isArray(candidateParts) && candidateParts.length > 0) {
+        const nonThoughtText = candidateParts
+          .filter((p: any) => !p.thought && typeof p.text === "string")
+          .map((p: any) => p.text)
+          .join("");
+        return nonThoughtText || candidateParts[0].text || "";
       }
+      return "";
     } catch (error) {
       console.error(
-        "Error generating text with Gemini 3 via Vertex AI:",
+        `Error generating text with ${modelIdLowerCase} via Vertex AI:`,
         error
       );
       throw error;
@@ -170,17 +151,7 @@ export async function generateTextFromPrompt(
   }
 
   const apiClient = createVertexAiApiClient();
-  const action = "generateContent";
-  let path;
-
-  if (
-    modelIdLowerCase.includes("imagen") ||
-    modelIdLowerCase.includes("gemini")
-  ) {
-    path = `/publishers/google/models/${modelIdLowerCase}:${action}`;
-  } else {
-    path = `/endpoints/${modelIdLowerCase}:${action}`;
-  }
+  const path = `/endpoints/${modelIdLowerCase}:generateContent`;
 
   const body = {
     contents: [{ role: "user", parts }],
@@ -226,7 +197,7 @@ export async function extractBrandGuidelines(
     useGlobalEndpoint: true,
   });
 
-  const modelIdLowerCase = modelId.toLowerCase();
+  const modelIdLowerCase = resolveGeminiModelId(modelId);
   const endpoint = `/publishers/google/models/${modelIdLowerCase}:generateContent`;
 
   const parts: any[] = [{ text: prompt }];
@@ -295,50 +266,4 @@ export async function createCreativeConceptPrompt(
   );
 }
 
-/**
- * Generates exactly 3 distinct character design prompts from a creative brief and optional brand guidelines.
- * @param {string} creativeBrief - The creative brief or baseline instructions.
- * @param {string} modelId - The Gemini model ID.
- * @param {string} [brandGuidelines] - Optional brand guidelines.
- * @return {Promise<string[]>} An array of exactly 3 image generation prompt strings.
- */
-export async function generateCharacterPrompts(
-  creativeBrief: string,
-  modelId: string,
-  brandGuidelines?: string
-): Promise<string[]> {
-  let systemPrompt = `You are a creative director and character designer.
-Your task is to read the following creative brief and generate exactly 3 distinct character concepts (e.g., representing diverse aspects of the target audience).
-For each character concept, you must write a highly-detailed image prompt optimized for a photorealistic AI image generator (like Imagen).
-The character prompts should focus solely on generating a high-quality, isolated portrait of that single character on a clean, solid neutral background (like a solid studio gray background) to make it suitable as a reference image. Avoid complex scenes, landscapes, text, or multiple people.
 
-Adhere strictly to the following instructions:
-1. Focus on the character's appearance, expression, age, gender, ethnicity, clothing, and style.
-2. Ensure the characters represent distinct and diverse personas fitting the creative brief.
-3. The background MUST be a solid, uniform, neutral color.
-4. Do not include any conversational filler, framing, or explanations.
-5. Output exactly 3 prompts, one per line, each starting with "a photo of". Do not number the lines.`;
-
-  if (brandGuidelines) {
-    systemPrompt += `\n\nAdhere strictly to the following brand guidelines:\n${brandGuidelines}`;
-  }
-
-  const promptForGemini = `${systemPrompt}\n\nHere is the creative brief:\n${creativeBrief}\n\nGenerate the 3 character prompts now (exactly 1 prompt per line, no numbers, starting with "a photo of"):`;
-
-  const rawOutput = await generateTextFromPrompt(promptForGemini, modelId);
-  console.log("Raw character prompts from Gemini:", rawOutput);
-
-  const prompts = rawOutput
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && (line.toLowerCase().startsWith("a photo of") || line.toLowerCase().startsWith("photo of")));
-
-  const formattedPrompts = prompts.map(p => p.toLowerCase().startsWith("a photo of") ? p : `a ${p}`);
-
-  // Fallback to make sure we always return exactly 3 valid prompts
-  while (formattedPrompts.length < 3) {
-    formattedPrompts.push(`a photo of a professional corporate specialist representing the brand, high quality, studio portrait, solid neutral background`);
-  }
-
-  return formattedPrompts.slice(0, 3);
-}

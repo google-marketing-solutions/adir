@@ -62,6 +62,16 @@ const activeMetrics = computed(() => {
   return new Set(conditions.value.map((c) => c.metric));
 });
 
+const getAssetImageUrl = (asset) => {
+  return (
+    asset?.asset?.imageAsset?.fullSize?.url ||
+    asset?.asset?.image_asset?.full_size?.url ||
+    asset?.asset?.imageAsset?.full_size?.url ||
+    asset?.asset?.image_asset?.fullSize?.url ||
+    ""
+  );
+};
+
 const getAssetFormat = (asset) => {
   if (asset.type === "pmax") {
     let format = asset.assetGroupAsset?.resourceName?.split("~").pop();
@@ -70,7 +80,12 @@ const getAssetFormat = (asset) => {
     }
     return format;
   } else {
-    const { width, height } = asset.asset?.imageAsset?.fullSize || {};
+    const fullSize =
+      asset?.asset?.imageAsset?.fullSize ||
+      asset?.asset?.image_asset?.full_size ||
+      asset?.asset?.imageAsset?.full_size ||
+      asset?.asset?.image_asset?.fullSize;
+    const { width, height } = fullSize || {};
     if (width && height) {
       if (width === height) {
         return "SQUARE_MARKETING_IMAGE";
@@ -86,17 +101,29 @@ const getAssetFormat = (asset) => {
 
 const getAssetResourceName = (asset) => {
   return asset.type === "pmax"
-    ? asset.assetGroupAsset.resourceName
-    : asset.asset.resourceName;
+    ? asset.assetGroupAsset?.resourceName
+    : asset.asset?.resourceName;
 };
 
 const getAssetUniqueId = (asset) => {
   if (asset.type === "demandgen") {
     // For Demand Gen, the combination of ad and asset is the one used in the API
-    return `${asset.adGroupAd?.resourceName || 'unknown-ad'}~${asset.asset?.resourceName || 'unknown-asset'}`;
+    const adRes =
+      asset.adGroupAd?.resourceName ||
+      asset.ad_group_ad?.resource_name ||
+      "unknown-ad";
+    const assetRes =
+      asset.asset?.resourceName ||
+      asset.asset?.resource_name ||
+      "unknown-asset";
+    return `${adRes}~${assetRes}`;
   }
   // For PMax, the asset group asset resource name is enough
-  return asset.assetGroupAsset?.resourceName || 'unknown-pmax-asset';
+  return (
+    asset.assetGroupAsset?.resourceName ||
+    asset.asset_group_asset?.resource_name ||
+    "unknown-pmax-asset"
+  );
 };
 
 const getGoogleAdsLink = (campaignId, adGroupId, adId) => {
@@ -699,7 +726,7 @@ async function confirmRemoval() {
                     class="relative"
                   >
                     <ProxiedImage
-                      :src="asset.asset.imageAsset.fullSize.url"
+                      :src="getAssetImageUrl(asset)"
                       alt="Asset"
                       class="rounded-lg"
                       :class="{
@@ -709,7 +736,7 @@ async function confirmRemoval() {
                       }"
                     />
                     <div class="text-xs text-gray-400 mt-1 truncate">
-                      {{ asset.asset.name }}
+                      {{ asset.asset?.name || 'Asset' }}
                     </div>
                     <div
                       v-if="assetStore.isAssetRemoved(getAssetUniqueId(asset))"
@@ -815,11 +842,24 @@ async function confirmRemoval() {
                       v-if="campaign.id && adGroup.id"
                       :href="getGoogleAdsLink(campaign.id, adGroup.id, ad.id)"
                       target="_blank"
-                      class="ml-2 text-cyan-400 hover:text-cyan-300 transform transition-transform hover:scale-110"
+                      class="ml-2 inline-flex items-center text-cyan-400 hover:text-cyan-300 transform transition-transform hover:scale-110"
                       title="Open in Google Ads"
                       @click.stop
                     >
-                      <span class="material-symbols-outlined text-sm font-bold">open_in_new</span>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="2"
+                        stroke="currentColor"
+                        class="w-4 h-4"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+                        />
+                      </svg>
                     </a>
                   </h5>
                   <!-- Asset Grid -->
@@ -832,7 +872,7 @@ async function confirmRemoval() {
                       class="relative"
                     >
                       <ProxiedImage
-                        :src="asset.asset.imageAsset.fullSize.url"
+                        :src="getAssetImageUrl(asset)"
                         alt="Asset"
                         class="rounded-lg"
                         :class="{
@@ -842,7 +882,7 @@ async function confirmRemoval() {
                         }"
                       />
                       <div class="text-xs text-gray-400 mt-1 truncate">
-                        {{ asset.asset.name }}
+                        {{ asset.asset?.name || 'Asset' }}
                       </div>
                       <div
                         v-if="assetStore.isAssetRemoved(getAssetUniqueId(asset))"
