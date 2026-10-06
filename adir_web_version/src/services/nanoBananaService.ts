@@ -2,32 +2,43 @@ import { useConfigStore } from "../stores/config";
 import { createVertexAiApiClient, DefaultSecuritySettings } from "./apiService";
 
 /**
- * Edits an image using Gemini 3 Pro Image (Nano Banana) via Vertex AI.
- * @param {string[]} base64Images - The base64 encoded images to edit.
- * @param {string} prompt - The text prompt for editing.
- * @return {Promise<string>} A promise that resolves to the edited image as a Base64 string.
+ * Generates or edits an image using Nano Banana (Gemini 3 Image models) via Vertex AI.
+ * @param {string | string[]} [base64Images=[]] - Optional base64 encoded reference images.
+ * @param {string} prompt - The text prompt for generation or editing.
+ * @param {string} [aspectRatio] - Optional aspect ratio for the generated image.
+ * @return {Promise<string>} A promise that resolves to the generated image as a Base64 string.
  */
 export async function editImageWithNanoBanana(
-  base64Images: string | string[],
-  prompt: string,
+  base64Images: string | string[] = [],
+  prompt: string = "",
+  aspectRatio?: string,
 ): Promise<string> {
-  // Ensure base64Images is an array
-  const imagesArray = Array.isArray(base64Images)
-    ? base64Images
-    : [base64Images];
+  // Ensure base64Images is an array of non-empty strings
+  const imagesArray = (
+    Array.isArray(base64Images)
+      ? base64Images
+      : base64Images
+        ? [base64Images]
+        : []
+  ).filter(Boolean);
 
   if (imagesArray.length > 14) {
     console.warn(
-      `Gemini 3 Pro Image supports up to 14 images. Truncating from ${imagesArray.length} to 14.`,
+      `Nano Banana supports up to 14 reference images. Truncating from ${imagesArray.length} to 14.`,
     );
     imagesArray.splice(14);
+  }
+
+  let finalPrompt = prompt;
+  if (aspectRatio) {
+    finalPrompt += `\n\nGenerate the image with an aspect ratio of ${aspectRatio}.`;
   }
 
   const contents = [
     {
       role: "user",
       parts: [
-        { text: prompt },
+        { text: finalPrompt },
         ...imagesArray.map((img) => ({
           inlineData: {
             mimeType: "image/png",
@@ -39,8 +50,8 @@ export async function editImageWithNanoBanana(
   ];
 
   const configStore = useConfigStore();
-  const modelId =
-    configStore.nanoBananaModel || "gemini-3.1-flash-image-preview";
+  const rawModelId = configStore.nanoBananaModel || "gemini-3.1-flash-image";
+  const modelId = rawModelId.replace(/-preview$/, "");
   const generateContentApi = "generateContent";
   const endpoint = `/publishers/google/models/${modelId}:${generateContentApi}`;
 

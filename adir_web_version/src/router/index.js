@@ -1,8 +1,10 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "../stores/auth";
+import { parseRedirectCallback } from "../services/googleAuth";
 import AssetGenerationView from "../views/AssetGenerationView.vue";
 import AssetPreviewView from "../views/AssetPreviewView.vue";
 import AssetRemovalView from "../views/AssetRemovalView.vue";
+
 import LoginView from "../views/LoginView.vue";
 import WelcomeView from "../views/WelcomeView.vue";
 
@@ -50,6 +52,12 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
+
+  const redirectAuth = parseRedirectCallback();
+  if (redirectAuth) {
+    authStore.setAccessToken(redirectAuth.accessToken, redirectAuth.expiresIn);
+  }
+
   const isAuthenticated = authStore.isAuthenticated;
 
   if (

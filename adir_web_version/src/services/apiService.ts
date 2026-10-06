@@ -97,7 +97,13 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => response.text());
+      const responseText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(responseText);
+      } catch (e) {
+        errorData = responseText;
+      }
       this.handleApiError(response, errorData);
     }
 
@@ -162,16 +168,23 @@ export async function createGoogleAdsApiClient() {
     finalDeveloperToken = await secretManagerService.getSecret(resourceId);
   }
 
-  if (!finalDeveloperToken || !mccID) {
+  const cleanMccID = mccID ? mccID.replace(/[-\s]+/g, "") : "";
+
+  if (!cleanMccID) {
     throw new Error("Missing Google Ads API credentials");
   }
 
+  const headers: Record<string, string> = {
+    "login-customer-id": `${cleanMccID}`,
+  };
+
+  if (finalDeveloperToken) {
+    headers["developer-token"] = `${finalDeveloperToken}`;
+  }
+
   return new ApiClient({
-    baseUrl: "https://googleads.googleapis.com/v21",
-    headers: {
-      "developer-token": `${finalDeveloperToken}`,
-      "login-customer-id": `${mccID}`,
-    },
+    baseUrl: "https://googleads.googleapis.com/v25",
+    headers,
   });
 }
 

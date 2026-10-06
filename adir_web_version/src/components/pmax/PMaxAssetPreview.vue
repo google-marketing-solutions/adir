@@ -8,7 +8,7 @@ import {
   moveImages,
   removeImages,
 } from "@/services/gcsService";
-import { uploadImageAssets } from "@/services/googleAdsService";
+import { uploadImageAssets, formatGoogleAdsAssetName } from "@/services/googleAdsService";
 import { useAssetStore } from "@/stores/assetStore";
 import { useConfigStore } from "@/stores/config";
 import { editImageWithNanoBanana } from "@/services/nanoBananaService";
@@ -22,6 +22,8 @@ const showSuccessMessage = ref(false);
 const allImagesCache = ref([]);
 const previewData = ref([]);
 const isLoading = ref(true);
+const columnCount = ref(4);
+const skeletonHeights = [200, 300, 250, 350, 400, 220, 280, 320, 260, 340, 380, 240];
 const isRemoving = ref(false);
 const isUploading = ref(false);
 const uploadMessage = ref("");
@@ -38,6 +40,12 @@ const initialLoad = ref(true);
 const showConfirmationModal = ref(false);
 const confirmationMessage = ref("");
 const confirmationTitle = ref("");
+
+const toggleSelection = (asset) => {
+  if (!asset.uploaded) {
+    asset.selected = !asset.selected;
+  }
+};
 
 const fetchImages = async (force = false) => {
   if (!configStore.customerID) {
@@ -98,12 +106,20 @@ const processImages = async () => {
         };
       }
 
+    const filename = parts[parts.length - 1];
+    const filenameParts = filename.split("_");
+    let aspectRatio = "";
+    if (filenameParts.length >= 4) {
+      aspectRatio = filenameParts[2].replace("-", ":");
+    }
+
     campaigns[campaignName].assetGroups[assetGroupName].assets.push({
       id: `gen-${index}`,
       src: image.gcsUri,
       name: image.name,
       selected: statusFolder !== "UPLOADED",
       uploaded: statusFolder === "UPLOADED",
+      aspectRatio: aspectRatio,
     });
   });
 
@@ -184,8 +200,16 @@ function toggleSelectAll(assets, value) {
 }
 
 const allSelected = computed(() => {
+  if (previewData.value.length === 0) return false;
   return previewData.value.every((c) =>
     c.assetGroups.every((ag) => ag.assets.every((a) => a.selected)),
+  );
+});
+
+const noneSelected = computed(() => {
+  if (previewData.value.length === 0) return true;
+  return previewData.value.every((c) =>
+    c.assetGroups.every((ag) => ag.assets.every((a) => !a.selected)),
   );
 });
 
@@ -195,6 +219,7 @@ function setAllCheckboxes(value) {
       ag.assets.forEach((a) => (a.selected = value)),
     ),
   );
+  previewData.value = [...previewData.value];
 }
 
 const areAllInCampaignSelected = (campaign) => {
@@ -209,11 +234,22 @@ function toggleCampaignSelection(campaign, shouldSelect) {
   campaign.assetGroups.forEach((ag) => {
     ag.assets.forEach((a) => (a.selected = shouldSelect));
   });
+  previewData.value = [...previewData.value];
 }
 
 function toggleGroupSelection(group, shouldSelect) {
   group.assets.forEach((a) => (a.selected = shouldSelect));
+  previewData.value = [...previewData.value];
 }
+
+const urisToDelete = ref([]);
+
+const handleSingleDelete = (asset) => {
+  urisToDelete.value = [asset.src];
+  confirmationTitle.value = "Confirm Delete";
+  confirmationMessage.value = "Are you sure you want to delete this image? This action cannot be undone.";
+  showConfirmationModal.value = true;
+};
 
 const handleRemoveSelected = async () => {
   const selectedImageUris = [];
@@ -235,28 +271,18 @@ const handleRemoveSelected = async () => {
     return;
   }
 
+  urisToDelete.value = selectedImageUris;
   confirmationTitle.value = "Confirm Delete";
   confirmationMessage.value = `Are you sure you want to delete ${selectedImageUris.length} images? This action cannot be undone.`;
   showConfirmationModal.value = true;
 };
 
 const confirmRemoval = async () => {
-  const selectedImageUris = [];
-  previewData.value.forEach((campaign) => {
-    campaign.assetGroups.forEach((group) => {
-      group.assets.forEach((asset) => {
-        if (asset.selected) {
-          selectedImageUris.push(asset.src);
-        }
-      });
-    });
-  });
-
   isRemoving.value = true;
   removalMessage.value = "Removing the requested images...";
 
   try {
-    await removeImages(selectedImageUris);
+    await removeImages(urisToDelete.value);
     await fetchImages(true); // Force refetch
     removalMessage.value = "Images removed successfully.";
   } catch (error) {
@@ -268,6 +294,37 @@ const confirmRemoval = async () => {
     setTimeout(() => {
       removalMessage.value = "";
     }, 3000);
+  }
+};
+
+const uploadImages = async (images) => {
+  if (images.length === 0) return;
+  isUploading.value = true;
+  uploadMessage.value = `Uploading ${images.length} images...`;
+
+  try {
+    const imagesWithContent = await Promise.all(
+      images.map(async (image) => {
+        const base64Content = await downloadFileAsBase64(image.gcsUri);
+        const safeName = formatGoogleAdsAssetName(image.name);
+        return {
+          name: safeName,
+          content: base64Content,
+        };
+      })
+    );
+
+    await uploadImageAssets(imagesWithContent);
+    const imageNamesToMove = images.map((img) => img.name);
+    await moveImages(imageNamesToMove);
+    await fetchImages(true); // Force refetch
+    uploadMessage.value = "Images uploaded and moved successfully.";
+  } catch (error) {
+    console.error("Error uploading images:", error);
+    uploadMessage.value = "Error during upload process.";
+  } finally {
+    isUploading.value = false;
+    setTimeout(() => (uploadMessage.value = ""), 3000);
   }
 };
 
@@ -292,38 +349,20 @@ const handleUploadSelected = async () => {
     return;
   }
 
-  isUploading.value = true;
-  uploadMessage.value = `Uploading ${selectedImages.length} images...`;
+  await uploadImages(selectedImages);
+};
 
-  try {
-    const imagesWithContent = await Promise.all(
-      selectedImages.map(async (image) => {
-        const base64Content = await downloadFileAsBase64(image.gcsUri);
-        const parts = image.name.split("/");
-        const filteredParts = parts.filter((part, index) => {
-          if (index === 0) return false; // Skip customer ID
-          if (part === "GENERATED" || part === "UPLOADED") return false; // Skip status folders
-          return true;
-        });
-        const shortName = `adir_${filteredParts.join("_")}`;
-        return {
-          name: shortName,
-          content: base64Content,
-        };
-      })
-    );
+const handleSingleUpload = async (asset) => {
+  await uploadImages([{ name: asset.name, gcsUri: asset.src }]);
+};
 
-    await uploadImageAssets(imagesWithContent);
-    const imageNamesToMove = selectedImages.map((img) => img.name);
-    await moveImages(imageNamesToMove);
-    await fetchImages(true); // Force refetch
-    uploadMessage.value = "Images uploaded and moved successfully.";
-  } catch (error) {
-    console.error("Error uploading images:", error);
-    uploadMessage.value = "Error during upload process.";
-  } finally {
-    isUploading.value = false;
-    setTimeout(() => (uploadMessage.value = ""), 3000);
+const openDropdownAssetId = ref(null);
+
+const toggleDropdown = (assetId) => {
+  if (openDropdownAssetId.value === assetId) {
+    openDropdownAssetId.value = null;
+  } else {
+    openDropdownAssetId.value = assetId;
   }
 };
 
@@ -395,54 +434,59 @@ const handleEditSubmit = async () => {
       @close="showConfirmationModal = false"
       @confirm="confirmRemoval"
     />
-    <h2 class="text-2xl font-bold mb-4">Generated Asset Preview</h2>
+    <h1 class="mb-6">Generated Asset Preview</h1>
 
-    <div v-if="isLoading" class="flex justify-center items-center h-64">
-      <span class="loading loading-spinner loading-lg"></span>
+    <!-- Workflow Stepper -->
+    <div class="flex items-center justify-between mb-8 max-w-2xl mx-auto">
+      <!-- Step 1 -->
+      <div class="flex flex-col items-center gap-2">
+        <div class="w-10 h-10 rounded-full bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] flex items-center justify-center font-bold">1</div>
+        <span class="text-sm font-medium text-[var(--color-text-primary)]">Configure</span>
+      </div>
+      <!-- Line (Active) -->
+      <div class="flex-1 h-1 bg-[var(--color-interactive-primary)] mx-4"></div>
+      <!-- Step 2 -->
+      <div class="flex flex-col items-center gap-2">
+        <div class="w-10 h-10 rounded-full bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] flex items-center justify-center font-bold">2</div>
+        <span class="text-sm font-medium text-[var(--color-text-primary)]">Generate</span>
+      </div>
+      <!-- Line (Active) -->
+      <div class="flex-1 h-1 bg-[var(--color-interactive-primary)] mx-4"></div>
+      <!-- Step 3 -->
+      <div class="flex flex-col items-center gap-2">
+        <div class="w-10 h-10 rounded-full bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] flex items-center justify-center font-bold">3</div>
+        <span class="text-sm font-medium text-[var(--color-text-primary)]">Review</span>
+      </div>
+    </div>
+
+    <div v-if="isLoading" :style="{ columns: columnCount }" class="gap-4">
+      <div v-for="i in 12" :key="i" class="bg-[var(--color-bg-secondary)] rounded-xl mb-4 break-inside-avoid animate-pulse" :style="{ height: skeletonHeights[(i - 1) % skeletonHeights.length] + 'px' }">
+        <div class="w-full h-full bg-[var(--color-bg-tertiary)]/50 rounded-xl"></div>
+      </div>
     </div>
 
     <div v-else>
-      <div
-        class="flex justify-between items-center mb-6 bg-gray-800 p-4 rounded-lg"
-      >
-        <div class="flex gap-4 items-center">
-          <button
-            @click="setAllCheckboxes(true)"
-            class="bg-gray-600 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-700"
-          >
-            Select All
-          </button>
-          <button
-            @click="setAllCheckboxes(false)"
-            class="bg-gray-600 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-700"
-          >
-            Deselect All
-          </button>
-          <div class="form-control">
-            <label class="label cursor-pointer">
-              <span class="label-text mr-2">Show Uploaded</span>
-              <input
-                type="checkbox"
-                v-model="showUploaded"
-                class="toggle toggle-primary"
-              />
-            </label>
-          </div>
-        </div>
-        <div class="flex-grow flex justify-end gap-4 items-center">
-          <div class="flex-1 max-w-md">
-            <label for="campaign-filter" class="mr-2">Campaign:</label>
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 bg-[var(--color-bg-secondary)] p-6 rounded-xl gap-4 border border-[var(--color-bg-tertiary)]">
+        <!-- Left Side: Actions & Toggles -->
+
+
+        <!-- Right Side: Filters -->
+        <div class="flex flex-wrap gap-4 items-center w-full md:w-auto">
+          <div class="flex flex-col min-w-[200px]">
+            <label class="text-caption mb-1">Campaign</label>
             <MultiSelectDropdown
               :options="campaignOptions"
               v-model="selectedCampaigns"
+              class="w-full"
             />
           </div>
-          <div class="flex-1 max-w-md">
-            <label for="asset-group-filter" class="mr-2">Asset Group:</label>
+          <div class="flex flex-col min-w-[200px]">
+            <label class="text-caption mb-1">Asset Group</label>
             <MultiSelectDropdown
               :options="availableAssetGroups"
               v-model="selectedAssetGroups"
               placeholder="Select asset groups..."
+              class="w-full"
             />
           </div>
         </div>
@@ -463,10 +507,10 @@ const handleEditSubmit = async () => {
           <button
             @click.prevent="openEditModal(null)"
             :disabled="isEditing"
-            class="bg-yellow-500 text-gray-900 font-bold py-2 px-6 rounded-md hover:bg-yellow-400 disabled:bg-gray-400 flex items-center gap-2"
+            class="bg-amber-500 text-gray-900 font-medium py-2 px-6 rounded-md hover:bg-amber-600 disabled:bg-gray-400 flex items-center gap-2 transition-colors"
           >
             <span v-if="isEditing" class="loading loading-spinner loading-sm"></span>
-            <span v-else>🍌</span>
+            <span v-else style="filter: drop-shadow(0 0 1px rgba(0,0,0,0.8))">🍌</span>
             <span>{{ isEditing ? "Editing..." : "Batch Edit" }}</span>
           </button>
           <button
@@ -490,6 +534,43 @@ const handleEditSubmit = async () => {
             {{ isUploading ? "Uploading..." : "Upload Selected to Asset Library" }}
           </button>
         </div>
+      </div>
+
+      <!-- Controls Toolbar above List -->
+      <div class="flex flex-wrap gap-6 items-center mb-6 bg-[var(--color-bg-secondary)] p-4 rounded-xl border border-[var(--color-bg-tertiary)]">
+        <!-- Master Checkbox -->
+        <div class="flex items-center gap-2 bg-[var(--color-bg-tertiary)] p-2 rounded-lg cursor-pointer hover:bg-[var(--color-bg-secondary)] transition-colors duration-200 w-fit" @click="setAllCheckboxes(!allSelected)">
+          <input
+            type="checkbox"
+            :checked="allSelected"
+            class="checkbox checkbox-primary"
+            @click.stop
+            @change="setAllCheckboxes($event.target.checked)"
+          />
+          <span class="text-sm font-medium text-[var(--color-text-primary)]">Select All</span>
+        </div>
+
+        <!-- Show Uploaded Toggle -->
+        <label class="flex items-center cursor-pointer group">
+          <div class="relative">
+            <input type="checkbox" v-model="showUploaded" class="sr-only peer" />
+            <div class="w-11 h-6 bg-[var(--color-bg-tertiary)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--color-interactive-focus)] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-interactive-primary)]"></div>
+          </div>
+          <span class="ml-3 text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)] transition-colors" :class="{'text-[var(--color-text-primary)]': showUploaded}">Show Uploaded</span>
+        </label>
+
+        <!-- Slider -->
+        <label class="flex items-center cursor-pointer group gap-2">
+          <span class="text-sm font-medium text-[var(--color-text-muted)] group-hover:text-[var(--color-text-primary)]">Grid Size</span>
+          <input
+            type="range"
+            min="1"
+            max="8"
+            v-model.number="columnCount"
+            class="range range-xs range-primary w-24"
+          />
+          <span class="text-xs text-[var(--color-text-muted)]">{{ columnCount }}</span>
+        </label>
       </div>
 
       <div class="space-y-8">
@@ -522,22 +603,29 @@ const handleEditSubmit = async () => {
                 />
                 {{ group.groupName }}
               </h4>
-              <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <div :style="{ columns: columnCount }" class="gap-4">
                 <div
                   v-for="asset in group.assets"
                   :key="asset.id"
-                  class="relative"
+                  class="relative break-inside-avoid mb-4 group cursor-pointer"
+                  @click="toggleSelection(asset)"
                 >
                   <GcsImage
                     :gcs-uri="asset.src"
+                    :aspect-ratio="asset.aspectRatio"
                     alt="Asset"
                     class="rounded-lg"
                   />
+                  <!-- Aspect Ratio Overlay -->
+                  <div v-if="asset.aspectRatio" class="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-md z-10">
+                    {{ asset.aspectRatio }}
+                  </div>
                   <input
                     type="checkbox"
                     v-model="asset.selected"
                     class="absolute top-2 left-2 h-5 w-5 rounded"
                     :disabled="asset.uploaded"
+                    @click.stop
                   />
                   <div
                     v-if="asset.uploaded"
@@ -545,14 +633,35 @@ const handleEditSubmit = async () => {
                   >
                     ✓
                   </div>
-                  <button
-                    @click.prevent="openEditModal(asset)"
-                    class="absolute bottom-2 right-2 bg-yellow-500 text-gray-900 rounded-md px-2 py-1 text-xs hover:bg-yellow-400 flex items-center gap-1 font-bold"
-                    title="Edit with Nano Banana"
-                  >
-                    <span>🍌</span>
-                    <span>Edit</span>
-                  </button>
+                  <!-- Actions Menu (Vue controlled) -->
+                  <div class="absolute bottom-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <button 
+                      @click.prevent.stop="toggleDropdown(asset.id)" 
+                      class="btn btn-xs bg-[var(--color-interactive-primary)] text-[var(--color-text-primary)] hover:brightness-110 font-medium flex items-center gap-1 rounded-md px-2 py-1"
+                    >
+                      <span>Actions</span>
+                      <span class="text-xs">▼</span>
+                    </button>
+                    <ul 
+                      v-show="openDropdownAssetId === asset.id" 
+                      class="absolute right-0 bottom-full mb-1 menu p-2 shadow bg-gray-800 rounded-box w-40 border border-gray-700 text-white text-sm"
+                    >
+                      <li><a @click.prevent="openEditModal(asset); openDropdownAssetId = null" class="hover:bg-gray-700 py-1 flex items-center gap-2"><span>🍌</span> Edit</a></li>
+                      <li>
+                        <a @click.prevent="handleSingleUpload(asset); openDropdownAssetId = null" class="hover:bg-gray-700 py-1 flex items-center gap-2">
+                          <svg class="w-4 h-4 flex-shrink-0" viewBox="0 -13 256 256" version="1.1" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid">
+                            <g>
+                              <path d="M5.888,166.405103 L90.88,20.9 C101.676138,27.2558621 156.115862,57.3844138,164.908138,63.1135172 L79.9161379,208.627448 C70.6206897,220.906621 -5.888,185.040138 5.888,166.396276 L5.888,166.405103 Z" fill="#FBBC04"></path>
+                              <path d="M250.084224,166.401789 L165.092224,20.9055131 C153.210293,1.13172 127.619121,-6.05393517 106.600638,5.62496138 C85.582155,17.3038579 79.182155,42.4624786 91.0640861,63.1190303 L176.056086,208.632961 C187.938017,228.397927 213.52919,235.583582 234.547672,223.904686 C254.648086,212.225789 261.966155,186.175582 250.084224,166.419444 L250.084224,166.401789 Z" fill="#4285F4"></path>
+                              <ellipse fill="#34A853" cx="42.6637241" cy="187.924414" rx="42.6637241" ry="41.6044138"></ellipse>
+                            </g>
+                          </svg>
+                          Upload
+                        </a>
+                      </li>
+                      <li><a @click.prevent="handleSingleDelete(asset); openDropdownAssetId = null" class="hover:bg-gray-700 py-1 text-red-400 hover:text-red-300 flex items-center gap-2"><span>🗑️</span> Delete</a></li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>
@@ -590,8 +699,8 @@ const handleEditSubmit = async () => {
         ></textarea>
         <div class="flex justify-end gap-4">
           <button @click="showEditModal = false" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700">Cancel</button>
-          <button @click="handleEditSubmit" class="bg-yellow-500 text-gray-900 px-4 py-2 rounded-md hover:bg-yellow-400 flex items-center gap-2 font-bold" :disabled="!editPrompt">
-            <span>🍌</span>
+          <button @click="handleEditSubmit" class="bg-amber-500 text-gray-900 px-4 py-2 rounded-md hover:bg-amber-600 flex items-center gap-2 font-medium disabled:opacity-50" :disabled="!editPrompt">
+            <span style="filter: drop-shadow(0 0 1px rgba(0,0,0,0.8))">🍌</span>
             <span>Edit</span>
           </button>
         </div>
