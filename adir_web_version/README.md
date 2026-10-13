@@ -1,6 +1,6 @@
 # Google Ads Asset Optimization Suite
 
-This application is a powerful tool designed for marketing professionals and advertisers to streamline the optimization of their Google Ads campaigns, with a special focus on Performance Max (PMax) and Demand Gen campaigns. It provides a seamless workflow to identify and remove underperforming image assets, generate new, high-quality creative images using Imagen, and manage their inclusion in campaigns directly within the platform.
+This application is a powerful tool designed for marketing professionals and advertisers to streamline the optimization of their Google Ads campaigns, with a special focus on Performance Max (PMax) and Demand Gen campaigns. It provides a seamless workflow to identify and remove underperforming image assets, generate new, high-quality creative images using Nano Banana (Gemini Image models), and manage their inclusion in campaigns directly within the platform.
 
 ## User Pains Targeted
 
@@ -28,7 +28,7 @@ This is the first step in the optimization process. Users can identify and remov
 
 After removing ineffective image assets, users can generate new ones to fill the creative gap. The application offers three distinct AI-powered generation modes:
 
-- **Creative Concepts Mode**: Users provide creative concepts or ideas, and Gemini creates image generation prompts based on the ideas and Google Ads image assets best practices. These prompts are then sent to Imagen. This is ideal for exploring new creative directions or generating high qualtiy image assets without pulling data from actual campaigns.
+- **Creative Concepts Mode**: Users provide creative concepts or ideas, and Gemini creates image generation prompts based on the ideas and Google Ads image assets best practices. These prompts are then sent to Nano Banana. This is ideal for exploring new creative directions or generating high quality image assets without pulling data from actual campaigns.
 - **Asset Group Name Mode**: Image generation based on prompts that use the names of the asset groups in he selected campaigns to generate relevant and contextually appropriate images at scale.
 - **Search Signal Keywords Mode**: This mode leverages the keywords from the search signals associated with the pmax campaigns to generate highly relevant image creatives. This mode is great for advertises who want to leverage keywords to generate relevant and contextually appropriate images at scale.
 

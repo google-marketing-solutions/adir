@@ -32,9 +32,45 @@ const conditions = ref([]);
 let conditionIdCounter = 0;
 const dateRange = ref("LAST_30_DAYS");
 
+const presets = [
+  {
+    name: "Low CTR (< 0.5%)",
+    rules: [{ metric: "CTR", operator: "<", value: 0.5, logicalOperator: "AND" }],
+  },
+  {
+    name: "High Cost, No Clicks",
+    rules: [
+      { metric: "Cost", operator: ">", value: 50, logicalOperator: "AND" },
+      { metric: "Clicks", operator: "=", value: 0, logicalOperator: "AND" },
+    ],
+  },
+  {
+    name: "Low Conversions",
+    rules: [{ metric: "Conversions", operator: "<", value: 1, logicalOperator: "AND" }],
+  },
+];
+
+const applyPreset = (preset) => {
+  conditions.value = preset.rules.map((rule, index) => ({
+    id: index + 1,
+    ...rule,
+  }));
+  conditionIdCounter = preset.rules.length;
+};
+
 const activeMetrics = computed(() => {
   return new Set(conditions.value.map((c) => c.metric));
 });
+
+const getAssetImageUrl = (asset) => {
+  return (
+    asset?.asset?.imageAsset?.fullSize?.url ||
+    asset?.asset?.image_asset?.full_size?.url ||
+    asset?.asset?.imageAsset?.full_size?.url ||
+    asset?.asset?.image_asset?.fullSize?.url ||
+    ""
+  );
+};
 
 const getAssetFormat = (asset) => {
   if (asset.type === "pmax") {
@@ -44,7 +80,12 @@ const getAssetFormat = (asset) => {
     }
     return format;
   } else {
-    const { width, height } = asset.asset?.imageAsset?.fullSize || {};
+    const fullSize =
+      asset?.asset?.imageAsset?.fullSize ||
+      asset?.asset?.image_asset?.full_size ||
+      asset?.asset?.imageAsset?.full_size ||
+      asset?.asset?.image_asset?.fullSize;
+    const { width, height } = fullSize || {};
     if (width && height) {
       if (width === height) {
         return "SQUARE_MARKETING_IMAGE";
@@ -60,17 +101,29 @@ const getAssetFormat = (asset) => {
 
 const getAssetResourceName = (asset) => {
   return asset.type === "pmax"
-    ? asset.assetGroupAsset.resourceName
-    : asset.asset.resourceName;
+    ? asset.assetGroupAsset?.resourceName
+    : asset.asset?.resourceName;
 };
 
 const getAssetUniqueId = (asset) => {
   if (asset.type === "demandgen") {
     // For Demand Gen, the combination of ad and asset is the one used in the API
-    return `${asset.adGroupAd?.resourceName || 'unknown-ad'}~${asset.asset?.resourceName || 'unknown-asset'}`;
+    const adRes =
+      asset.adGroupAd?.resourceName ||
+      asset.ad_group_ad?.resource_name ||
+      "unknown-ad";
+    const assetRes =
+      asset.asset?.resourceName ||
+      asset.asset?.resource_name ||
+      "unknown-asset";
+    return `${adRes}~${assetRes}`;
   }
   // For PMax, the asset group asset resource name is enough
-  return asset.assetGroupAsset?.resourceName || 'unknown-pmax-asset';
+  return (
+    asset.assetGroupAsset?.resourceName ||
+    asset.asset_group_asset?.resource_name ||
+    "unknown-pmax-asset"
+  );
 };
 
 const getGoogleAdsLink = (campaignId, adGroupId, adId) => {
@@ -438,30 +491,43 @@ async function confirmRemoval() {
       @confirm="confirmRemoval"
     />
     <div v-if="removalStep === 1">
-      <h2 class="text-2xl font-bold mb-4">
-        Pull Low-Performing PMax & Demand Gen Assets
-      </h2>
-      <div class="bg-gray-800 p-8 rounded-lg">
+      <h1 class="mb-6">Pull Low-Performing PMax & Demand Gen Assets</h1>
+      <div class="bg-[var(--color-bg-secondary)] p-6 rounded-xl mb-6 border border-[var(--color-bg-tertiary)]">
         <p class="text-gray-400 mb-6">
           Define the performance threshold to identify assets for removal. Add
           multiple conditions using "AND" or "OR".
         </p>
         <div
-          class="bg-yellow-900 border-l-4 border-yellow-500 text-yellow-100 p-4 mb-6"
+          class="bg-[var(--color-status-warning)]/10 border-l-4 border-[var(--color-status-warning)] p-4 mb-6 rounded-r-lg"
           role="alert"
         >
-          <p class="font-bold">API Limitation Notice</p>
-          <p>
+          <p class="font-bold text-[var(--color-status-warning)]">API Limitation Notice</p>
+          <p class="text-[var(--color-text-primary)]">
             Note: Demand Gen ad creatives cannot be modified or removed
             programmatically due to a Google Ads API limitation.
           </p>
         </div>
+        <!-- Presets -->
+        <div class="mb-6">
+          <span class="text-caption mb-2 block">Quick Presets</span>
+          <div class="flex flex-wrap gap-3">
+            <button
+              v-for="preset in presets"
+              :key="preset.name"
+              @click="applyPreset(preset)"
+              class="bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] px-4 py-2 rounded-md hover:bg-[var(--color-bg-secondary)] border border-[var(--color-bg-tertiary)] hover:border-[var(--color-interactive-primary)] transition-colors text-sm"
+            >
+              {{ preset.name }}
+            </button>
+          </div>
+        </div>
+
         <div class="space-y-4">
           <div v-for="(condition, index) in conditions" :key="condition.id">
             <div class="condition-row flex items-center gap-2 mb-2">
               <select
                 v-model="condition.metric"
-                class="bg-gray-700 rounded-md p-2"
+                class="bg-[var(--color-bg-tertiary)] rounded-md p-2"
               >
                 <option>CTR</option>
                 <option>Clicks</option>
@@ -475,7 +541,7 @@ async function confirmRemoval() {
               </select>
               <select
                 v-model="condition.operator"
-                class="bg-gray-700 rounded-md p-2"
+                class="bg-[var(--color-bg-tertiary)] rounded-md p-2"
               >
                 <option><</option>
                 <option>></option>
@@ -487,7 +553,7 @@ async function confirmRemoval() {
                 v-model.number="condition.value"
                 type="number"
                 placeholder="e.g., 0.5"
-                class="bg-gray-700 rounded-md p-2"
+                class="bg-[var(--color-bg-tertiary)] rounded-md p-2"
               />
               <button
                 @click="removeCondition(index)"
@@ -503,7 +569,7 @@ async function confirmRemoval() {
             >
               <select
                 v-model="condition.logicalOperator"
-                class="bg-gray-700 text-cyan-400 rounded-md p-1"
+                class="bg-[var(--color-bg-tertiary)] text-cyan-400 rounded-md p-1"
               >
                 <option>AND</option>
                 <option>OR</option>
@@ -527,7 +593,7 @@ async function confirmRemoval() {
           <select
             id="dateRange"
             v-model="dateRange"
-            class="bg-gray-700 rounded-md p-2"
+            class="bg-[var(--color-bg-tertiary)] rounded-md p-2"
           >
             <option value="LAST_7_DAYS">Last 7 Days</option>
             <option value="LAST_14_DAYS">Last 14 Days</option>
@@ -555,11 +621,11 @@ async function confirmRemoval() {
           removed from their respective campaigns.
         </p>
         <div
-          class="bg-yellow-900 border-l-4 border-yellow-500 text-yellow-100 p-4 mb-6"
+          class="bg-[var(--color-status-warning)]/10 border-l-4 border-[var(--color-status-warning)] p-4 mb-6 rounded-r-lg"
           role="alert"
         >
-          <p class="font-bold">API Limitation Notice</p>
-          <p>
+          <p class="font-bold text-[var(--color-status-warning)]">API Limitation Notice</p>
+          <p class="text-[var(--color-text-primary)]">
             Note: Demand Gen ad creatives cannot be modified or removed
             programmatically due to a Google Ads API limitation.
           </p>
@@ -575,7 +641,7 @@ async function confirmRemoval() {
           </div>
           <button
             @click.prevent="removalStep = 1"
-            class="bg-gray-600 text-white font-bold py-2 px-6 rounded-md hover:bg-gray-700"
+            class="bg-gray-600 text-white font-bold py-2 px-6 rounded-md hover:bg-[var(--color-bg-tertiary)]"
           >
             Back
           </button>
@@ -593,8 +659,8 @@ async function confirmRemoval() {
             Generate New Assets
           </button>
         </div>
-        <div class="filter-bar mb-6 p-4 bg-gray-800 rounded-lg">
-          <span class="mr-4 font-semibold">Filter by format:</span>
+        <div class="filter-bar mb-6 p-4 bg-[var(--color-bg-secondary)] rounded-lg border border-[var(--color-bg-tertiary)]">
+          <span class="text-caption mr-4">Filter by format:</span>
           <label
             v-for="format in assetFormats"
             :key="format"
@@ -615,7 +681,7 @@ async function confirmRemoval() {
           <div
             v-for="campaign in groupedAssets"
             :key="campaign.name"
-            class="bg-gray-700 rounded-lg p-6"
+            class="bg-[var(--color-bg-tertiary)] rounded-lg p-6"
           >
             <h3 class="text-xl font-semibold text-white mb-4">
               <input
@@ -660,7 +726,7 @@ async function confirmRemoval() {
                     class="relative"
                   >
                     <ProxiedImage
-                      :src="asset.asset.imageAsset.fullSize.url"
+                      :src="getAssetImageUrl(asset)"
                       alt="Asset"
                       class="rounded-lg"
                       :class="{
@@ -670,7 +736,7 @@ async function confirmRemoval() {
                       }"
                     />
                     <div class="text-xs text-gray-400 mt-1 truncate">
-                      {{ asset.asset.name }}
+                      {{ asset.asset?.name || 'Asset' }}
                     </div>
                     <div
                       v-if="assetStore.isAssetRemoved(getAssetUniqueId(asset))"
@@ -776,11 +842,24 @@ async function confirmRemoval() {
                       v-if="campaign.id && adGroup.id"
                       :href="getGoogleAdsLink(campaign.id, adGroup.id, ad.id)"
                       target="_blank"
-                      class="ml-2 text-cyan-400 hover:text-cyan-300 transform transition-transform hover:scale-110"
+                      class="ml-2 inline-flex items-center text-cyan-400 hover:text-cyan-300 transform transition-transform hover:scale-110"
                       title="Open in Google Ads"
                       @click.stop
                     >
-                      <span class="material-symbols-outlined text-sm font-bold">open_in_new</span>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="2"
+                        stroke="currentColor"
+                        class="w-4 h-4"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+                        />
+                      </svg>
                     </a>
                   </h5>
                   <!-- Asset Grid -->
@@ -793,7 +872,7 @@ async function confirmRemoval() {
                       class="relative"
                     >
                       <ProxiedImage
-                        :src="asset.asset.imageAsset.fullSize.url"
+                        :src="getAssetImageUrl(asset)"
                         alt="Asset"
                         class="rounded-lg"
                         :class="{
@@ -803,7 +882,7 @@ async function confirmRemoval() {
                         }"
                       />
                       <div class="text-xs text-gray-400 mt-1 truncate">
-                        {{ asset.asset.name }}
+                        {{ asset.asset?.name || 'Asset' }}
                       </div>
                       <div
                         v-if="assetStore.isAssetRemoved(getAssetUniqueId(asset))"
@@ -873,7 +952,7 @@ async function confirmRemoval() {
         <ScrollToTopButton />
       </div>
       <div v-else>
-        <div class="bg-gray-800 p-8 rounded-lg text-center">
+        <div class="bg-[var(--color-bg-secondary)] p-8 rounded-lg text-center">
           <h2 class="text-2xl font-bold mb-4">No Assets Found</h2>
           <p class="text-gray-400">
             There are 0 images with the selected rules. Please go back and

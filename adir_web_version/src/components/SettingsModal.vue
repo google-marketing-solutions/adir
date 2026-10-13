@@ -124,7 +124,7 @@
               />
               <div class="flex flex-col gap-2 w-full">
                 <label for="use-secret-manager" class="text-sm font-medium text-gray-300 flex items-center gap-2 flex-wrap">
-                  Use Google Cloud Secret Manager for Developer Token
+                  Use Google Cloud Secret Manager for Developer Token (Optional)
                   <div
                     class="relative group inline-block"
                     @mouseenter="showTooltip"
@@ -152,12 +152,16 @@
               <label
                 for="dev-token"
                 class="block text-sm font-medium text-gray-300 mb-1"
-                >Ads API Key (Developer Token)</label
+                >Ads API Key (Developer Token)
+                <span class="text-xs font-normal text-gray-400"
+                  >(Optional — not needed anymore)</span
+                ></label
               >
               <input
                 v-model="configStore.developerToken"
                 type="password"
                 id="dev-token"
+                placeholder="Optional (not needed anymore)"
                 class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
               />
             </div>
@@ -177,47 +181,70 @@
                 id="gemini-model"
                 class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
               >
-                <option>gemini-3.1-pro-preview</option>
-                <option>gemini-3-flash-preview</option>
-                <option>gemini-2.5-pro</option>
-                <option>gemini-2.5-flash</option>
-                <option>gemini-2.5-flash-lite</option>
-              </select>
-            </div>
-            <div>
-              <label
-                for="image-generation-model"
-                class="block text-sm font-medium text-gray-300 mb-1"
-                >Image Generation Model</label
-              >
-              <select
-                v-model="configStore.imageGenModel"
-                id="image-generation-model"
-                class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
-              >
-                <option>Imagen-4.0-generate-001</option>
-                <option>Imagen-4.0-ultra-generate-001</option>
-                <option>Imagen-4.0-fast-generate-001</option>
-                <option>Imagen-3.0-generate-002</option>
+                <option value="gemini-flash-latest">Gemini Flash (Latest)</option>
+                <option value="gemini-3.8-flash">Gemini 3.8 Flash</option>
+                <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
+                <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+                <option value="gemini-pro-latest">Gemini Pro (Latest)</option>
               </select>
             </div>
             <div>
               <label
                 for="nano-banana-model"
                 class="block text-sm font-medium text-gray-300 mb-1"
-                >Nano Banana Model</label
+                >Image Generation Model (Nano Banana)</label
               >
               <select
                 v-model="configStore.nanoBananaModel"
                 id="nano-banana-model"
                 class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
               >
-                <option value="gemini-3.1-flash-image-preview">gemini-3.1-flash-image-preview</option>
-                <option value="gemini-3-pro-image-preview">gemini-3-pro-image-preview</option>
+                <option value="gemini-3.1-flash-image">Nano Banana 2</option>
+                <option value="gemini-3.1-flash-lite-image">Nano Banana 2 Lite</option>
+                <option value="gemini-3-pro-image">Nano Banana Pro</option>
               </select>
             </div>
           </div>
         </fieldset>
+
+        <!-- Agentic Evaluation (Commented out)
+        <fieldset class="border border-gray-700 rounded-md p-4">
+          <legend class="text-lg font-semibold px-2">Agentic Evaluation</legend>
+          <div class="grid grid-cols-1 gap-4">
+            <div class="flex items-center gap-2">
+              <input
+                v-model="configStore.enableEvaluation"
+                type="checkbox"
+                id="enable-evaluation"
+                class="w-4 h-4 text-cyan-600 bg-gray-700 border-gray-600 rounded focus:ring-cyan-500 flex-shrink-0"
+              />
+              <label for="enable-evaluation" class="text-sm font-medium text-gray-300">
+                Enable Agentic Evaluation
+              </label>
+            </div>
+            <div v-if="configStore.enableEvaluation">
+              <label
+                for="max-evaluation-retries"
+                class="block text-sm font-medium text-gray-300 mb-1"
+                >Max Evaluation Retries</label
+              >
+              <select
+                v-model.number="configStore.maxEvaluationRetries"
+                id="max-evaluation-retries"
+                class="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-gray-200 focus:ring-cyan-500 focus:border-cyan-500"
+              >
+                <option :value="1">1</option>
+                <option :value="2">2</option>
+                <option :value="3">3</option>
+                <option :value="4">4</option>
+                <option :value="5">5</option>
+              </select>
+            </div>
+
+
+          </div>
+        </fieldset>
+        -->
 
         <div class="flex justify-end">
           <button
@@ -239,6 +266,58 @@ import { useConfigStore } from "../stores/config";
 
 const configStore = useConfigStore();
 const isCustomRegion = ref(false);
+
+const validGeminiModels = [
+  "gemini-flash-latest",
+  "gemini-3.8-flash",
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
+  "gemini-pro-latest",
+];
+if (!validGeminiModels.includes(configStore.geminiModel)) {
+  if (
+    configStore.geminiModel === "gemini-3.1-pro" ||
+    configStore.geminiModel === "gemini-3.1-pro-preview"
+  ) {
+    configStore.geminiModel = "gemini-pro-latest";
+  } else {
+    configStore.geminiModel = "gemini-flash-latest";
+  }
+}
+
+const validNanoBananaModels = [
+  "gemini-3.1-flash-image",
+  "gemini-3.1-flash-lite-image",
+  "gemini-3-pro-image",
+];
+if (!validNanoBananaModels.includes(configStore.nanoBananaModel)) {
+  configStore.nanoBananaModel = "gemini-3.1-flash-image";
+}
+
+const sanitizeAccountId = (value) =>
+  typeof value === "string" ? value.replace(/[-\s]+/g, "") : "";
+
+watch(
+  () => configStore.mccID,
+  (newVal) => {
+    const cleaned = sanitizeAccountId(newVal);
+    if (cleaned !== newVal) {
+      configStore.mccID = cleaned;
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  () => configStore.customerID,
+  (newVal) => {
+    const cleaned = sanitizeAccountId(newVal);
+    if (cleaned !== newVal) {
+      configStore.customerID = cleaned;
+    }
+  },
+  { immediate: true },
+);
 
 // Tooltip Logic
 const tooltipVisible = ref(false);

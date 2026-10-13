@@ -140,7 +140,7 @@
                 <li><strong>MCC ID:</strong> A Google Ads Manager Account (MCC) you have direct access to.</li>
                 <li><strong>Customer ID:</strong> A child account under the specified MCC.</li>
 
-                <li><strong>Google Ads Developer Token:</strong> Basic or Standard level access.</li>
+                <li><strong>Google Ads Developer Token (Optional):</strong> Not needed anymore as of Google Ads API v25 (existing tokens still work if already configured).</li>
                 <li><strong>Secret Manager (Optional):</strong> Securely store your Developer Token in Google Cloud Secret Manager. The key should be named <code>google_ads_developer_token</code>, and saved in the same project as the one associated with the Google Client ID. You need to be granted the role <strong>Secret Manager Secret Accessor</strong> in the IAM.</li>
               </ul>
             </div>

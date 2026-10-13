@@ -26,6 +26,7 @@ const closeSettings = () => {
     <PMaxCampaignSelector
       v-if="authStore.isAuthenticated"
       class="campaign-selector"
+      :class="{ 'opacity-50 pointer-events-none': route.name === 'BrandGuidelines' }"
     />
     <div class="main-container">
       <AppSidebar v-if="authStore.isAuthenticated" />
@@ -68,11 +69,13 @@ const closeSettings = () => {
   border-bottom: 1px solid #4a5568;
   background-color: #1f2937; /* bg-gray-800 */
   color: #d1d5db; /* text-gray-300 */
+  position: relative;
+  z-index: 40;
 }
 
 .main-content {
   flex: 1;
-  padding: 1rem;
+  padding: 1.5rem;
   overflow-y: auto; /* Allow scrolling within the main content */
 }
 </style>

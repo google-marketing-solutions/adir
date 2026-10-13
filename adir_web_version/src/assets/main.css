@@ -1,7 +1,849 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    /* Colors - OKLCH Tinted Neutrals */
+    --color-bg-primary: oklch(0.15 0.01 240);
+    --color-bg-secondary: oklch(0.20 0.01 240);
+    --color-bg-tertiary: oklch(0.30 0.01 240);
+    
+    --color-text-primary: oklch(0.90 0.005 240);
+    --color-text-muted: oklch(0.70 0.01 240);
+    --color-text-dim: oklch(0.50 0.01 240);
+    --color-text-highlight: oklch(0.98 0.005 240);
+    
+    --color-interactive-primary: oklch(0.60 0.25 240);
+    --color-interactive-hover: oklch(0.50 0.25 240);
+    --color-interactive-focus: oklch(0.70 0.20 240);
+    
+    --color-status-success: oklch(0.70 0.20 140);
+    --color-status-error: oklch(0.60 0.20 30);
+    --color-status-warning: oklch(0.80 0.15 70);
+
+    /* Theme active control variables */
+    --color-theme-active-icon: oklch(0.70 0.15 200); /* Cool cyan */
+    --color-theme-active-bg: rgba(34, 211, 238, 0.1);
+    --color-theme-active-border: rgba(34, 211, 238, 0.2);
+    --color-border-theme-group: rgba(255, 255, 255, 0.1);
+
+    /* Helper layout variables */
+    --color-bg-aside-start: rgba(17, 24, 39, 0.95);
+    --color-bg-aside-end: rgba(15, 23, 42, 0.98);
+    --color-border-aside: rgba(255, 255, 255, 0.06);
+    --color-bg-modal: rgba(17, 24, 39, 0.95);
+    --color-focus-ring: rgba(59, 130, 246, 0.3);
+
+    /* Spacing - 4px/8px Grid */
+    --spacing-xs: 0.25rem; /* 4px */
+    --spacing-sm: 0.5rem; /* 8px */
+    --spacing-md: 1rem; /* 16px */
+    --spacing-lg: 1.5rem; /* 24px */
+    --spacing-xl: 2rem; /* 32px */
+    --spacing-xxl: 3rem; /* 48px */
+
+    /* Typography Scale */
+    --text-xs: 0.75rem; /* 12px */
+    --text-sm: 0.875rem; /* 14px */
+    --text-base: 1rem; /* 16px */
+    --text-lg: 1.125rem; /* 18px */
+    --text-xl: 1.25rem; /* 20px */
+    --text-2xl: 1.5rem; /* 24px */
+    --text-3xl: clamp(1.5rem, 4vw + 1rem, 1.875rem);
+    --text-4xl: clamp(1.875rem, 5vw + 1rem, 2.25rem);
+
+    /* Reading Measure */
+    --max-width-body: 60ch;
+  }
+
   body {
-    @apply bg-gray-900 text-gray-200;
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-family: Geist, system-ui, -apple-system, sans-serif;
+  }
+
+  h1 { font-size: var(--text-3xl); line-height: 1.15; font-weight: 800; letter-spacing: -0.025em; color: var(--color-text-highlight); }
+  h2 { font-size: var(--text-2xl); line-height: 1.2; font-weight: 700; letter-spacing: -0.015em; color: var(--color-text-highlight); }
+  h3 { font-size: var(--text-xl); line-height: 1.25; font-weight: 700; letter-spacing: -0.01em; color: var(--color-text-highlight); }
+  h4 { font-size: var(--text-lg); line-height: 1.3; font-weight: 600; color: var(--color-text-highlight); }
+  
+  p {
+    max-width: var(--max-width-body);
+    line-height: 1.65;
+    color: var(--color-text-muted);
+  }
+
+  .text-caption {
+    font-size: var(--text-xs);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-dim);
   }
 }
+
+/* ==========================================
+   Global High-Contrast Inputs, Textareas & Selects (Dark Mode Base)
+   ========================================== */
+select,
+textarea,
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  background: rgba(31, 41, 55, 0.4) !important;
+  border-radius: 8px !important;
+  color: #f3f4f6 !important;
+  transition: all 0.3s ease !important;
+}
+
+select:focus,
+textarea:focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3) !important;
+  background: rgba(31, 41, 55, 0.6) !important;
+  outline: none !important;
+}
+
+/* ==========================================
+   Global Premium Primary Action Buttons Style
+   ========================================== */
+button.bg-blue-600,
+button.bg-cyan-600,
+button.bg-indigo-600 {
+  background: #2563eb !important;
+  border: none !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.025em !important;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  color: #ffffff !important;
+}
+
+button.bg-blue-600:hover:not(:disabled),
+button.bg-cyan-600:hover:not(:disabled),
+button.bg-indigo-600:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 22px rgba(37, 99, 235, 0.4) !important;
+  background: #1d4ed8 !important;
+}
+
+button.bg-blue-600:active:not(:disabled),
+button.bg-cyan-600:active:not(:disabled),
+button.bg-indigo-600:active:not(:disabled) {
+  transform: translateY(0) !important;
+}
+
+/* ==========================================
+   Light Mode Global Theme Overrides (CSS-Only)
+   ========================================== */
+:root[data-theme="light"] {
+  --color-bg-primary: oklch(0.98 0.005 240);
+  --color-bg-secondary: oklch(0.96 0.008 240);
+  --color-bg-tertiary: oklch(0.91 0.01 240);
+
+  --color-text-primary: oklch(0.15 0.01 240);
+  --color-text-muted: oklch(0.35 0.01 240);
+  --color-text-dim: oklch(0.55 0.01 240);
+  --color-text-highlight: oklch(0.08 0.01 240);
+
+  --color-interactive-primary: oklch(0.55 0.22 240);
+  --color-interactive-hover: oklch(0.45 0.22 240);
+  --color-interactive-focus: oklch(0.65 0.18 240);
+
+  /* Theme active control variables */
+  --color-theme-active-icon: oklch(0.60 0.18 70); /* Warm amber/orange */
+  --color-theme-active-bg: rgba(217, 119, 6, 0.1);
+  --color-theme-active-border: rgba(217, 119, 6, 0.2);
+  --color-border-theme-group: rgba(15, 23, 42, 0.08);
+
+  /* Helper layout variables */
+  --color-bg-aside-start: #ffffff;
+  --color-bg-aside-end: #f8fafc;
+  --color-border-aside: rgba(15, 23, 42, 0.08);
+  --color-bg-modal: rgba(255, 255, 255, 0.95);
+  --color-focus-ring: rgba(37, 99, 235, 0.2);
+  --color-active-link-bg-start: rgba(37, 99, 235, 0.08);
+  --color-active-link-bg-end: rgba(37, 99, 235, 0.01);
+  --color-active-link-text: #1d4ed8;
+}
+
+:root[data-theme="mango"] {
+  --color-bg-primary: oklch(0.97 0.03 82); /* Softer creamy warm flesh background */
+  --color-bg-secondary: oklch(0.94 0.05 78); /* Creamy middle tint */
+  --color-bg-tertiary: oklch(0.90 0.08 73); /* Deeper creamy orange */
+
+  --color-text-primary: oklch(0.22 0.04 55); /* Rich espresso brown text */
+  --color-text-muted: oklch(0.38 0.06 60);
+  --color-text-dim: oklch(0.52 0.05 65);
+  --color-text-highlight: oklch(0.15 0.08 45); /* Deepest reddish-brown */
+
+  --color-interactive-primary: oklch(0.68 0.20 70); /* Warm mango gold accent */
+  --color-interactive-hover: oklch(0.62 0.22 58); /* Deeper mango orange hover */
+  --color-interactive-focus: oklch(0.72 0.18 75);
+
+  /* Richer Mango Gradients */
+  --color-mango-gradient-primary: linear-gradient(135deg, oklch(0.75 0.20 72) 0%, oklch(0.58 0.22 42) 100%); /* Beautiful Mango Orange to Reddish-Orange sunset */
+  --color-mango-gradient-hover: linear-gradient(135deg, oklch(0.78 0.20 75) 0%, oklch(0.61 0.22 45) 100%);
+  --color-mango-gradient-soft: linear-gradient(180deg, oklch(0.97 0.04 82) 0%, oklch(0.91 0.08 72) 100%); /* Soft sunset gradient for aside/sidebar */
+
+  /* Theme active control variables */
+  --color-theme-active-icon: oklch(0.62 0.22 58);
+  --color-theme-active-bg: oklch(0.90 0.08 73 / 70%);
+  --color-theme-active-border: oklch(0.68 0.20 70 / 35%);
+  --color-border-theme-group: oklch(0.22 0.04 55 / 12%);
+
+  /* Helper layout variables */
+  --color-bg-aside-start: oklch(0.98 0.03 82); /* Very light soft gold cream */
+  --color-bg-aside-end: oklch(0.92 0.07 73); /* Warm sunset gold cream */
+  --color-border-aside: oklch(0.22 0.04 55 / 8%);
+  --color-bg-modal: oklch(0.97 0.03 82 / 96%);
+  --color-focus-ring: oklch(0.68 0.20 70 / 25%);
+
+  /* Redefine active link variables for sidebar context */
+  --color-active-link-bg-start: oklch(0.91 0.09 70 / 22%); 
+  --color-active-link-bg-end: oklch(0.96 0.05 82 / 6%);
+  --color-active-link-text: oklch(0.55 0.20 45); /* Rich ripe mango text color */
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) body,
+:root:is([data-theme="light"], [data-theme="mango"]) #app-container,
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-gray-900,
+:root:is([data-theme="light"], [data-theme="mango"]) .min-h-screen {
+  background-color: var(--color-bg-primary) !important;
+  color: var(--color-text-primary) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) header {
+  background-color: var(--color-bg-modal) !important;
+  border-color: var(--color-border-aside) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) header img {
+  filter: invert(0.1) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) aside,
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-gray-800 {
+  background-color: var(--color-bg-secondary) !important;
+  border: 1px solid var(--color-border-aside) !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Override gray-700 form groups and options in Light Mode */
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-gray-700,
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-gray-700\/30 {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) .hover\:bg-gray-700\/50:hover {
+  background-color: #e2e8f0 !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) .peer:checked + div {
+  background-color: #eff6ff !important;
+  border-color: #3b82f6 !important;
+}
+
+/* Campaign selector light style */
+:root:is([data-theme="light"], [data-theme="mango"]) .campaign-selector {
+  background-color: #f1f5f9 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) textarea,
+:root:is([data-theme="light"], [data-theme="mango"]) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+:root:is([data-theme="light"], [data-theme="mango"]) select {
+  background: var(--color-bg-secondary) !important;
+  border: 1px solid #cbd5e1 !important;
+  color: var(--color-text-primary) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) textarea:focus,
+:root:is([data-theme="light"], [data-theme="mango"]) input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+:root:is([data-theme="light"], [data-theme="mango"]) select:focus {
+  border-color: var(--color-interactive-primary) !important;
+  box-shadow: 0 0 12px var(--color-focus-ring), inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+  background: var(--color-bg-primary) !important;
+}
+
+/* Custom Toggle Switches visibility in Light Mode */
+:root:is([data-theme="light"], [data-theme="mango"]) .relative div[class*="w-11 h-6"] {
+  background-color: #cbd5e1 !important;
+  border: 1px solid #94a3b8 !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) input:checked + div[class*="w-11 h-6"] {
+  background-color: var(--color-interactive-primary) !important;
+  border-color: var(--color-interactive-hover) !important;
+}
+
+/* Header utility buttons */
+:root:is([data-theme="light"], [data-theme="mango"]) header a,
+:root:is([data-theme="light"], [data-theme="mango"]) header button {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  color: #475569 !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) header a:hover,
+:root:is([data-theme="light"], [data-theme="mango"]) header button:hover {
+  background-color: rgba(15, 23, 42, 0.08) !important;
+  border-color: rgba(37, 99, 235, 0.3) !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* Sidebar elements */
+:root:is([data-theme="light"], [data-theme="mango"]) aside a {
+  color: #475569 !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) aside a:hover {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+  color: var(--color-text-primary) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) aside a.router-link-active {
+  background-color: var(--color-active-link-bg-start) !important;
+  color: var(--color-active-link-text) !important;
+}
+
+/* Label, headings & campaign selection text light styles */
+:root:is([data-theme="light"], [data-theme="mango"]) h2,
+:root:is([data-theme="light"], [data-theme="mango"]) h3,
+:root:is([data-theme="light"], [data-theme="mango"]) h4,
+:root:is([data-theme="light"], [data-theme="mango"]) .text-white,
+:root:is([data-theme="light"], [data-theme="mango"]) .text-gray-200 {
+  color: var(--color-text-primary) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) .text-gray-400,
+:root:is([data-theme="light"], [data-theme="mango"]) .text-gray-300,
+:root:is([data-theme="light"], [data-theme="mango"]) .label-text,
+:root:is([data-theme="light"], [data-theme="mango"]) span.label-text,
+:root:is([data-theme="light"], [data-theme="mango"]) span {
+  color: var(--color-text-muted) !important;
+}
+
+/* Prevent overriding text colors of primary action buttons with white text */
+:root:is([data-theme="light"], [data-theme="mango"]) button.bg-blue-600,
+:root:is([data-theme="light"], [data-theme="mango"]) button.bg-cyan-600,
+:root:is([data-theme="light"], [data-theme="mango"]) button.bg-cyan-500,
+:root:is([data-theme="light"], [data-theme="mango"]) button[class*="bg-indigo-500"],
+:root:is([data-theme="light"], [data-theme="mango"]) span[class*="bg-indigo-500"],
+:root:is([data-theme="light"], [data-theme="mango"]) .tab-btn.active,
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-emerald-600,
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-green-600,
+:root:is([data-theme="light"], [data-theme="mango"]) button.btn-primary,
+:root:is([data-theme="light"], [data-theme="mango"]) button.bg-red-600 {
+  color: #ffffff !important;
+}
+
+/* Specific rules for MultiSelectDropdown inside the campaign selector */
+:root:is([data-theme="light"], [data-theme="mango"]) .relative > div[class*="bg-gray-700"],
+:root:is([data-theme="light"], [data-theme="mango"]) .relative div[class*="bg-gray-700"] {
+  background-color: var(--color-bg-primary) !important;
+  border-color: var(--color-border-aside) !important;
+  color: var(--color-text-primary) !important;
+}
+:root:is([data-theme="light"], [data-theme="mango"]) .relative input[class*="bg-gray-800"] {
+  background-color: var(--color-bg-secondary) !important;
+  border-color: var(--color-border-aside) !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* Accent accordion button */
+:root:is([data-theme="light"], [data-theme="mango"]) button.text-cyan-400 {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.04), rgba(6, 182, 212, 0.04)) !important;
+  border: 1px solid rgba(37, 99, 235, 0.2) !important;
+  color: #1d4ed8 !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) button.text-cyan-400:hover {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(6, 182, 212, 0.08)) !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 0 15px rgba(37, 99, 235, 0.15) !important;
+}
+
+/* Image modals in light theme */
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-gray-900.rounded-lg {
+  background: var(--color-bg-modal) !important;
+  border-color: var(--color-border-aside) !important;
+  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.25), 0 0 40px rgba(37, 99, 235, 0.06) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) .fixed.inset-0 {
+  background: rgba(15, 23, 42, 0.4) !important;
+}
+
+/* Aspect ratio & tabs container */
+:root:is([data-theme="light"], [data-theme="mango"]) .tabs-container {
+  background: var(--color-bg-secondary) !important;
+  border-color: var(--color-border-aside) !important;
+  box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.05) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) .tab-btn {
+  color: #64748b !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) .tab-btn:hover {
+  color: var(--color-text-primary) !important;
+  background: rgba(15, 23, 42, 0.03) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) .tab-btn.active {
+  color: #ffffff !important;
+  background: #2563eb !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important;
+}
+
+/* Global Label Spacing Overrides */
+.label {
+  margin-bottom: 0.5rem !important;
+  display: flex;
+  align-items: center;
+}
+
+/* ==========================================
+   Premium Sidebar & Layout Overhaul
+   ========================================== */
+aside {
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.06) !important;
+  backdrop-filter: blur(20px) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) aside {
+  background: linear-gradient(180deg, var(--color-bg-aside-start) 0%, var(--color-bg-aside-end) 100%) !important;
+  border-right: 1px solid var(--color-border-aside) !important;
+}
+
+aside nav a {
+  position: relative;
+  overflow: hidden;
+  padding: 12px 16px !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  display: flex !important;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+aside nav a[class*="bg-gray-700"],
+aside nav a.router-link-active {
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.15) 0%, rgba(37, 99, 235, 0.02) 100%) !important;
+  color: #60a5fa !important;
+  border-left: 3px solid #2563eb !important;
+  border-radius: 0 8px 8px 0 !important;
+  box-shadow: inset 4px 0 15px rgba(37, 99, 235, 0.1) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) aside nav a[class*="bg-gray-700"],
+:root:is([data-theme="light"], [data-theme="mango"]) aside nav a.router-link-active {
+  background: linear-gradient(90deg, var(--color-active-link-bg-start) 0%, var(--color-active-link-bg-end) 100%) !important;
+  color: var(--color-active-link-text) !important;
+  border-left: 3px solid var(--color-interactive-primary) !important;
+}
+
+aside nav a:hover:not([class*="bg-gray-700"]):not(.router-link-active) {
+  background: rgba(255, 255, 255, 0.03) !important;
+  color: #ffffff !important;
+  transform: translateX(4px);
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) aside nav a:hover:not([class*="bg-gray-700"]):not(.router-link-active) {
+  background: rgba(15, 23, 42, 0.03) !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* ==========================================
+   Premium Section & Campaign Selection Cards
+   ========================================== */
+.campaign-selector,
+.bg-gray-800\/50,
+.bg-gray-800 {
+  background: rgba(30, 41, 59, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(24px) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.05) !important;
+  border-radius: 16px !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) .campaign-selector,
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-gray-800\/50,
+:root:is([data-theme="light"], [data-theme="mango"]) .bg-gray-800 {
+  background: rgba(255, 255, 255, 0.75) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.03), inset 0 1px 1px rgba(255, 255, 255, 0.9) !important;
+}
+
+/* ==========================================
+   Custom Premium Input Controls (Checkbox / Radio)
+   ========================================== */
+input[type="checkbox"].checkbox {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 1.35rem !important;
+  height: 1.35rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 6px !important;
+  background: rgba(31, 41, 55, 0.4) !important;
+  cursor: pointer !important;
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+input[type="checkbox"].checkbox:hover {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 8px rgba(37, 99, 235, 0.2) !important;
+}
+
+input[type="checkbox"].checkbox:checked {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.35) !important;
+}
+
+input[type="checkbox"].checkbox:checked::after {
+  content: "" !important;
+  display: block !important;
+  width: 0.35rem !important;
+  height: 0.6rem !important;
+  border: solid #ffffff !important;
+  border-width: 0 2px 2px 0 !important;
+  transform: rotate(45deg) translate(-0.5px, -1px) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) input[type="checkbox"].checkbox {
+  border: 1px solid #cbd5e1 !important;
+  background: var(--color-bg-primary) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) input[type="checkbox"].checkbox:checked {
+  background: var(--color-interactive-primary) !important;
+  border-color: var(--color-interactive-primary) !important;
+}
+
+/* Custom Premium Radio Button Overhaul */
+input[type="radio"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 1.2rem !important;
+  height: 1.2rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  border-radius: 50% !important;
+  background: rgba(31, 41, 55, 0.4) !important;
+  cursor: pointer !important;
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  margin-right: 0.5rem !important;
+}
+
+input[type="radio"]:hover {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 8px rgba(37, 99, 235, 0.2) !important;
+}
+
+input[type="radio"]:checked {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.35) !important;
+}
+
+input[type="radio"]:checked::after {
+  content: "" !important;
+  display: block !important;
+  width: 0.55rem !important;
+  height: 0.55rem !important;
+  background: #2563eb !important;
+  border-radius: 50% !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) input[type="radio"] {
+  border: 1px solid #cbd5e1 !important;
+  background: var(--color-bg-primary) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) input[type="radio"]:checked {
+  border-color: var(--color-interactive-primary) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) input[type="radio"]:checked::after {
+  background: var(--color-interactive-primary) !important;
+}
+
+/* ==========================================
+   Premium Multi-Select Dropdown Overrides
+   ========================================== */
+div[ref="dropdownRef"] > div {
+  background: rgba(31, 41, 55, 0.5) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  border-radius: 8px !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  padding: 10px 14px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+div[ref="dropdownRef"] > div:focus-within {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 14px rgba(37, 99, 235, 0.25) !important;
+}
+
+span.bg-indigo-500 {
+  background: #2563eb !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2) !important;
+  font-weight: 600 !important;
+  padding: 4px 12px !important;
+  border-radius: 20px !important;
+}
+
+div[ref="dropdownRef"] > div.absolute {
+  background: rgba(17, 24, 39, 0.95) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5) !important;
+  border-radius: 12px !important;
+  padding: 8px !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) div[ref="dropdownRef"] > div {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid #cbd5e1 !important;
+  color: var(--color-text-primary) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) div[ref="dropdownRef"] > div.absolute {
+  background: var(--color-bg-primary) !important;
+  border: 1px solid var(--color-border-aside) !important;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08) !important;
+}
+
+/* ==========================================
+   Global Premium Secondary Action Buttons Style
+   ========================================== */
+button.bg-gray-700 {
+  background: rgba(55, 65, 81, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  backdrop-filter: blur(12px);
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+button.bg-gray-700:hover:not(:disabled) {
+  background: rgba(75, 85, 99, 0.65) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
+  transform: translateY(-1.5px) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) button.bg-gray-700 {
+  background: rgba(15, 23, 42, 0.04) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  color: #475569 !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02) !important;
+}
+
+:root:is([data-theme="light"], [data-theme="mango"]) button.bg-gray-700:hover:not(:disabled) {
+  background: rgba(15, 23, 42, 0.08) !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  color: var(--color-text-primary) !important;
+  transform: translateY(-1.5px) !important;
+}
+
+/* ==========================================
+   Theme Selector Segmented Control Styles
+   ========================================== */
+.theme-selector-group {
+  display: flex;
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-theme-group);
+  border-radius: 12px;
+  padding: 2px;
+  gap: 2px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-select-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  color: var(--color-text-dim);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.theme-select-btn:hover {
+  color: var(--color-text-primary);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme="light"] .theme-select-btn:hover,
+:root[data-theme="mango"] .theme-select-btn:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.theme-select-btn.active {
+  color: var(--color-theme-active-icon) !important;
+  background-color: var(--color-theme-active-bg) !important;
+  border: 1px solid var(--color-theme-active-border) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.theme-btn-icon {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.3s ease;
+}
+
+.theme-select-btn.active .theme-btn-icon {
+  transform: scale(1.1);
+}
+
+/* ==========================================
+   Tab Navigation Styles (Extracted)
+   ========================================== */
+.tabs-container {
+  display: flex;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 6px;
+  border-radius: 14px;
+  backdrop-filter: blur(16px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3), 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.tab-btn {
+  padding: 10px 22px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  letter-spacing: 0.03em;
+  color: #9ca3af;
+  border: none !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tab-btn:hover {
+  color: #f3f4f6;
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+.tab-btn.active {
+  color: #ffffff !important;
+  background: #2563eb !important;
+  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3) !important;
+  transform: scale(1.02);
+}
+
+/* ==========================================
+   Mango Mode Custom Component Enhancements
+   ========================================== */
+
+/* Active theme selector button for Mango */
+.theme-select-btn.mango.active {
+  color: #ffffff !important; /* White mango icon */
+  background: var(--color-mango-gradient-primary) !important; /* Vibrant mango gradient fill */
+  border: 1px solid oklch(0.58 0.22 42 / 40%) !important;
+  box-shadow: 0 3px 12px oklch(0.58 0.22 42 / 30%) !important;
+}
+
+/* Override primary action buttons in Mango Mode to use Sunset Gradient */
+:root[data-theme="mango"] button.bg-blue-600,
+:root[data-theme="mango"] button.bg-cyan-600,
+:root[data-theme="mango"] button.bg-indigo-600,
+:root[data-theme="mango"] button.btn-primary,
+:root[data-theme="mango"] button[class*="bg-indigo-600"],
+:root[data-theme="mango"] button[class*="bg-blue-600"] {
+  background: var(--color-mango-gradient-primary) !important;
+  box-shadow: 0 4px 15px oklch(0.58 0.22 42 / 25%) !important;
+  border: none !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="mango"] button.bg-blue-600:hover:not(:disabled),
+:root[data-theme="mango"] button.bg-cyan-600:hover:not(:disabled),
+:root[data-theme="mango"] button.bg-indigo-600:hover:not(:disabled),
+:root[data-theme="mango"] button.btn-primary:hover:not(:disabled),
+:root[data-theme="mango"] button[class*="bg-indigo-600"]:hover:not(:disabled),
+:root[data-theme="mango"] button[class*="bg-blue-600"]:hover:not(:disabled) {
+  background: var(--color-mango-gradient-hover) !important;
+  box-shadow: 0 6px 22px oklch(0.58 0.22 42 / 35%) !important;
+}
+
+/* Active Tabs in Mango Mode */
+:root[data-theme="mango"] .tab-btn.active {
+  background: var(--color-mango-gradient-primary) !important;
+  box-shadow: 0 4px 14px oklch(0.58 0.22 42 / 25%) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+/* Custom Accordion button text-cyan-400 in Mango Mode */
+:root[data-theme="mango"] button.text-cyan-400 {
+  background: linear-gradient(135deg, oklch(0.97 0.04 82 / 50%), oklch(0.90 0.08 73 / 50%)) !important;
+  border: 1px solid oklch(0.68 0.20 70 / 30%) !important;
+  border-left: 4px solid oklch(0.68 0.20 70) !important;
+  color: oklch(0.55 0.20 45) !important; /* Rich ripe mango text color */
+}
+
+:root[data-theme="mango"] button.text-cyan-400:hover {
+  background: linear-gradient(135deg, oklch(0.97 0.04 82 / 80%), oklch(0.90 0.08 73 / 80%)) !important;
+  border-color: oklch(0.68 0.20 70 / 60%) !important;
+}
+
+/* Map standard Cyan colors to warm Mango colors in Mango Mode */
+:root[data-theme="mango"] .text-cyan-400 {
+  color: oklch(0.60 0.20 60) !important; /* A nice mango-orange color */
+}
+:root[data-theme="mango"] .hover\:text-cyan-300:hover {
+  color: oklch(0.68 0.20 70) !important;
+}
+
+/* Override Campaign Selector Pills in Mango Mode */
+:root[data-theme="mango"] span.bg-indigo-500,
+:root[data-theme="mango"] span[class*="bg-indigo-500"] {
+  background: var(--color-mango-gradient-primary) !important;
+  box-shadow: 0 2px 6px oklch(0.58 0.22 42 / 20%) !important;
+  border-color: oklch(0.58 0.22 42 / 30%) !important;
+}
+
+/* Campaign selector accent tags/slashes in Mango Mode */
+:root[data-theme="mango"] .text-indigo-500,
+:root[data-theme="mango"] span.text-indigo-500 {
+  color: var(--color-interactive-primary) !important;
+}
+
+/* Standard checkbox checked states in Mango Mode */
+:root[data-theme="mango"] input[type="checkbox"]:checked,
+:root[data-theme="mango"] input[type="radio"]:checked {
+  accent-color: var(--color-interactive-primary) !important;
+  background-color: var(--color-interactive-primary) !important;
+  border-color: var(--color-interactive-primary) !important;
+}
+
+/* MultiSelectDropdown hover overrides for Light/Mango modes */
+:root:is([data-theme="light"], [data-theme="mango"]) .hover\:bg-gray-600\/50:hover {
+  background-color: var(--color-bg-tertiary) !important;
+}
+

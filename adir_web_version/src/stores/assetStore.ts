@@ -53,15 +53,17 @@ export const useAssetStore = defineStore("assetStore", {
           }
           campaigns[campaignName].assetGroups[groupName].assets.push(asset);
         } else if (asset.type === "demandgen") {
-          const adGroupName = asset.adGroup?.name || "Unknown Ad Group";
-          const adGroupId = asset.adGroup?.id;
+          const adGroup = asset.adGroup || asset.ad_group;
+          const adGroupAd = asset.adGroupAd || asset.ad_group_ad;
+          const adGroupName = adGroup?.name || "Unknown Ad Group";
+          const adGroupId = adGroup?.id;
           const adResourceName =
-            asset.adGroupAd?.resourceName || "Unknown Ad Resource";
+            adGroupAd?.resourceName || adGroupAd?.resource_name || "Unknown Ad Resource";
           // Try to extract Ad ID from resource name (format: customers/{customerId}/adGroupAds/{adGroupId}~{adId})
           const adIdMatch = adResourceName.match(/~(\d+)$/);
           const adId = adIdMatch ? adIdMatch[1] : null;
 
-          const adName = asset.adGroupAd?.ad?.name || "Unknown Ad";
+          const adName = adGroupAd?.ad?.name || "Unknown Ad";
 
           if (!campaigns[campaignName].adGroups[adGroupName]) {
             campaigns[campaignName].adGroups[adGroupName] = {

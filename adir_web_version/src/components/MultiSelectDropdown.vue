@@ -53,12 +53,21 @@ const handleClickOutside = (event) => {
   }
 };
 
+const handleKeyDown = (event) => {
+  if (event.key === "Escape" && isOpen.value) {
+    isOpen.value = false;
+    searchTerm.value = "";
+  }
+};
+
 onMounted(() => {
   window.addEventListener("click", handleClickOutside);
+  window.addEventListener("keydown", handleKeyDown);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener("click", handleClickOutside);
+  window.removeEventListener("keydown", handleKeyDown);
 });
 
 const handleCheckboxChange = (event, optionValue) => {
